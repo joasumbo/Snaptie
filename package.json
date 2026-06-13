@@ -1,0 +1,43 @@
+{
+  "name": "snaptie",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@atlaskit/button": "^23.11.8",
+    "@atlaskit/css-reset": "^7.4.5",
+    "@atlaskit/heading": "^5.4.2",
+    "@atlaskit/icon": "^35.4.0",
+    "@atlaskit/logo": "^20.2.0",
+    "@atlaskit/primitives": "^19.0.2",
+    "@atlaskit/tokens": "^13.3.1",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "next": "^15.5.19",
+    "prisma": "^6.19.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "eslint": "^9",
+    "eslint-config-next": "^15.5.19",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,9 @@
+html,
+body {
+  height: 100%;
+}
+
+#__next,
+body > div:first-child {
+  min-height: 100%;
+}
