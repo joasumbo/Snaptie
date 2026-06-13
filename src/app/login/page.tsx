@@ -3,10 +3,11 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
-import { Eye, EyeOff, Loader2, QrCode } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/brand/logo";
 import { login } from "./actions";
 
 export default function LoginPage() {
@@ -64,11 +65,8 @@ function LoginForm() {
         transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
         className="relative z-10 w-full max-w-sm"
       >
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
-            <QrCode className="size-5" />
-          </span>
-          <span className="text-xl font-bold tracking-tight">Snaptie</span>
+        <div className="mb-6 flex justify-center">
+          <Logo markClassName="size-7" />
         </div>
 
         <div className="rounded-2xl bg-card p-6 ring-1 ring-foreground/10 shadow-xl shadow-foreground/5">

@@ -9,13 +9,20 @@ import {
   Users,
   UserRound,
   LogOut,
-  QrCode,
+  CircleUserRound,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { ROLE_LABELS } from "@/lib/roles";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/brand/logo";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/dashboard/actions";
 
@@ -38,11 +45,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/profile", label: "Perfil", icon: UserRound },
 ];
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
-}
-
 export default function DashboardShell({
   user,
   children,
@@ -55,15 +57,17 @@ export default function DashboardShell({
 
   return (
     <div className="flex min-h-screen bg-muted/30">
-      <aside className="flex w-64 shrink-0 flex-col gap-6 border-r bg-card p-4">
-        <Link href="/dashboard" className="flex items-center gap-2 px-2 py-1">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
-            <QrCode className="size-5" />
-          </span>
-          <span className="text-lg font-bold tracking-tight">Snaptie</span>
-        </Link>
+      <aside className="flex w-64 shrink-0 flex-col border-r bg-card">
+        <div className="flex h-16 items-center border-b px-5">
+          <Link href="/dashboard">
+            <Logo />
+          </Link>
+        </div>
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-1 flex-col gap-1 p-3">
+          <p className="px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+            Navegação
+          </p>
           {items.map(({ href, label, icon: Icon }) => {
             const active =
               href === "/dashboard"
@@ -93,26 +97,47 @@ export default function DashboardShell({
             );
           })}
         </nav>
+
+        <div className="border-t p-4 text-xs text-muted-foreground">
+          Snaptie · Plataforma de QR codes
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-end gap-3 border-b bg-card px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white">
-              {initials(user.nome)}
-            </div>
-            <div className="text-right leading-tight">
-              <div className="text-sm font-medium">{user.nome}</div>
-              <div className="text-xs text-muted-foreground">{user.email}</div>
-            </div>
-          </div>
-          <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
-          <form action={logout}>
-            <Button type="submit" variant="ghost" size="sm">
-              <LogOut />
-              Sair
-            </Button>
-          </form>
+        <header className="flex h-16 items-center justify-end border-b bg-card px-6">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted aria-expanded:bg-muted" />
+              }
+            >
+              <CircleUserRound className="size-5 text-muted-foreground" />
+              <span className="hidden text-left leading-tight sm:block">
+                <span className="block text-sm font-medium">{user.nome}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {ROLE_LABELS[user.role]}
+                </span>
+              </span>
+              <ChevronDown className="size-4 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <div className="px-2 py-1.5">
+                <div className="text-sm font-medium">{user.nome}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {user.email}
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/dashboard/profile" />}>
+                <UserRound />
+                Perfil
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => logout()}>
+                <LogOut />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         <main className="flex-1 p-6">{children}</main>
