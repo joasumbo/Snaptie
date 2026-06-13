@@ -4,9 +4,10 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Form, { Field, FormFooter } from "@atlaskit/form";
 import Textfield from "@atlaskit/textfield";
-import Button from "@atlaskit/button/new";
-import Heading from "@atlaskit/heading";
+import Button, { IconButton } from "@atlaskit/button/new";
 import { token } from "@atlaskit/tokens";
+import EyeOpenIcon from "@atlaskit/icon/core/eye-open";
+import EyeHiddenIcon from "@atlaskit/icon/core/eye-open-strikethrough";
 import { login } from "./actions";
 
 type Values = { email: string; password: string };
@@ -23,6 +24,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(values: Values) {
     setError(null);
@@ -31,8 +33,10 @@ function LoginForm() {
       setError(result.message);
       return;
     }
+    // Only follow `next` into the protected area, never to arbitrary paths.
     const next = searchParams.get("next");
-    router.replace(next && next.startsWith("/") ? next : "/dashboard");
+    const destination = next && next.startsWith("/dashboard") ? next : "/dashboard";
+    router.replace(destination);
     router.refresh();
   }
 
@@ -44,87 +48,127 @@ function LoginForm() {
         alignItems: "center",
         justifyContent: "center",
         padding: token("space.400"),
-        backgroundColor: token("elevation.surface.sunken"),
+        background: `linear-gradient(180deg, ${token(
+          "elevation.surface.sunken",
+        )} 0%, ${token("elevation.surface")} 100%)`,
       }}
     >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 400,
-          backgroundColor: token("elevation.surface"),
-          borderRadius: token("radius.medium"),
-          boxShadow: token("elevation.shadow.raised"),
-          padding: token("space.500"),
-        }}
-      >
-        <div style={{ marginBottom: token("space.300") }}>
-          <Heading size="large">Snaptie</Heading>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: token("space.150"),
+            justifyContent: "center",
+            marginBottom: token("space.300"),
+          }}
+        >
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: token("radius.small"),
+              backgroundColor: token("color.background.brand.bold"),
+            }}
+            aria-hidden
+          />
+          <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
+            Snaptie
+          </span>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: token("elevation.surface"),
+            border: `1px solid ${token("color.border")}`,
+            borderRadius: token("radius.large"),
+            boxShadow: token("elevation.shadow.overlay"),
+            padding: token("space.500"),
+          }}
+        >
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Iniciar sessão</h1>
           <p
             style={{
               color: token("color.text.subtle"),
-              margin: `${token("space.100")} 0 0`,
+              margin: `${token("space.100")} 0 ${token("space.300")}`,
             }}
           >
-            Inicie sessão para aceder à plataforma.
+            Aceda à sua conta para gerir a plataforma.
           </p>
-        </div>
 
-        {error ? (
-          <div
-            role="alert"
-            style={{
-              marginBottom: token("space.200"),
-              padding: token("space.200"),
-              borderRadius: token("radius.small"),
-              backgroundColor: token("color.background.danger"),
-              color: token("color.text.danger"),
-              fontSize: 14,
-            }}
-          >
-            {error}
-          </div>
-        ) : null}
+          {error ? (
+            <div
+              role="alert"
+              style={{
+                marginBottom: token("space.200"),
+                padding: token("space.200"),
+                borderRadius: token("radius.small"),
+                backgroundColor: token("color.background.danger"),
+                color: token("color.text.danger"),
+                fontSize: 14,
+              }}
+            >
+              {error}
+            </div>
+          ) : null}
 
-        <Form<Values> onSubmit={handleSubmit}>
-          {({ formProps, submitting }) => (
-            <form {...formProps}>
-              <Field name="email" label="Email" isRequired defaultValue="">
-                {({ fieldProps }) => (
-                  <Textfield
-                    type="email"
-                    autoComplete="email"
-                    placeholder="nome@empresa.pt"
-                    {...fieldProps}
-                  />
-                )}
-              </Field>
-              <Field
-                name="password"
-                label="Palavra-passe"
-                isRequired
-                defaultValue=""
-              >
-                {({ fieldProps }) => (
-                  <Textfield
-                    type="password"
-                    autoComplete="current-password"
-                    {...fieldProps}
-                  />
-                )}
-              </Field>
-              <FormFooter align="start">
-                <Button
-                  type="submit"
-                  appearance="primary"
-                  isLoading={submitting}
-                  shouldFitContainer
+          <Form<Values> onSubmit={handleSubmit}>
+            {({ formProps, submitting }) => (
+              <form {...formProps}>
+                <Field name="email" label="Email" isRequired defaultValue="">
+                  {({ fieldProps }) => (
+                    <Textfield
+                      type="email"
+                      autoComplete="email"
+                      placeholder="nome@empresa.pt"
+                      {...fieldProps}
+                    />
+                  )}
+                </Field>
+                <Field
+                  name="password"
+                  label="Palavra-passe"
+                  isRequired
+                  defaultValue=""
                 >
-                  Entrar
-                </Button>
-              </FormFooter>
-            </form>
-          )}
-        </Form>
+                  {({ fieldProps }) => (
+                    <Textfield
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      {...fieldProps}
+                      elemAfterInput={
+                        <div style={{ paddingRight: 4, display: "flex" }}>
+                          <IconButton
+                            type="button"
+                            appearance="subtle"
+                            spacing="compact"
+                            icon={showPassword ? EyeHiddenIcon : EyeOpenIcon}
+                            label={
+                              showPassword
+                                ? "Ocultar palavra-passe"
+                                : "Mostrar palavra-passe"
+                            }
+                            onClick={() => setShowPassword((v) => !v)}
+                          />
+                        </div>
+                      }
+                    />
+                  )}
+                </Field>
+                <FormFooter align="start">
+                  <Button
+                    type="submit"
+                    appearance="primary"
+                    isLoading={submitting}
+                    shouldFitContainer
+                  >
+                    Entrar
+                  </Button>
+                </FormFooter>
+              </form>
+            )}
+          </Form>
+        </div>
       </div>
     </main>
   );

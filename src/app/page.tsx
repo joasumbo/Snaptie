@@ -1,7 +1,6 @@
 "use client";
 
-import Button from "@atlaskit/button/new";
-import Heading from "@atlaskit/heading";
+import { LinkButton } from "@atlaskit/button/new";
 import { token } from "@atlaskit/tokens";
 
 export default function Home() {
@@ -16,9 +15,45 @@ export default function Home() {
         gap: token("space.300"),
         padding: token("space.400"),
         textAlign: "center",
+        background: `linear-gradient(180deg, ${token(
+          "elevation.surface",
+        )} 0%, ${token("elevation.surface.sunken")} 100%)`,
       }}
     >
-      <Heading size="xxlarge">Snaptie</Heading>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: token("space.150"),
+          marginBottom: token("space.100"),
+        }}
+      >
+        <span
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: token("radius.small"),
+            backgroundColor: token("color.background.brand.bold"),
+          }}
+          aria-hidden
+        />
+        <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em" }}>
+          Snaptie
+        </span>
+      </div>
+
+      <h1
+        style={{
+          margin: 0,
+          fontSize: 36,
+          fontWeight: 700,
+          letterSpacing: "-0.02em",
+          maxWidth: 600,
+          lineHeight: 1.15,
+        }}
+      >
+        Interactive QR codes for businesses
+      </h1>
       <p
         style={{
           color: token("color.text.subtle"),
@@ -28,10 +63,15 @@ export default function Home() {
           lineHeight: 1.5,
         }}
       >
-        Interactive QR codes that let businesses turn a single scan into menus,
-        guides, links and more.
+        Turn a single scan into menus, guides, links and more, and update the
+        content anytime without reprinting.
       </p>
-      <Button appearance="primary">Sign in</Button>
+
+      <div style={{ marginTop: token("space.200") }}>
+        <LinkButton href="/login" appearance="primary">
+          Sign in
+        </LinkButton>
+      </div>
     </main>
   );
 }
