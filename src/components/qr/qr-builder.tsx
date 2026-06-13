@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -13,6 +14,7 @@ import {
   Trash2,
   Plus,
   Copy,
+  Download,
   ExternalLink,
 } from "lucide-react";
 import type { BlockType } from "@prisma/client";
@@ -50,6 +52,9 @@ export default function QrBuilder({
   >(null);
   const [deleteTarget, setDeleteTarget] = useState<BuilderBlock | null>(null);
   const [busy, setBusy] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const qrColor = qr.corPrimaria || "#0f172a";
 
   async function handlePublish() {
     setBusy(true);
@@ -79,6 +84,15 @@ export default function QrBuilder({
       () => toast.success("Ligação copiada."),
       () => toast.error("Não foi possível copiar."),
     );
+  }
+
+  function downloadQr() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `${qr.slug}.png`;
+    link.click();
   }
 
   return (
@@ -123,7 +137,10 @@ export default function QrBuilder({
           ) : (
             <div className="space-y-2">
               {blocks.map((block, i) => (
-                <Card key={block.id}>
+                <Card
+                  key={block.id}
+                  className="transition-all hover:shadow-md"
+                >
                   <CardContent className="flex items-center gap-3">
                     <div className="flex flex-col">
                       <Button
@@ -186,9 +203,21 @@ export default function QrBuilder({
         <Card className="h-fit">
           <CardContent className="space-y-4">
             <h2 className="font-medium">Página pública</h2>
-            <div className="flex justify-center rounded-lg bg-white p-4">
-              <QRCodeSVG value={publicUrl} size={180} />
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] }}
+              className="flex justify-center rounded-xl bg-white p-4 ring-1 ring-foreground/10"
+            >
+              <QRCodeCanvas
+                ref={canvasRef}
+                value={publicUrl}
+                size={184}
+                fgColor={qrColor}
+                level="M"
+                marginSize={2}
+              />
+            </motion.div>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1 text-xs">
                 {publicUrl}
@@ -197,21 +226,26 @@ export default function QrBuilder({
                 <Copy />
               </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              nativeButton={false}
-              render={<a href={publicUrl} target="_blank" rel="noreferrer" />}
-            >
-              <ExternalLink />
-              Abrir página
-            </Button>
-            {!qr.publicado ? (
-              <p className="text-xs text-muted-foreground">
-                O QR só fica acessível ao público depois de publicado.
-              </p>
-            ) : null}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" onClick={downloadQr}>
+                <Download />
+                Descarregar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<a href={publicUrl} target="_blank" rel="noreferrer" />}
+              >
+                <ExternalLink />
+                Abrir
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {qr.publicado
+                ? "O código usa a cor primária do QR. Edite o QR para a alterar."
+                : "O QR só fica acessível ao público depois de publicado."}
+            </p>
           </CardContent>
         </Card>
       </div>

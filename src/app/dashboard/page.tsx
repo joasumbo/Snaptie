@@ -33,7 +33,7 @@ export default async function DashboardPage() {
       <RevealGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map(({ label, value, icon: Icon }) => (
           <RevealItem key={label}>
-            <Card>
+            <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
               <CardContent className="flex items-center justify-between">
                 <div>
                   <div className="text-sm text-muted-foreground">{label}</div>

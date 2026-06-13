@@ -82,7 +82,7 @@ export default async function ScanPage({
         background: `radial-gradient(120% 60% at 50% 0%, ${primary}22, transparent 60%)`,
       }}
     >
-      <div className="mx-auto flex max-w-md flex-col items-center text-center">
+      <div className="mx-auto flex max-w-md flex-col items-center text-center duration-700 animate-in fade-in">
         {qr.company.logo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -108,13 +108,15 @@ export default async function ScanPage({
           {qr.blocks.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sem conteúdos.</p>
           ) : (
-            qr.blocks.map((block) => {
+            qr.blocks.map((block, i) => {
               const content = conteudoToString(block.conteudo);
+              const delay = { animationDelay: `${i * 70}ms` } as const;
               if (block.tipo === "TEXTO") {
                 return (
                   <div
                     key={block.id}
-                    className="rounded-xl border bg-card p-4 text-left"
+                    style={delay}
+                    className="rounded-xl border bg-card p-4 text-left duration-500 animate-in fade-in slide-in-from-bottom-3"
                   >
                     <div className="font-medium">{block.titulo}</div>
                     <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
@@ -129,8 +131,8 @@ export default async function ScanPage({
                   href={content}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-xl px-4 py-3 font-medium text-white shadow-sm transition-transform hover:scale-[1.02]"
-                  style={{ backgroundColor: primary }}
+                  className="rounded-xl px-4 py-3 font-medium text-white shadow-sm duration-500 animate-in fade-in slide-in-from-bottom-3 hover:scale-[1.02] transition-transform"
+                  style={{ backgroundColor: primary, ...delay }}
                 >
                   {block.titulo}
                 </a>

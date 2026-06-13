@@ -120,7 +120,7 @@ export default function CompanyDetailView({
       <div className="grid gap-4 sm:grid-cols-3">
         {INDICATORS.map(({ key, label, icon: Icon }, i) => (
           <Reveal key={key} delay={i * 0.06}>
-            <Card>
+            <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
               <CardContent className="flex items-center justify-between">
                 <div>
                   <div className="text-sm text-muted-foreground">{label}</div>
