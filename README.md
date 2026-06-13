@@ -108,7 +108,7 @@ public/          Static assets
 ## Roadmap
 
 - [x] Database schema and migrations
-- [ ] Authentication and user management
+- [x] Authentication and user management
 - [ ] Company management
 - [ ] QR code builder
 - [ ] Public scan pages
