@@ -79,6 +79,7 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
       key: "email",
       header: "Email",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (c) => c.email.toLowerCase(),
       cell: (c) => <span className="text-muted-foreground">{c.email}</span>,
     },
@@ -97,6 +98,7 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
       key: "plano",
       header: "Plano",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (c) => c.plano,
       cell: (c) => PLANO_LABELS[c.plano as Plano],
     },
@@ -105,6 +107,7 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
       header: "Utilizadores",
       alignRight: true,
       sortable: true,
+      hideOnMobile: true,
       sortValue: (c) => c.userCount,
       cell: (c) => c.userCount,
     },
@@ -113,6 +116,7 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
       header: "QR Codes",
       alignRight: true,
       sortable: true,
+      hideOnMobile: true,
       sortValue: (c) => c.qrCount,
       cell: (c) => c.qrCount,
     },
@@ -120,6 +124,7 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
       key: "createdAt",
       header: "Criado",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (c) => c.createdAt,
       cell: (c) => (
         <span className="text-muted-foreground">{formatDate(c.createdAt)}</span>
@@ -179,14 +184,17 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           placeholder="Pesquisar por nome ou email"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-9 max-w-72"
+          className="h-9 w-full sm:max-w-72"
         />
-        <Button onClick={() => setModal({ mode: "create" })}>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => setModal({ mode: "create" })}
+        >
           <Building2 />
           Nova empresa
         </Button>

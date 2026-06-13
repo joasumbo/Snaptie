@@ -79,6 +79,7 @@ export default function UsersView({
       key: "email",
       header: "Email",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (u) => u.email.toLowerCase(),
       cell: (u) => <span className="text-muted-foreground">{u.email}</span>,
     },
@@ -86,6 +87,7 @@ export default function UsersView({
       key: "role",
       header: "Função",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (u) => u.role,
       cell: (u) => <Badge variant="secondary">{ROLE_LABELS[u.role]}</Badge>,
     },
@@ -104,6 +106,7 @@ export default function UsersView({
       key: "ultimoLogin",
       header: "Último login",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (u) => u.ultimoLogin ?? "",
       cell: (u) => (
         <span className="text-muted-foreground">
@@ -115,6 +118,7 @@ export default function UsersView({
       key: "createdAt",
       header: "Criado",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (u) => u.createdAt,
       cell: (u) => (
         <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>
@@ -173,14 +177,17 @@ export default function UsersView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           placeholder="Pesquisar por nome ou email"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-9 max-w-72"
+          className="h-9 w-full sm:max-w-72"
         />
-        <Button onClick={() => setModal({ mode: "create" })}>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => setModal({ mode: "create" })}
+        >
           <UserPlus />
           Novo utilizador
         </Button>

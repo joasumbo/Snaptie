@@ -31,7 +31,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  roles?: UserRole[]; // when set, only these roles see the item
+  roles?: UserRole[];
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -57,6 +57,10 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/profile", label: "Perfil", icon: UserRound },
 ];
 
+function isActive(pathname: string, href: string) {
+  return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+}
+
 export default function DashboardShell({
   user,
   children,
@@ -69,7 +73,8 @@ export default function DashboardShell({
 
   return (
     <div className="flex min-h-screen bg-muted/30">
-      <aside className="flex w-64 shrink-0 flex-col border-r bg-card">
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">
         <div className="flex h-16 items-center border-b px-5">
           <Link href="/dashboard">
             <Logo />
@@ -81,10 +86,7 @@ export default function DashboardShell({
             Navegação
           </p>
           {items.map(({ href, label, icon: Icon }) => {
-            const active =
-              href === "/dashboard"
-                ? pathname === href
-                : pathname.startsWith(href);
+            const active = isActive(pathname, href);
             return (
               <Link
                 key={href}
@@ -116,7 +118,12 @@ export default function DashboardShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-end border-b bg-card px-6">
+        {/* Header */}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b bg-card/80 px-4 backdrop-blur md:justify-end md:px-6">
+          <Link href="/dashboard" className="md:hidden">
+            <Logo />
+          </Link>
+
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -140,7 +147,10 @@ export default function DashboardShell({
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem nativeButton={false} render={<Link href="/dashboard/profile" />}>
+              <DropdownMenuItem
+                nativeButton={false}
+                render={<Link href="/dashboard/profile" />}
+              >
                 <UserRound />
                 Perfil
               </DropdownMenuItem>
@@ -152,7 +162,7 @@ export default function DashboardShell({
           </DropdownMenu>
         </header>
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">
           <motion.div
             key={pathname}
             initial={{ opacity: 0, y: 8 }}
@@ -163,6 +173,26 @@ export default function DashboardShell({
           </motion.div>
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-card/90 backdrop-blur md:hidden">
+        {items.map(({ href, label, icon: Icon }) => {
+          const active = isActive(pathname, href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                active ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              <Icon className={cn("size-5", active && "fill-foreground/5")} />
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

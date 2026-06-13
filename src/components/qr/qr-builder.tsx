@@ -104,7 +104,7 @@ export default function QrBuilder({
             {qr.publicado ? "Publicado" : "Rascunho"}
           </StatusBadge>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/dashboard/qr-codes" />}>
             <ArrowLeft />
             Voltar

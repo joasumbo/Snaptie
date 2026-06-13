@@ -81,6 +81,7 @@ export default function QrCodesView({
             key: "company",
             header: "Empresa",
             sortable: true,
+            hideOnMobile: true,
             sortValue: (r: QrRow) => r.companyNome ?? "",
             cell: (r: QrRow) => (
               <span className="text-muted-foreground">{r.companyNome ?? "—"}</span>
@@ -104,6 +105,7 @@ export default function QrCodesView({
       header: "Botões",
       alignRight: true,
       sortable: true,
+      hideOnMobile: true,
       sortValue: (r) => r.blockCount,
       cell: (r) => r.blockCount,
     },
@@ -112,6 +114,7 @@ export default function QrCodesView({
       header: "Scans",
       alignRight: true,
       sortable: true,
+      hideOnMobile: true,
       sortValue: (r) => r.scansTotal,
       cell: (r) => r.scansTotal,
     },
@@ -119,6 +122,7 @@ export default function QrCodesView({
       key: "createdAt",
       header: "Criado",
       sortable: true,
+      hideOnMobile: true,
       sortValue: (r) => r.createdAt,
       cell: (r) => (
         <span className="text-muted-foreground">{formatDate(r.createdAt)}</span>
@@ -156,14 +160,17 @@ export default function QrCodesView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           placeholder="Pesquisar por nome"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-9 max-w-72"
+          className="h-9 w-full sm:max-w-72"
         />
-        <Button onClick={() => setModal({ mode: "create" })}>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => setModal({ mode: "create" })}
+        >
           <Plus />
           Novo QR
         </Button>

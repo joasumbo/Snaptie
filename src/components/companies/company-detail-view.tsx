@@ -84,14 +84,14 @@ export default function CompanyDetailView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{company.nome}</h1>
           <StatusBadge tone={COMPANY_STATUS_TONE[company.estado]}>
             {COMPANY_STATUS_LABELS[company.estado]}
           </StatusBadge>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/dashboard/companies" />}>
             <ArrowLeft />
             Voltar

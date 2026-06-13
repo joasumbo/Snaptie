@@ -24,6 +24,7 @@ export type Column<T> = {
   header: string;
   sortable?: boolean;
   alignRight?: boolean;
+  hideOnMobile?: boolean;
   className?: string;
   cell: (row: T) => React.ReactNode;
   sortValue?: (row: T) => string | number;
@@ -85,7 +86,11 @@ export function DataTable<T>({
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
-                  className={cn(col.alignRight && "text-right", col.className)}
+                  className={cn(
+                    col.alignRight && "text-right",
+                    col.hideOnMobile && "hidden md:table-cell",
+                    col.className,
+                  )}
                 >
                   {col.sortable ? (
                     <button
@@ -130,7 +135,11 @@ export function DataTable<T>({
                   {columns.map((col) => (
                     <TableCell
                       key={col.key}
-                      className={cn(col.alignRight && "text-right", col.className)}
+                      className={cn(
+                        col.alignRight && "text-right",
+                        col.hideOnMobile && "hidden md:table-cell",
+                        col.className,
+                      )}
                     >
                       {col.cell(row)}
                     </TableCell>
