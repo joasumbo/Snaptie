@@ -2,18 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import DynamicTable from "@atlaskit/dynamic-table";
-import Textfield from "@atlaskit/textfield";
-import Button from "@atlaskit/button/new";
-import Lozenge from "@atlaskit/lozenge";
-import PersonAddIcon from "@atlaskit/icon/core/person-add";
+import { UserPlus } from "lucide-react";
 import type { UserRole, UserStatus } from "@prisma/client";
-import {
-  ROLE_LABELS,
-  STATUS_LABELS,
-  STATUS_APPEARANCE,
-} from "@/lib/roles";
+import { ROLE_LABELS, STATUS_LABELS, STATUS_TONE } from "@/lib/roles";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UserFormModal, type EditableUser } from "./user-form-modal";
 import { deleteUser, setUserStatus } from "@/app/dashboard/users/actions";
@@ -28,12 +25,13 @@ export type UserRow = {
   createdAt: string;
 };
 
-type Props = {
+export default function UsersView({
+  users,
+  actor,
+}: {
   users: UserRow[];
   actor: { id: string; role: UserRole };
-};
-
-export default function UsersView({ users, actor }: Props) {
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<
@@ -51,15 +49,11 @@ export default function UsersView({ users, actor }: Props) {
     );
   }, [users, query]);
 
-  function canManage(u: UserRow): boolean {
-    if (actor.role === "ADMIN") return true;
-    return u.role !== "ADMIN";
-  }
+  const canManage = (u: UserRow) => actor.role === "ADMIN" || u.role !== "ADMIN";
 
   async function handleToggleStatus(u: UserRow) {
     setBusyId(u.id);
-    const next: UserStatus = u.status === "ATIVO" ? "INATIVO" : "ATIVO";
-    await setUserStatus(u.id, next);
+    await setUserStatus(u.id, u.status === "ATIVO" ? "INATIVO" : "ATIVO");
     setBusyId(null);
     router.refresh();
   }
@@ -73,121 +67,131 @@ export default function UsersView({ users, actor }: Props) {
     router.refresh();
   }
 
-  const head = {
-    cells: [
-      { key: "nome", content: "Nome", isSortable: true },
-      { key: "email", content: "Email", isSortable: true },
-      { key: "role", content: "Função", isSortable: true },
-      { key: "status", content: "Estado", isSortable: true },
-      { key: "ultimoLogin", content: "Último login", isSortable: true },
-      { key: "createdAt", content: "Criado", isSortable: true },
-      { key: "actions", content: "", isSortable: false, width: 18 },
-    ],
-  };
-
-  const rows = filtered.map((u) => {
-    const isSelf = u.id === actor.id;
-    const manageable = canManage(u);
-    return {
-      key: u.id,
-      cells: [
-        { key: u.nome, content: u.nome },
-        { key: u.email, content: u.email },
-        { key: u.role, content: <Lozenge>{ROLE_LABELS[u.role]}</Lozenge> },
-        {
-          key: u.status,
-          content: (
-            <Lozenge appearance={STATUS_APPEARANCE[u.status]}>
-              {STATUS_LABELS[u.status]}
-            </Lozenge>
-          ),
-        },
-        { key: u.ultimoLogin ?? "", content: formatDateTime(u.ultimoLogin) },
-        { key: u.createdAt, content: formatDate(u.createdAt) },
-        {
-          key: "actions",
-          content: (
-            <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-              <Button
-                appearance="subtle"
-                spacing="compact"
-                isDisabled={!manageable}
-                onClick={() =>
-                  setModal({
-                    mode: "edit",
-                    user: {
-                      id: u.id,
-                      nome: u.nome,
-                      email: u.email,
-                      role: u.role,
-                      status: u.status,
-                    },
-                  })
-                }
-              >
-                Editar
-              </Button>
-              <Button
-                appearance="subtle"
-                spacing="compact"
-                isDisabled={!manageable || isSelf || busyId === u.id}
-                onClick={() => handleToggleStatus(u)}
-              >
-                {u.status === "ATIVO" ? "Desativar" : "Ativar"}
-              </Button>
-              <Button
-                appearance="subtle"
-                spacing="compact"
-                isDisabled={!manageable || isSelf}
-                onClick={() => setDeleteTarget(u)}
-              >
-                Eliminar
-              </Button>
-            </div>
-          ),
-        },
-      ],
-    };
-  });
+  const columns: Column<UserRow>[] = [
+    {
+      key: "nome",
+      header: "Nome",
+      sortable: true,
+      sortValue: (u) => u.nome.toLowerCase(),
+      cell: (u) => <span className="font-medium">{u.nome}</span>,
+    },
+    {
+      key: "email",
+      header: "Email",
+      sortable: true,
+      sortValue: (u) => u.email.toLowerCase(),
+      cell: (u) => <span className="text-muted-foreground">{u.email}</span>,
+    },
+    {
+      key: "role",
+      header: "Função",
+      sortable: true,
+      sortValue: (u) => u.role,
+      cell: (u) => <Badge variant="secondary">{ROLE_LABELS[u.role]}</Badge>,
+    },
+    {
+      key: "status",
+      header: "Estado",
+      sortable: true,
+      sortValue: (u) => u.status,
+      cell: (u) => (
+        <StatusBadge tone={STATUS_TONE[u.status]}>
+          {STATUS_LABELS[u.status]}
+        </StatusBadge>
+      ),
+    },
+    {
+      key: "ultimoLogin",
+      header: "Último login",
+      sortable: true,
+      sortValue: (u) => u.ultimoLogin ?? "",
+      cell: (u) => (
+        <span className="text-muted-foreground">
+          {formatDateTime(u.ultimoLogin)}
+        </span>
+      ),
+    },
+    {
+      key: "createdAt",
+      header: "Criado",
+      sortable: true,
+      sortValue: (u) => u.createdAt,
+      cell: (u) => (
+        <span className="text-muted-foreground">{formatDate(u.createdAt)}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      alignRight: true,
+      cell: (u) => {
+        const isSelf = u.id === actor.id;
+        const manageable = canManage(u);
+        return (
+          <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!manageable}
+              onClick={() =>
+                setModal({
+                  mode: "edit",
+                  user: {
+                    id: u.id,
+                    nome: u.nome,
+                    email: u.email,
+                    role: u.role,
+                    status: u.status,
+                  },
+                })
+              }
+            >
+              Editar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!manageable || isSelf || busyId === u.id}
+              onClick={() => handleToggleStatus(u)}
+            >
+              {u.status === "ATIVO" ? "Desativar" : "Ativar"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              disabled={!manageable || isSelf}
+              onClick={() => setDeleteTarget(u)}
+            >
+              Eliminar
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <div style={{ maxWidth: 280, width: "100%" }}>
-          <Textfield
-            placeholder="Pesquisar por nome ou email"
-            value={query}
-            onChange={(e) => setQuery(e.currentTarget.value)}
-          />
-        </div>
-        <Button
-          appearance="primary"
-          iconBefore={() => <PersonAddIcon label="" color="currentColor" />}
-          onClick={() => setModal({ mode: "create" })}
-        >
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <Input
+          placeholder="Pesquisar por nome ou email"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-9 max-w-72"
+        />
+        <Button onClick={() => setModal({ mode: "create" })}>
+          <UserPlus />
           Novo utilizador
         </Button>
       </div>
 
-      <DynamicTable
-        head={head}
-        rows={rows}
-        rowsPerPage={10}
-        defaultPage={1}
-        defaultSortKey="createdAt"
-        defaultSortOrder="DESC"
-        emptyView={
-          <div style={{ padding: 24, color: "var(--ds-text-subtle)" }}>
-            Nenhum utilizador encontrado.
-          </div>
-        }
+      <DataTable
+        columns={columns}
+        data={filtered}
+        rowKey={(u) => u.id}
+        initialSort={{ key: "createdAt", dir: "desc" }}
+        emptyMessage="Nenhum utilizador encontrado."
       />
 
       {modal ? (

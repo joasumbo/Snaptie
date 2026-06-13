@@ -1,38 +1,16 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        padding: 24,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: 56, fontWeight: 700, color: "#172B4D" }}>404</div>
-      <p style={{ margin: 0, fontSize: 18, color: "#44546F" }}>
-        Esta página não existe.
-      </p>
-      <Link
-        href="/dashboard"
-        style={{
-          marginTop: 8,
-          display: "inline-block",
-          padding: "8px 16px",
-          borderRadius: 6,
-          backgroundColor: "#0052CC",
-          color: "#ffffff",
-          textDecoration: "none",
-          fontWeight: 500,
-        }}
-      >
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="bg-gradient-to-br from-foreground to-foreground/40 bg-clip-text text-7xl font-bold text-transparent">
+        404
+      </div>
+      <p className="text-lg text-muted-foreground">Esta página não existe.</p>
+      <Button render={<Link href="/dashboard" />} className="mt-2">
         Voltar ao painel
-      </Link>
+      </Button>
     </main>
   );
 }

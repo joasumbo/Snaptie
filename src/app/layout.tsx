@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import "@atlaskit/css-reset";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
-import Providers from "./providers";
+
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Snaptie",
@@ -15,9 +18,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-PT" data-color-mode="light">
-      <body>
-        <Providers>{children}</Providers>
+    <html lang="pt-PT" className={cn(geist.variable)} suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        {children}
+        <Toaster richColors position="top-center" />
       </body>
     </html>
   );

@@ -2,21 +2,27 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Modal, {
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
-  ModalTransition,
-} from "@atlaskit/modal-dialog";
-import Textfield from "@atlaskit/textfield";
-import Select from "@atlaskit/select";
-import Button from "@atlaskit/button/new";
+import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Plano } from "@prisma/client";
-import { PLANO_OPTIONS } from "@/lib/companies";
+import { PLANO_OPTIONS, PLANO_LABELS } from "@/lib/companies";
 import { createCompany, updateCompany } from "@/app/dashboard/companies/actions";
-
-type Option = { label: string; value: Plano };
 
 export type EditableCompany = {
   id: string;
@@ -36,28 +42,10 @@ type Props = {
   onSaved: () => void;
 };
 
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: 12,
-  fontWeight: 600,
-  color: "var(--ds-text-subtle)",
-  marginBottom: 4,
-};
-
-function Labeled({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label htmlFor={htmlFor} style={labelStyle}>
-        {label}
-      </label>
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
       {children}
     </div>
   );
@@ -73,31 +61,17 @@ function ColorField({
   onChange: (v: string) => void;
 }) {
   return (
-    <div style={{ flex: 1 }}>
-      <span style={labelStyle}>{label}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <Field label={label}>
+      <div className="flex items-center gap-2">
         <input
           type="color"
           value={value}
-          onChange={(e) => onChange(e.currentTarget.value)}
-          style={{
-            width: 40,
-            height: 36,
-            padding: 2,
-            border: "1px solid var(--ds-border)",
-            borderRadius: 6,
-            background: "var(--ds-surface)",
-            cursor: "pointer",
-          }}
+          onChange={(e) => onChange(e.target.value)}
+          className="size-9 cursor-pointer rounded-md border bg-transparent p-1"
         />
-        <div style={{ flex: 1 }}>
-          <Textfield
-            value={value}
-            onChange={(e) => onChange(e.currentTarget.value)}
-          />
-        </div>
+        <Input value={value} onChange={(e) => onChange(e.target.value)} />
       </div>
-    </div>
+    </Field>
   );
 }
 
@@ -110,9 +84,9 @@ export function CompanyFormModal({ company, onClose, onSaved }: Props) {
   const [telefone, setTelefone] = useState(company?.telefone ?? "");
   const [website, setWebsite] = useState(company?.website ?? "");
   const [logo, setLogo] = useState(company?.logo ?? "");
-  const [corPrimaria, setCorPrimaria] = useState(company?.corPrimaria ?? "#0052cc");
+  const [corPrimaria, setCorPrimaria] = useState(company?.corPrimaria ?? "#6366f1");
   const [corSecundaria, setCorSecundaria] = useState(
-    company?.corSecundaria ?? "#172b4d",
+    company?.corSecundaria ?? "#8b5cf6",
   );
   const [plano, setPlano] = useState<Plano>(company?.plano ?? "FREE");
   const [submitting, setSubmitting] = useState(false);
@@ -144,77 +118,57 @@ export function CompanyFormModal({ company, onClose, onSaved }: Props) {
   }
 
   return (
-    <ModalTransition>
-      <Modal onClose={submitting ? () => {} : onClose}>
-        <ModalHeader>
-          <ModalTitle>{isEdit ? "Editar empresa" : "Nova empresa"}</ModalTitle>
-        </ModalHeader>
-        <ModalBody>
-          {error ? (
-            <div
-              role="alert"
-              style={{
-                marginBottom: 16,
-                padding: 12,
-                borderRadius: 4,
-                backgroundColor: "var(--ds-background-danger)",
-                color: "var(--ds-text-danger)",
-                fontSize: 14,
-              }}
-            >
-              {error}
-            </div>
-          ) : null}
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next && !submitting) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Editar empresa" : "Nova empresa"}</DialogTitle>
+        </DialogHeader>
 
-          <Labeled label="Nome da empresa" htmlFor="c-nome">
-            <Textfield
-              id="c-nome"
-              value={nome}
-              onChange={(e) => setNome(e.currentTarget.value)}
-            />
-          </Labeled>
+        {error ? (
+          <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
 
-          <Labeled label="Email principal" htmlFor="c-email">
-            <Textfield
-              id="c-email"
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+          <Field label="Nome da empresa">
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+          </Field>
+          <Field label="Email principal">
+            <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.currentTarget.value)}
+              onChange={(e) => setEmail(e.target.value)}
             />
-          </Labeled>
-
-          <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <Labeled label="Telefone" htmlFor="c-telefone">
-                <Textfield
-                  id="c-telefone"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.currentTarget.value)}
-                />
-              </Labeled>
-            </div>
-            <div style={{ flex: 1 }}>
-              <Labeled label="Website" htmlFor="c-website">
-                <Textfield
-                  id="c-website"
-                  placeholder="https://"
-                  value={website}
-                  onChange={(e) => setWebsite(e.currentTarget.value)}
-                />
-              </Labeled>
-            </div>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Telefone">
+              <Input
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+              />
+            </Field>
+            <Field label="Website">
+              <Input
+                placeholder="https://"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+            </Field>
           </div>
-
-          <Labeled label="Logótipo (URL)" htmlFor="c-logo">
-            <Textfield
-              id="c-logo"
+          <Field label="Logótipo (URL)">
+            <Input
               placeholder="https://"
               value={logo}
-              onChange={(e) => setLogo(e.currentTarget.value)}
+              onChange={(e) => setLogo(e.target.value)}
             />
-          </Labeled>
-
-          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
             <ColorField
               label="Cor primária"
               value={corPrimaria}
@@ -226,25 +180,36 @@ export function CompanyFormModal({ company, onClose, onSaved }: Props) {
               onChange={setCorSecundaria}
             />
           </div>
+          <Field label="Plano">
+            <Select value={plano} onValueChange={(v) => setPlano(v as Plano)}>
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(v: string | null) =>
+                    v ? PLANO_LABELS[v as Plano] : "Selecionar"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PLANO_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
 
-          <Labeled label="Plano" htmlFor="c-plano">
-            <Select<Option>
-              inputId="c-plano"
-              options={PLANO_OPTIONS}
-              value={PLANO_OPTIONS.find((o) => o.value === plano) ?? null}
-              onChange={(opt) => opt && setPlano(opt.value)}
-            />
-          </Labeled>
-        </ModalBody>
-        <ModalFooter>
-          <Button appearance="subtle" onClick={onClose} isDisabled={submitting}>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancelar
           </Button>
-          <Button appearance="primary" onClick={handleSubmit} isLoading={submitting}>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <Loader2 className="animate-spin" /> : null}
             {isEdit ? "Guardar" : "Criar"}
           </Button>
-        </ModalFooter>
-      </Modal>
-    </ModalTransition>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,4 +1,5 @@
 import type { CompanyStatus, Plano } from "@prisma/client";
+import type { Tone } from "./tone";
 
 export const COMPANY_STATUS_LABELS: Record<CompanyStatus, string> = {
   ATIVA: "Ativa",
@@ -6,13 +7,10 @@ export const COMPANY_STATUS_LABELS: Record<CompanyStatus, string> = {
   INATIVA: "Inativa",
 };
 
-export const COMPANY_STATUS_APPEARANCE: Record<
-  CompanyStatus,
-  "success" | "moved" | "default"
-> = {
+export const COMPANY_STATUS_TONE: Record<CompanyStatus, Tone> = {
   ATIVA: "success",
-  SUSPENSA: "moved",
-  INATIVA: "default",
+  SUSPENSA: "warning",
+  INATIVA: "neutral",
 };
 
 export const PLANO_LABELS: Record<Plano, string> = {

@@ -1,13 +1,15 @@
 "use client";
 
-import Button from "@atlaskit/button/new";
-import Modal, {
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
-  ModalTransition,
-} from "@atlaskit/modal-dialog";
+import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   open: boolean;
@@ -29,23 +31,27 @@ export function ConfirmDialog({
   onClose,
 }: Props) {
   return (
-    <ModalTransition>
-      {open && (
-        <Modal onClose={onClose}>
-          <ModalHeader>
-            <ModalTitle appearance="danger">{title}</ModalTitle>
-          </ModalHeader>
-          <ModalBody>{message}</ModalBody>
-          <ModalFooter>
-            <Button appearance="subtle" onClick={onClose} isDisabled={isLoading}>
-              Cancelar
-            </Button>
-            <Button appearance="danger" onClick={onConfirm} isLoading={isLoading}>
-              {confirmLabel}
-            </Button>
-          </ModalFooter>
-        </Modal>
-      )}
-    </ModalTransition>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !isLoading) onClose();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>
+            {isLoading ? <Loader2 className="animate-spin" /> : null}
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

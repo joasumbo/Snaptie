@@ -1,21 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import Modal, {
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
-  ModalTransition,
-} from "@atlaskit/modal-dialog";
-import Textfield from "@atlaskit/textfield";
-import Select from "@atlaskit/select";
-import Button from "@atlaskit/button/new";
+import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { UserRole, UserStatus } from "@prisma/client";
-import { ROLE_OPTIONS, STATUS_OPTIONS } from "@/lib/roles";
+import { ROLE_OPTIONS, ROLE_LABELS, STATUS_OPTIONS, STATUS_LABELS } from "@/lib/roles";
 import { createUser, updateUser } from "@/app/dashboard/users/actions";
-
-type Option<T extends string> = { label: string; value: T };
 
 export type EditableUser = {
   id: string;
@@ -33,29 +39,10 @@ type Props = {
   onSaved: () => void;
 };
 
-function Labeled({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label
-        htmlFor={htmlFor}
-        style={{
-          display: "block",
-          fontSize: 12,
-          fontWeight: 600,
-          color: "var(--ds-text-subtle)",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </label>
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
       {children}
     </div>
   );
@@ -72,8 +59,7 @@ export function UserFormModal({ mode, user, actorRole, onClose, onSaved }: Props
 
   const roleOptions = ROLE_OPTIONS.filter(
     (o) => actorRole === "ADMIN" || o.value !== "ADMIN",
-  ) as Option<UserRole>[];
-  const statusOptions = STATUS_OPTIONS as Option<UserStatus>[];
+  );
 
   async function handleSubmit() {
     setError(null);
@@ -91,87 +77,98 @@ export function UserFormModal({ mode, user, actorRole, onClose, onSaved }: Props
   }
 
   return (
-    <ModalTransition>
-      <Modal onClose={submitting ? () => {} : onClose}>
-        <ModalHeader>
-          <ModalTitle>
+    <Dialog
+      open
+      onOpenChange={(next) => {
+        if (!next && !submitting) onClose();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
             {mode === "create" ? "Novo utilizador" : "Editar utilizador"}
-          </ModalTitle>
-        </ModalHeader>
-        <ModalBody>
-          {error ? (
-            <div
-              role="alert"
-              style={{
-                marginBottom: 16,
-                padding: 12,
-                borderRadius: 4,
-                backgroundColor: "var(--ds-background-danger)",
-                color: "var(--ds-text-danger)",
-                fontSize: 14,
-              }}
-            >
-              {error}
-            </div>
-          ) : null}
+          </DialogTitle>
+        </DialogHeader>
 
-          <Labeled label="Nome" htmlFor="nome">
-            <Textfield
-              id="nome"
-              value={nome}
-              onChange={(e) => setNome(e.currentTarget.value)}
-            />
-          </Labeled>
+        {error ? (
+          <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
 
-          <Labeled label="Email" htmlFor="email">
-            <Textfield
-              id="email"
+        <div className="space-y-4">
+          <Field label="Nome">
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+          </Field>
+          <Field label="Email">
+            <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.currentTarget.value)}
+              onChange={(e) => setEmail(e.target.value)}
             />
-          </Labeled>
-
+          </Field>
           {mode === "create" ? (
-            <Labeled label="Palavra-passe" htmlFor="password">
-              <Textfield
-                id="password"
+            <Field label="Palavra-passe">
+              <Input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
+                onChange={(e) => setPassword(e.target.value)}
               />
-            </Labeled>
+            </Field>
           ) : null}
-
-          <Labeled label="Função" htmlFor="role">
-            <Select<Option<UserRole>>
-              inputId="role"
-              options={roleOptions}
-              value={roleOptions.find((o) => o.value === role) ?? null}
-              onChange={(opt) => opt && setRole(opt.value)}
-            />
-          </Labeled>
-
+          <Field label="Função">
+            <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(v: string | null) =>
+                    v ? ROLE_LABELS[v as UserRole] : "Selecionar"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {roleOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
           {mode === "edit" ? (
-            <Labeled label="Estado" htmlFor="status">
-              <Select<Option<UserStatus>>
-                inputId="status"
-                options={statusOptions}
-                value={statusOptions.find((o) => o.value === status) ?? null}
-                onChange={(opt) => opt && setStatus(opt.value)}
-              />
-            </Labeled>
+            <Field label="Estado">
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as UserStatus)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(v: string | null) =>
+                      v ? STATUS_LABELS[v as UserStatus] : "Selecionar"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
           ) : null}
-        </ModalBody>
-        <ModalFooter>
-          <Button appearance="subtle" onClick={onClose} isDisabled={submitting}>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancelar
           </Button>
-          <Button appearance="primary" onClick={handleSubmit} isLoading={submitting}>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <Loader2 className="animate-spin" /> : null}
             {mode === "create" ? "Criar" : "Guardar"}
           </Button>
-        </ModalFooter>
-      </Modal>
-    </ModalTransition>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

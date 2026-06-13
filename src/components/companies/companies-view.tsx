@@ -1,28 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DynamicTable from "@atlaskit/dynamic-table";
-import Textfield from "@atlaskit/textfield";
-import Button, { LinkButton } from "@atlaskit/button/new";
-import Lozenge from "@atlaskit/lozenge";
-import OfficeBuildingIcon from "@atlaskit/icon/core/office-building";
+import { Building2 } from "lucide-react";
 import type { CompanyStatus, Plano } from "@prisma/client";
 import {
   COMPANY_STATUS_LABELS,
-  COMPANY_STATUS_APPEARANCE,
+  COMPANY_STATUS_TONE,
   PLANO_LABELS,
 } from "@/lib/companies";
 import { formatDate } from "@/lib/format";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  CompanyFormModal,
-  type EditableCompany,
-} from "./company-form-modal";
-import {
-  deleteCompany,
-  setCompanyStatus,
-} from "@/app/dashboard/companies/actions";
+import { CompanyFormModal, type EditableCompany } from "./company-form-modal";
+import { deleteCompany, setCompanyStatus } from "@/app/dashboard/companies/actions";
 
 export type CompanyRow = EditableCompany & {
   estado: CompanyStatus;
@@ -51,8 +46,7 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
 
   async function handleToggleStatus(c: CompanyRow) {
     setBusyId(c.id);
-    const next: CompanyStatus = c.estado === "ATIVA" ? "SUSPENSA" : "ATIVA";
-    await setCompanyStatus(c.id, next);
+    await setCompanyStatus(c.id, c.estado === "ATIVA" ? "SUSPENSA" : "ATIVA");
     setBusyId(null);
     router.refresh();
   }
@@ -66,128 +60,144 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
     router.refresh();
   }
 
-  const head = {
-    cells: [
-      { key: "nome", content: "Nome", isSortable: true },
-      { key: "email", content: "Email", isSortable: true },
-      { key: "estado", content: "Estado", isSortable: true },
-      { key: "plano", content: "Plano", isSortable: true },
-      { key: "users", content: "Utilizadores", isSortable: true },
-      { key: "qr", content: "QR Codes", isSortable: true },
-      { key: "createdAt", content: "Criado", isSortable: true },
-      { key: "actions", content: "", isSortable: false },
-    ],
-  };
-
-  const rows = filtered.map((c) => ({
-    key: c.id,
-    cells: [
-      { key: c.nome, content: c.nome },
-      { key: c.email, content: c.email },
-      {
-        key: c.estado,
-        content: (
-          <Lozenge appearance={COMPANY_STATUS_APPEARANCE[c.estado]}>
-            {COMPANY_STATUS_LABELS[c.estado]}
-          </Lozenge>
-        ),
-      },
-      { key: c.plano, content: PLANO_LABELS[c.plano as Plano] },
-      { key: c.userCount, content: c.userCount },
-      { key: c.qrCount, content: c.qrCount },
-      { key: c.createdAt, content: formatDate(c.createdAt) },
-      {
-        key: "actions",
-        content: (
-          <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-            <LinkButton
-              href={`/dashboard/companies/${c.id}`}
-              appearance="subtle"
-              spacing="compact"
-            >
-              Ver
-            </LinkButton>
-            <Button
-              appearance="subtle"
-              spacing="compact"
-              onClick={() =>
-                setModal({
-                  mode: "edit",
-                  company: {
-                    id: c.id,
-                    nome: c.nome,
-                    email: c.email,
-                    telefone: c.telefone,
-                    website: c.website,
-                    logo: c.logo,
-                    corPrimaria: c.corPrimaria,
-                    corSecundaria: c.corSecundaria,
-                    plano: c.plano,
-                  },
-                })
-              }
-            >
-              Editar
-            </Button>
-            <Button
-              appearance="subtle"
-              spacing="compact"
-              isDisabled={busyId === c.id}
-              onClick={() => handleToggleStatus(c)}
-            >
-              {c.estado === "ATIVA" ? "Suspender" : "Ativar"}
-            </Button>
-            <Button
-              appearance="subtle"
-              spacing="compact"
-              onClick={() => setDeleteTarget(c)}
-            >
-              Eliminar
-            </Button>
-          </div>
-        ),
-      },
-    ],
-  }));
+  const columns: Column<CompanyRow>[] = [
+    {
+      key: "nome",
+      header: "Nome",
+      sortable: true,
+      sortValue: (c) => c.nome.toLowerCase(),
+      cell: (c) => (
+        <Link
+          href={`/dashboard/companies/${c.id}`}
+          className="font-medium hover:underline"
+        >
+          {c.nome}
+        </Link>
+      ),
+    },
+    {
+      key: "email",
+      header: "Email",
+      sortable: true,
+      sortValue: (c) => c.email.toLowerCase(),
+      cell: (c) => <span className="text-muted-foreground">{c.email}</span>,
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      sortable: true,
+      sortValue: (c) => c.estado,
+      cell: (c) => (
+        <StatusBadge tone={COMPANY_STATUS_TONE[c.estado]}>
+          {COMPANY_STATUS_LABELS[c.estado]}
+        </StatusBadge>
+      ),
+    },
+    {
+      key: "plano",
+      header: "Plano",
+      sortable: true,
+      sortValue: (c) => c.plano,
+      cell: (c) => PLANO_LABELS[c.plano as Plano],
+    },
+    {
+      key: "users",
+      header: "Utilizadores",
+      alignRight: true,
+      sortable: true,
+      sortValue: (c) => c.userCount,
+      cell: (c) => c.userCount,
+    },
+    {
+      key: "qr",
+      header: "QR Codes",
+      alignRight: true,
+      sortable: true,
+      sortValue: (c) => c.qrCount,
+      cell: (c) => c.qrCount,
+    },
+    {
+      key: "createdAt",
+      header: "Criado",
+      sortable: true,
+      sortValue: (c) => c.createdAt,
+      cell: (c) => (
+        <span className="text-muted-foreground">{formatDate(c.createdAt)}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      alignRight: true,
+      cell: (c) => (
+        <div className="flex justify-end gap-1">
+          <Button variant="ghost" size="sm" render={<Link href={`/dashboard/companies/${c.id}`} />}>
+            Ver
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setModal({
+                mode: "edit",
+                company: {
+                  id: c.id,
+                  nome: c.nome,
+                  email: c.email,
+                  telefone: c.telefone,
+                  website: c.website,
+                  logo: c.logo,
+                  corPrimaria: c.corPrimaria,
+                  corSecundaria: c.corSecundaria,
+                  plano: c.plano,
+                },
+              })
+            }
+          >
+            Editar
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busyId === c.id}
+            onClick={() => handleToggleStatus(c)}
+          >
+            {c.estado === "ATIVA" ? "Suspender" : "Ativar"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteTarget(c)}
+          >
+            Eliminar
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <div style={{ maxWidth: 280, width: "100%" }}>
-          <Textfield
-            placeholder="Pesquisar por nome ou email"
-            value={query}
-            onChange={(e) => setQuery(e.currentTarget.value)}
-          />
-        </div>
-        <Button
-          appearance="primary"
-          iconBefore={() => <OfficeBuildingIcon label="" color="currentColor" />}
-          onClick={() => setModal({ mode: "create" })}
-        >
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <Input
+          placeholder="Pesquisar por nome ou email"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-9 max-w-72"
+        />
+        <Button onClick={() => setModal({ mode: "create" })}>
+          <Building2 />
           Nova empresa
         </Button>
       </div>
 
-      <DynamicTable
-        head={head}
-        rows={rows}
-        rowsPerPage={10}
-        defaultPage={1}
-        defaultSortKey="createdAt"
-        defaultSortOrder="DESC"
-        emptyView={
-          <div style={{ padding: 24, color: "var(--ds-text-subtle)" }}>
-            Nenhuma empresa encontrada.
-          </div>
-        }
+      <DataTable
+        columns={columns}
+        data={filtered}
+        rowKey={(c) => c.id}
+        initialSort={{ key: "createdAt", dir: "desc" }}
+        emptyMessage="Nenhuma empresa encontrada."
       />
 
       {modal ? (

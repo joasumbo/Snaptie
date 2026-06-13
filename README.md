@@ -12,10 +12,10 @@ reprinting anything.
 
 ## Tech stack
 
-- **Next.js 15** (App Router) and **React 18**
+- **Next.js 16** (App Router) and **React 19**
 - **TypeScript**
 - **PostgreSQL** with **Prisma** as the ORM
-- **Atlassian Design System** for the user interface
+- **Tailwind CSS** and **shadcn/ui** for the interface, with **Motion** for animation
 
 ## Data model
 

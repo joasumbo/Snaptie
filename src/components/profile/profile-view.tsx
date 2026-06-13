@@ -2,85 +2,46 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Textfield from "@atlaskit/textfield";
-import Button from "@atlaskit/button/new";
-import Lozenge from "@atlaskit/lozenge";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { ROLE_LABELS } from "@/lib/roles";
 import { formatDate } from "@/lib/format";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { updateName, changePassword } from "@/app/dashboard/profile/actions";
 
-type Props = {
-  user: {
-    nome: string;
-    email: string;
-    role: UserRole;
-    createdAt: string;
-  };
-};
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: 12,
-  fontWeight: 600,
-  color: "var(--ds-text-subtle)",
-  marginBottom: 4,
-};
-
-function Feedback({ state }: { state: { ok: boolean; message: string } | null }) {
-  if (!state) return null;
-  return (
-    <div
-      role="status"
-      style={{
-        marginBottom: 16,
-        padding: 12,
-        borderRadius: 4,
-        fontSize: 14,
-        backgroundColor: state.ok
-          ? "var(--ds-background-success)"
-          : "var(--ds-background-danger)",
-        color: state.ok ? "var(--ds-text-success)" : "var(--ds-text-danger)",
-      }}
-    >
-      {state.message}
-    </div>
-  );
-}
-
-export default function ProfileView({ user }: Props) {
+export default function ProfileView({
+  user,
+}: {
+  user: { nome: string; email: string; role: UserRole; createdAt: string };
+}) {
   const router = useRouter();
 
   const [nome, setNome] = useState(user.nome);
   const [savingName, setSavingName] = useState(false);
-  const [nameState, setNameState] = useState<{ ok: boolean; message: string } | null>(
-    null,
-  );
 
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [savingPwd, setSavingPwd] = useState(false);
-  const [pwdState, setPwdState] = useState<{ ok: boolean; message: string } | null>(
-    null,
-  );
 
   async function handleSaveName() {
-    setNameState(null);
     setSavingName(true);
     const result = await updateName(nome);
     setSavingName(false);
-    setNameState(
-      result.ok
-        ? { ok: true, message: "Nome atualizado." }
-        : { ok: false, message: result.message },
-    );
-    if (result.ok) router.refresh();
+    if (result.ok) {
+      toast.success("Nome atualizado.");
+      router.refresh();
+    } else {
+      toast.error(result.message);
+    }
   }
 
   async function handleChangePassword() {
-    setPwdState(null);
     setSavingPwd(true);
     const result = await changePassword({ current, next, confirm });
     setSavingPwd(false);
@@ -88,113 +49,91 @@ export default function ProfileView({ user }: Props) {
       setCurrent("");
       setNext("");
       setConfirm("");
-      setPwdState({ ok: true, message: "Palavra-passe alterada." });
+      toast.success("Palavra-passe alterada.");
     } else {
-      setPwdState({ ok: false, message: result.message });
+      toast.error(result.message);
     }
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-        gap: 16,
-        alignItems: "start",
-      }}
-    >
+    <div className="grid gap-4 md:grid-cols-2">
       <Card>
-        <h2 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>
-          Dados da conta
-        </h2>
-        <Feedback state={nameState} />
-
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="profile-nome" style={labelStyle}>
-            Nome
-          </label>
-          <Textfield
-            id="profile-nome"
-            value={nome}
-            onChange={(e) => setNome(e.currentTarget.value)}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
-          <div>
-            <span style={labelStyle}>Email</span>
-            <div>{user.email}</div>
+        <CardContent className="space-y-4">
+          <h2 className="font-medium">Dados da conta</h2>
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-nome">Nome</Label>
+            <Input
+              id="profile-nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+            />
           </div>
-          <div>
-            <span style={labelStyle}>Função</span>
+          <div className="flex flex-wrap gap-6 text-sm">
             <div>
-              <Lozenge>{ROLE_LABELS[user.role]}</Lozenge>
+              <div className="text-xs font-medium text-muted-foreground">Email</div>
+              <div className="mt-0.5">{user.email}</div>
+            </div>
+            <div>
+              <div className="text-xs font-medium text-muted-foreground">Função</div>
+              <div className="mt-0.5">
+                <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-medium text-muted-foreground">
+                Criado em
+              </div>
+              <div className="mt-0.5">{formatDate(user.createdAt)}</div>
             </div>
           </div>
-          <div>
-            <span style={labelStyle}>Criado em</span>
-            <div>{formatDate(user.createdAt)}</div>
-          </div>
-        </div>
-
-        <Button
-          appearance="primary"
-          onClick={handleSaveName}
-          isLoading={savingName}
-          isDisabled={nome.trim() === user.nome}
-        >
-          Guardar
-        </Button>
+          <Button
+            onClick={handleSaveName}
+            disabled={savingName || nome.trim() === user.nome}
+          >
+            {savingName ? <Loader2 className="animate-spin" /> : null}
+            Guardar
+          </Button>
+        </CardContent>
       </Card>
 
       <Card>
-        <h2 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>
-          Alterar palavra-passe
-        </h2>
-        <Feedback state={pwdState} />
-
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="pwd-current" style={labelStyle}>
-            Palavra-passe atual
-          </label>
-          <Textfield
-            id="pwd-current"
-            type="password"
-            value={current}
-            onChange={(e) => setCurrent(e.currentTarget.value)}
-          />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="pwd-next" style={labelStyle}>
-            Nova palavra-passe
-          </label>
-          <Textfield
-            id="pwd-next"
-            type="password"
-            value={next}
-            onChange={(e) => setNext(e.currentTarget.value)}
-          />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="pwd-confirm" style={labelStyle}>
-            Confirmar nova palavra-passe
-          </label>
-          <Textfield
-            id="pwd-confirm"
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.currentTarget.value)}
-          />
-        </div>
-
-        <Button
-          appearance="primary"
-          onClick={handleChangePassword}
-          isLoading={savingPwd}
-          isDisabled={!current || !next || !confirm}
-        >
-          Alterar palavra-passe
-        </Button>
+        <CardContent className="space-y-4">
+          <h2 className="font-medium">Alterar palavra-passe</h2>
+          <div className="space-y-1.5">
+            <Label htmlFor="pwd-current">Palavra-passe atual</Label>
+            <Input
+              id="pwd-current"
+              type="password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pwd-next">Nova palavra-passe</Label>
+            <Input
+              id="pwd-next"
+              type="password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pwd-confirm">Confirmar nova palavra-passe</Label>
+            <Input
+              id="pwd-confirm"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </div>
+          <Button
+            onClick={handleChangePassword}
+            disabled={savingPwd || !current || !next || !confirm}
+          >
+            {savingPwd ? <Loader2 className="animate-spin" /> : null}
+            Alterar palavra-passe
+          </Button>
+        </CardContent>
       </Card>
     </div>
   );

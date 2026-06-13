@@ -1,23 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Button, { LinkButton } from "@atlaskit/button/new";
-import Lozenge from "@atlaskit/lozenge";
+import { ArrowLeft, Users, QrCode, ScanLine } from "lucide-react";
 import type { CompanyStatus } from "@prisma/client";
 import {
   COMPANY_STATUS_LABELS,
-  COMPANY_STATUS_APPEARANCE,
+  COMPANY_STATUS_TONE,
   PLANO_LABELS,
 } from "@/lib/companies";
 import { formatDate } from "@/lib/format";
-import { Card } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Reveal } from "@/components/ui/reveal";
 import { CompanyFormModal, type EditableCompany } from "./company-form-modal";
-import {
-  deleteCompany,
-  setCompanyStatus,
-} from "@/app/dashboard/companies/actions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { deleteCompany, setCompanyStatus } from "@/app/dashboard/companies/actions";
 
 type Company = EditableCompany & {
   slug: string;
@@ -25,53 +25,40 @@ type Company = EditableCompany & {
   createdAt: string;
 };
 
-type Props = {
-  company: Company;
-  indicators: { users: number; qrCodes: number; scans: number };
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 600,
-  color: "var(--ds-text-subtle)",
-};
+const INDICATORS = [
+  { key: "users", label: "Utilizadores", icon: Users },
+  { key: "qrCodes", label: "QR Codes", icon: QrCode },
+  { key: "scans", label: "Scans", icon: ScanLine },
+] as const;
 
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <div style={labelStyle}>{label}</div>
-      <div style={{ marginTop: 2 }}>{value || "—"}</div>
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+      <div className="mt-0.5">{value || "—"}</div>
     </div>
   );
 }
 
-function Indicator({ label, value }: { label: string; value: number }) {
+function Swatch({ color }: { color: string | null }) {
   return (
-    <Card>
-      <div style={{ color: "var(--ds-text-subtle)", fontSize: 13 }}>{label}</div>
-      <div style={{ fontSize: 32, fontWeight: 600, marginTop: 4 }}>{value}</div>
-    </Card>
-  );
-}
-
-function Swatch({ label, color }: { label: string; color: string | null }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="flex items-center gap-2">
       <span
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 6,
-          border: "1px solid var(--ds-border)",
-          backgroundColor: color ?? "transparent",
-        }}
+        className="size-5 rounded-md border"
+        style={{ backgroundColor: color ?? "transparent" }}
       />
       <span>{color ?? "—"}</span>
     </div>
   );
 }
 
-export default function CompanyDetailView({ company, indicators }: Props) {
+export default function CompanyDetailView({
+  company,
+  indicators,
+}: {
+  company: Company;
+  indicators: { users: number; qrCodes: number; scans: number };
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -79,8 +66,10 @@ export default function CompanyDetailView({ company, indicators }: Props) {
 
   async function handleToggleStatus() {
     setBusy(true);
-    const next: CompanyStatus = company.estado === "ATIVA" ? "SUSPENSA" : "ATIVA";
-    await setCompanyStatus(company.id, next);
+    await setCompanyStatus(
+      company.id,
+      company.estado === "ATIVA" ? "SUSPENSA" : "ATIVA",
+    );
     setBusy(false);
     router.refresh();
   }
@@ -94,69 +83,76 @@ export default function CompanyDetailView({ company, indicators }: Props) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 16,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>
-            {company.nome}
-          </h1>
-          <Lozenge appearance={COMPANY_STATUS_APPEARANCE[company.estado]}>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{company.nome}</h1>
+          <StatusBadge tone={COMPANY_STATUS_TONE[company.estado]}>
             {COMPANY_STATUS_LABELS[company.estado]}
-          </Lozenge>
+          </StatusBadge>
         </div>
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <LinkButton href="/dashboard/companies" appearance="subtle">
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" size="sm" render={<Link href="/dashboard/companies" />}>
+            <ArrowLeft />
             Voltar
-          </LinkButton>
-          <Button onClick={() => setEditing(true)}>Editar</Button>
-          <Button onClick={handleToggleStatus} isDisabled={busy}>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            Editar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleStatus}
+            disabled={busy}
+          >
             {company.estado === "ATIVA" ? "Suspender" : "Ativar"}
           </Button>
-          <Button appearance="warning" onClick={() => setConfirmDelete(true)}>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmDelete(true)}
+          >
             Eliminar
           </Button>
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 16,
-        }}
-      >
-        <Indicator label="Utilizadores" value={indicators.users} />
-        <Indicator label="QR Codes" value={indicators.qrCodes} />
-        <Indicator label="Scans" value={indicators.scans} />
+      <div className="grid gap-4 sm:grid-cols-3">
+        {INDICATORS.map(({ key, label, icon: Icon }, i) => (
+          <Reveal key={key} delay={i * 0.06}>
+            <Card>
+              <CardContent className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-muted-foreground">{label}</div>
+                  <div className="mt-1 text-3xl font-semibold">
+                    {indicators[key]}
+                  </div>
+                </div>
+                <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Icon className="size-5" />
+                </span>
+              </CardContent>
+            </Card>
+          </Reveal>
+        ))}
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: 16,
-          alignItems: "start",
-        }}
-      >
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <h2 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>
-            Dados gerais
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <CardContent className="space-y-3">
+            <h2 className="font-medium">Dados gerais</h2>
             <Detail label="Email" value={company.email} />
             <Detail label="Telefone" value={company.telefone} />
             <Detail
               label="Website"
               value={
                 company.website ? (
-                  <a href={company.website} target="_blank" rel="noreferrer">
+                  <a
+                    href={company.website}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline"
+                  >
                     {company.website}
                   </a>
                 ) : null
@@ -165,14 +161,12 @@ export default function CompanyDetailView({ company, indicators }: Props) {
             <Detail label="Identificador" value={company.slug} />
             <Detail label="Plano" value={PLANO_LABELS[company.plano]} />
             <Detail label="Criada em" value={formatDate(company.createdAt)} />
-          </div>
+          </CardContent>
         </Card>
 
         <Card>
-          <h2 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>
-            Identidade visual
-          </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <CardContent className="space-y-3">
+            <h2 className="font-medium">Identidade visual</h2>
             <Detail
               label="Logótipo"
               value={
@@ -181,20 +175,17 @@ export default function CompanyDetailView({ company, indicators }: Props) {
                   <img
                     src={company.logo}
                     alt={`Logótipo de ${company.nome}`}
-                    style={{ maxHeight: 48, maxWidth: 160, objectFit: "contain" }}
+                    className="max-h-12 max-w-40 object-contain"
                   />
                 ) : null
               }
             />
-            <Detail
-              label="Cor primária"
-              value={<Swatch label="primaria" color={company.corPrimaria} />}
-            />
+            <Detail label="Cor primária" value={<Swatch color={company.corPrimaria} />} />
             <Detail
               label="Cor secundária"
-              value={<Swatch label="secundaria" color={company.corSecundaria} />}
+              value={<Swatch color={company.corSecundaria} />}
             />
-          </div>
+          </CardContent>
         </Card>
       </div>
 

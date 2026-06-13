@@ -21,12 +21,10 @@ export const STATUS_OPTIONS = (Object.keys(STATUS_LABELS) as UserStatus[]).map(
   (value) => ({ label: STATUS_LABELS[value], value }),
 );
 
-// Maps a status to an Atlaskit Lozenge appearance.
-export const STATUS_APPEARANCE: Record<
-  UserStatus,
-  "success" | "default" | "removed"
-> = {
+import type { Tone } from "./tone";
+
+export const STATUS_TONE: Record<UserStatus, Tone> = {
   ATIVO: "success",
-  INATIVO: "default",
-  SUSPENSO: "removed",
+  INATIVO: "neutral",
+  SUSPENSO: "danger",
 };

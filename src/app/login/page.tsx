@@ -2,15 +2,12 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Form, { Field, FormFooter } from "@atlaskit/form";
-import Textfield from "@atlaskit/textfield";
-import Button, { IconButton } from "@atlaskit/button/new";
-import { token } from "@atlaskit/tokens";
-import EyeOpenIcon from "@atlaskit/icon/core/eye-open";
-import EyeHiddenIcon from "@atlaskit/icon/core/eye-open-strikethrough";
+import { motion } from "motion/react";
+import { Eye, EyeOff, Loader2, QrCode } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { login } from "./actions";
-
-type Values = { email: string; password: string };
 
 export default function LoginPage() {
   return (
@@ -23,153 +20,119 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(values: Values) {
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
-    const result = await login(values);
+    setSubmitting(true);
+    const result = await login({ email, password });
+    setSubmitting(false);
     if (!result.ok) {
       setError(result.message);
       return;
     }
-    // Only follow `next` into the protected area, never to arbitrary paths.
     const next = searchParams.get("next");
-    const destination = next && next.startsWith("/dashboard") ? next : "/dashboard";
-    router.replace(destination);
+    router.replace(next && next.startsWith("/dashboard") ? next : "/dashboard");
     router.refresh();
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: token("space.400"),
-        background: `linear-gradient(180deg, ${token(
-          "elevation.surface.sunken",
-        )} 0%, ${token("elevation.surface")} 100%)`,
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: 400 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: token("space.150"),
-            justifyContent: "center",
-            marginBottom: token("space.300"),
-          }}
-        >
-          <span
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: token("radius.small"),
-              backgroundColor: token("color.background.brand.bold"),
-            }}
-            aria-hidden
-          />
-          <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            Snaptie
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <motion.div
+          aria-hidden
+          className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl"
+          animate={{ y: [0, 40, 0], scale: [1, 1.15, 1] }}
+          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          aria-hidden
+          className="absolute -bottom-32 right-1/4 h-96 w-96 rounded-full bg-violet-500/20 blur-3xl"
+          animate={{ y: [0, -40, 0], scale: [1, 1.2, 1] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
+        className="relative z-10 w-full max-w-sm"
+      >
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-white">
+            <QrCode className="size-5" />
           </span>
+          <span className="text-xl font-bold tracking-tight">Snaptie</span>
         </div>
 
-        <div
-          style={{
-            backgroundColor: token("elevation.surface"),
-            border: `1px solid ${token("color.border")}`,
-            borderRadius: token("radius.large"),
-            boxShadow: token("elevation.shadow.overlay"),
-            padding: token("space.500"),
-          }}
-        >
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Iniciar sessão</h1>
-          <p
-            style={{
-              color: token("color.text.subtle"),
-              margin: `${token("space.100")} 0 ${token("space.300")}`,
-            }}
-          >
+        <div className="rounded-2xl bg-card p-6 ring-1 ring-foreground/10 shadow-xl shadow-foreground/5">
+          <h1 className="text-lg font-semibold">Iniciar sessão</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Aceda à sua conta para gerir a plataforma.
           </p>
 
           {error ? (
-            <div
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mt-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
               role="alert"
-              style={{
-                marginBottom: token("space.200"),
-                padding: token("space.200"),
-                borderRadius: token("radius.small"),
-                backgroundColor: token("color.background.danger"),
-                color: token("color.text.danger"),
-                fontSize: 14,
-              }}
             >
               {error}
-            </div>
+            </motion.div>
           ) : null}
 
-          <Form<Values> onSubmit={handleSubmit}>
-            {({ formProps, submitting }) => (
-              <form {...formProps}>
-                <Field name="email" label="Email" isRequired defaultValue="">
-                  {({ fieldProps }) => (
-                    <Textfield
-                      type="email"
-                      autoComplete="email"
-                      placeholder="nome@empresa.pt"
-                      {...fieldProps}
-                    />
-                  )}
-                </Field>
-                <Field
-                  name="password"
-                  label="Palavra-passe"
-                  isRequired
-                  defaultValue=""
+          <form onSubmit={onSubmit} className="mt-5 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="nome@empresa.pt"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="h-9"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Palavra-passe</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={show ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-9 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShow((v) => !v)}
+                  aria-label={show ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {({ fieldProps }) => (
-                    <Textfield
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      {...fieldProps}
-                      elemAfterInput={
-                        <div style={{ paddingRight: 4, display: "flex" }}>
-                          <IconButton
-                            type="button"
-                            appearance="subtle"
-                            spacing="compact"
-                            icon={showPassword ? EyeHiddenIcon : EyeOpenIcon}
-                            label={
-                              showPassword
-                                ? "Ocultar palavra-passe"
-                                : "Mostrar palavra-passe"
-                            }
-                            onClick={() => setShowPassword((v) => !v)}
-                          />
-                        </div>
-                      }
-                    />
-                  )}
-                </Field>
-                <FormFooter align="start">
-                  <Button
-                    type="submit"
-                    appearance="primary"
-                    isLoading={submitting}
-                    shouldFitContainer
-                  >
-                    Entrar
-                  </Button>
-                </FormFooter>
-              </form>
-            )}
-          </Form>
+                  {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+            </div>
+
+            <Button type="submit" className="h-9 w-full" disabled={submitting}>
+              {submitting ? <Loader2 className="animate-spin" /> : null}
+              Entrar
+            </Button>
+          </form>
         </div>
-      </div>
+      </motion.div>
     </main>
   );
 }
