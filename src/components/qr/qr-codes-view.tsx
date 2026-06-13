@@ -130,7 +130,7 @@ export default function QrCodesView({
       alignRight: true,
       cell: (r) => (
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" render={<Link href={`/dashboard/qr-codes/${r.id}`} />}>
+          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/dashboard/qr-codes/${r.id}`} />}>
             Abrir
           </Button>
           <Button

@@ -92,7 +92,7 @@ export default function CompanyDetailView({
           </StatusBadge>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/dashboard/companies" />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/dashboard/companies" />}>
             <ArrowLeft />
             Voltar
           </Button>

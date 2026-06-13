@@ -8,7 +8,7 @@ export default function NotFound() {
         404
       </div>
       <p className="text-lg text-muted-foreground">Esta página não existe.</p>
-      <Button render={<Link href="/dashboard" />} className="mt-2">
+      <Button nativeButton={false} render={<Link href="/dashboard" />} className="mt-2">
         Voltar ao painel
       </Button>
     </main>

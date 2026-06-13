@@ -131,7 +131,7 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
       alignRight: true,
       cell: (c) => (
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" render={<Link href={`/dashboard/companies/${c.id}`} />}>
+          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/dashboard/companies/${c.id}`} />}>
             Ver
           </Button>
           <Button

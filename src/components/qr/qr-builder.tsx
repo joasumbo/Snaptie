@@ -91,7 +91,7 @@ export default function QrBuilder({
           </StatusBadge>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/dashboard/qr-codes" />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/dashboard/qr-codes" />}>
             <ArrowLeft />
             Voltar
           </Button>
@@ -201,6 +201,7 @@ export default function QrBuilder({
               variant="outline"
               size="sm"
               className="w-full"
+              nativeButton={false}
               render={<a href={publicUrl} target="_blank" rel="noreferrer" />}
             >
               <ExternalLink />

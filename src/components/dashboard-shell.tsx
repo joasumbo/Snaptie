@@ -140,7 +140,7 @@ export default function DashboardShell({
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/dashboard/profile" />}>
+              <DropdownMenuItem nativeButton={false} render={<Link href="/dashboard/profile" />}>
                 <UserRound />
                 Perfil
               </DropdownMenuItem>

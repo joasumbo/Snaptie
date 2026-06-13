@@ -80,6 +80,7 @@ export default function Home() {
           <Button
             size="lg"
             className="group h-11 px-6 text-base"
+            nativeButton={false}
             render={<Link href="/login" />}
           >
             Iniciar sessão
