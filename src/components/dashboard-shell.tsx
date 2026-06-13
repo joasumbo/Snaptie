@@ -8,6 +8,7 @@ import {
   Building2,
   Users,
   UserRound,
+  QrCode,
   LogOut,
   CircleUserRound,
   ChevronDown,
@@ -30,7 +31,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  adminOnly?: boolean;
+  roles?: UserRole[]; // when set, only these roles see the item
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -39,9 +40,20 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/companies",
     label: "Empresas",
     icon: Building2,
-    adminOnly: true,
+    roles: ["ADMIN"],
   },
-  { href: "/dashboard/users", label: "Utilizadores", icon: Users },
+  {
+    href: "/dashboard/qr-codes",
+    label: "QR Codes",
+    icon: QrCode,
+    roles: ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"],
+  },
+  {
+    href: "/dashboard/users",
+    label: "Utilizadores",
+    icon: Users,
+    roles: ["ADMIN", "GESTOR_EMPRESA"],
+  },
   { href: "/dashboard/profile", label: "Perfil", icon: UserRound },
 ];
 
@@ -53,7 +65,7 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const items = NAV_ITEMS.filter((i) => !i.adminOnly || user.role === "ADMIN");
+  const items = NAV_ITEMS.filter((i) => !i.roles || i.roles.includes(user.role));
 
   return (
     <div className="flex min-h-screen bg-muted/30">

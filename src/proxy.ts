@@ -3,8 +3,8 @@ import { COOKIE_NAME, decodeSession } from "@/lib/auth/jwt";
 
 // Auth screens: redirect signed-in users away from them.
 const AUTH_PATHS = ["/login", "/forgot-password", "/reset-password"];
-// Paths anyone may open without a session (landing page included).
-const PUBLIC_PATHS = ["/", ...AUTH_PATHS];
+// Paths anyone may open without a session (landing page and public scan pages).
+const PUBLIC_PATHS = ["/", "/s", ...AUTH_PATHS];
 
 function matches(pathname: string, paths: string[]): boolean {
   return paths.some(

@@ -110,9 +110,9 @@ public/          Static assets
 - [x] Database schema and migrations
 - [x] Authentication and user management
 - [x] Company management
-- [ ] QR code builder
-- [ ] Public scan pages
-- [ ] Scan analytics
+- [x] QR code builder
+- [x] Public scan pages
+- [ ] Scan analytics dashboard
 
 ## License
 
