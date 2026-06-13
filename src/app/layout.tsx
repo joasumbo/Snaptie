@@ -6,7 +6,7 @@ import Providers from "./providers";
 export const metadata: Metadata = {
   title: "Snaptie",
   description:
-    "Interactive QR code platform that lets businesses turn a single scan into menus, guides, links and more.",
+    "Plataforma de QR codes interativos que transforma um único scan em menus, guias, links e muito mais.",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-color-mode="light">
+    <html lang="pt-PT" data-color-mode="light">
       <body>
         <Providers>{children}</Providers>
       </body>

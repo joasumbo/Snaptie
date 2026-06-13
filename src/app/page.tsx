@@ -52,7 +52,7 @@ export default function Home() {
           lineHeight: 1.15,
         }}
       >
-        Interactive QR codes for businesses
+        QR codes interativos para empresas
       </h1>
       <p
         style={{
@@ -63,13 +63,13 @@ export default function Home() {
           lineHeight: 1.5,
         }}
       >
-        Turn a single scan into menus, guides, links and more, and update the
-        content anytime without reprinting.
+        Transforme um único scan em menus, guias, links e muito mais, e atualize
+        o conteúdo a qualquer momento sem reimprimir nada.
       </p>
 
       <div style={{ marginTop: token("space.200") }}>
         <LinkButton href="/login" appearance="primary">
-          Sign in
+          Iniciar sessão
         </LinkButton>
       </div>
     </main>
