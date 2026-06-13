@@ -9,6 +9,7 @@ import { token } from "@atlaskit/tokens";
 import DashboardIcon from "@atlaskit/icon/core/dashboard";
 import PeopleGroupIcon from "@atlaskit/icon/core/people-group";
 import PersonIcon from "@atlaskit/icon/core/person-avatar";
+import OfficeBuildingIcon from "@atlaskit/icon/core/office-building";
 import SignOutIcon from "@atlaskit/icon/core/log-out";
 import type { UserRole } from "@prisma/client";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -18,10 +19,17 @@ type NavItem = {
   href: string;
   label: string;
   icon: typeof DashboardIcon;
+  adminOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Painel", icon: DashboardIcon },
+  {
+    href: "/dashboard/companies",
+    label: "Empresas",
+    icon: OfficeBuildingIcon,
+    adminOnly: true,
+  },
   { href: "/dashboard/users", label: "Utilizadores", icon: PeopleGroupIcon },
   { href: "/dashboard/profile", label: "Perfil", icon: PersonIcon },
 ];
@@ -53,7 +61,9 @@ export default function DashboardShell({ user, children }: Props) {
         </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: token("space.050") }}>
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {NAV_ITEMS.filter(
+            (item) => !item.adminOnly || user.role === "ADMIN",
+          ).map(({ href, label, icon: Icon }) => {
             const active =
               href === "/dashboard"
                 ? pathname === href

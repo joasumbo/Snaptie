@@ -109,7 +109,7 @@ public/          Static assets
 
 - [x] Database schema and migrations
 - [x] Authentication and user management
-- [ ] Company management
+- [x] Company management
 - [ ] QR code builder
 - [ ] Public scan pages
 - [ ] Scan analytics
