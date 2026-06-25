@@ -4,12 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users, QrCode, ScanLine } from "lucide-react";
-import type { CompanyStatus } from "@prisma/client";
+import type { CompanyStatus, UserRole, UserStatus } from "@prisma/client";
 import {
   COMPANY_STATUS_LABELS,
   COMPANY_STATUS_TONE,
   PLANO_LABELS,
 } from "@/lib/companies";
+import { ROLE_LABELS, STATUS_LABELS, STATUS_TONE } from "@/lib/roles";
+import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,12 +54,22 @@ function Swatch({ color }: { color: string | null }) {
   );
 }
 
+type CompanyUser = {
+  id: string;
+  nome: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+};
+
 export default function CompanyDetailView({
   company,
   indicators,
+  users,
 }: {
   company: Company;
   indicators: { users: number; qrCodes: number; scans: number };
+  users: CompanyUser[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -188,6 +200,39 @@ export default function CompanyDetailView({
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardContent className="space-y-3">
+          <h2 className="font-medium">Utilizadores</h2>
+          {users.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Esta empresa ainda não tem utilizadores.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {users.map((u) => (
+                <li
+                  key={u.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium">{u.nome}</div>
+                    <div className="truncate text-sm text-muted-foreground">
+                      {u.email}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{ROLE_LABELS[u.role]}</Badge>
+                    <StatusBadge tone={STATUS_TONE[u.status]}>
+                      {STATUS_LABELS[u.status]}
+                    </StatusBadge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       {editing ? (
         <CompanyFormModal

@@ -22,8 +22,15 @@ export default async function CompanyDetailPage({
     _sum: { scansTotal: true },
   });
 
+  const users = await prisma.user.findMany({
+    where: { companyId: id },
+    select: { id: true, nome: true, email: true, role: true, status: true },
+    orderBy: { nome: "asc" },
+  });
+
   return (
     <CompanyDetailView
+      users={users}
       company={{
         id: company.id,
         nome: company.nome,

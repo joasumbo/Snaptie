@@ -44,6 +44,7 @@ export async function createUser(input: {
   email: string;
   password: string;
   role: UserRole;
+  companyId?: string | null;
 }): Promise<ActionResult> {
   const actor = await requireManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
@@ -57,6 +58,20 @@ export async function createUser(input: {
     return { ok: false, message: "Não pode atribuir essa função." };
   }
 
+  // Admins choose the company; other managers create within their own.
+  let companyId = actor.companyId;
+  if (actor.role === "ADMIN" && input.companyId !== undefined) {
+    if (input.companyId) {
+      const company = await prisma.company.findFirst({
+        where: { id: input.companyId, deletedAt: null },
+      });
+      if (!company) return { ok: false, message: "Empresa inválida." };
+      companyId = company.id;
+    } else {
+      companyId = null;
+    }
+  }
+
   const email = input.email.trim().toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return { ok: false, message: "Já existe um utilizador com esse email." };
@@ -68,8 +83,7 @@ export async function createUser(input: {
         email,
         password: await hashPassword(input.password),
         role: input.role,
-        // New users belong to the manager's company (null for platform admins).
-        companyId: actor.companyId,
+        companyId,
       },
     });
   } catch (e) {
@@ -89,6 +103,7 @@ export async function updateUser(input: {
   email: string;
   role: UserRole;
   status: UserStatus;
+  companyId?: string | null;
 }): Promise<ActionResult> {
   const actor = await requireManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
@@ -120,6 +135,20 @@ export async function updateUser(input: {
     if (clash) return { ok: false, message: "Já existe um utilizador com esse email." };
   }
 
+  // Only admins may move a user to a different company.
+  let companyData: { companyId?: string | null } = {};
+  if (actor.role === "ADMIN" && input.companyId !== undefined) {
+    if (input.companyId) {
+      const company = await prisma.company.findFirst({
+        where: { id: input.companyId, deletedAt: null },
+      });
+      if (!company) return { ok: false, message: "Empresa inválida." };
+      companyData = { companyId: company.id };
+    } else {
+      companyData = { companyId: null };
+    }
+  }
+
   await prisma.user.update({
     where: { id: target.id },
     data: {
@@ -127,6 +156,7 @@ export async function updateUser(input: {
       email,
       role: input.role,
       status: input.status,
+      ...companyData,
     },
   });
 

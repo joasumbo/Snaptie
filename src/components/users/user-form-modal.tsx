@@ -29,12 +29,14 @@ export type EditableUser = {
   email: string;
   role: UserRole;
   status: UserStatus;
+  companyId: string | null;
 };
 
 type Props = {
   mode: "create" | "edit";
   user?: EditableUser;
   actorRole: UserRole;
+  companies?: { id: string; nome: string }[];
   onClose: () => void;
   onSaved: () => void;
 };
@@ -48,26 +50,43 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function UserFormModal({ mode, user, actorRole, onClose, onSaved }: Props) {
+export function UserFormModal({
+  mode,
+  user,
+  actorRole,
+  companies,
+  onClose,
+  onSaved,
+}: Props) {
   const [nome, setNome] = useState(user?.nome ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>(user?.role ?? "VISUALIZADOR");
   const [status, setStatus] = useState<UserStatus>(user?.status ?? "ATIVO");
+  const [companyId, setCompanyId] = useState<string>(user?.companyId ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const roleOptions = ROLE_OPTIONS.filter(
     (o) => actorRole === "ADMIN" || o.value !== "ADMIN",
   );
+  const showCompany = actorRole === "ADMIN" && companies;
 
   async function handleSubmit() {
     setError(null);
     setSubmitting(true);
+    const companyValue = showCompany ? companyId || null : undefined;
     const result =
       mode === "create"
-        ? await createUser({ nome, email, password, role })
-        : await updateUser({ id: user!.id, nome, email, role, status });
+        ? await createUser({ nome, email, password, role, companyId: companyValue })
+        : await updateUser({
+            id: user!.id,
+            nome,
+            email,
+            role,
+            status,
+            companyId: companyValue,
+          });
     setSubmitting(false);
     if (!result.ok) {
       setError(result.message);
@@ -134,6 +153,29 @@ export function UserFormModal({ mode, user, actorRole, onClose, onSaved }: Props
               </SelectContent>
             </Select>
           </Field>
+          {showCompany ? (
+            <Field label="Empresa">
+              <Select value={companyId} onValueChange={(v) => setCompanyId(v ?? "")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {(v: string | null) =>
+                      v
+                        ? (companies!.find((c) => c.id === v)?.nome ?? "Selecionar")
+                        : "Sem empresa"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem empresa</SelectItem>
+                  {companies!.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
           {mode === "edit" ? (
             <Field label="Estado">
               <Select

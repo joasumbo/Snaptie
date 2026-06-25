@@ -23,14 +23,17 @@ export type UserRow = {
   status: UserStatus;
   ultimoLogin: string | null;
   createdAt: string;
+  companyId: string | null;
 };
 
 export default function UsersView({
   users,
   actor,
+  companies,
 }: {
   users: UserRow[];
   actor: { id: string; role: UserRole };
+  companies: { id: string; nome: string }[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -146,6 +149,7 @@ export default function UsersView({
                     email: u.email,
                     role: u.role,
                     status: u.status,
+                    companyId: u.companyId,
                   },
                 })
               }
@@ -206,6 +210,7 @@ export default function UsersView({
           mode={modal.mode}
           user={modal.mode === "edit" ? modal.user : undefined}
           actorRole={actor.role}
+          companies={companies}
           onClose={() => setModal(null)}
           onSaved={() => {
             setModal(null);
