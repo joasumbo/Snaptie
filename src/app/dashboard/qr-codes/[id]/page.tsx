@@ -4,13 +4,8 @@ import { requireRole } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import QrBuilder from "@/components/qr/qr-builder";
 
-function conteudoToString(value: unknown): string {
-  if (value && typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    if (typeof obj.url === "string") return obj.url;
-    if (typeof obj.texto === "string") return obj.texto;
-  }
-  return "";
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
 export default async function QrBuilderPage({
@@ -23,7 +18,10 @@ export default async function QrBuilderPage({
 
   const qr = await prisma.qrCode.findUnique({
     where: { id },
-    include: { blocks: { orderBy: { ordem: "asc" } } },
+    include: {
+      company: { select: { nome: true, logo: true, corPrimaria: true } },
+      blocks: { orderBy: { ordem: "asc" } },
+    },
   });
   if (!qr) notFound();
   if (actor.role !== "ADMIN" && qr.companyId !== actor.companyId) notFound();
@@ -42,13 +40,25 @@ export default async function QrBuilderPage({
         descricao: qr.descricao,
         corPrimaria: qr.corPrimaria,
         corSecundaria: qr.corSecundaria,
+        logo: qr.logo,
+        imagemCapa: qr.imagemCapa,
+        logoTamanho: qr.logoTamanho,
+        logoForma: qr.logoForma,
+        nomeTamanho: qr.nomeTamanho,
         publicado: qr.publicado,
+      }}
+      company={{
+        nome: qr.company.nome,
+        logo: qr.company.logo,
+        corPrimaria: qr.company.corPrimaria,
       }}
       blocks={qr.blocks.map((b) => ({
         id: b.id,
         tipo: b.tipo,
         titulo: b.titulo,
-        conteudo: conteudoToString(b.conteudo),
+        cor: b.cor,
+        descricao: b.descricao,
+        conteudo: asRecord(b.conteudo),
         ativo: b.ativo,
         ordem: b.ordem,
       }))}

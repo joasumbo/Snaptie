@@ -52,16 +52,23 @@ enum SubscriptionStatus {
 // Tipos de botão (block). Os primeiros já são suportados; os restantes ficam
 // preparados para evoluir sem alterar o schema.
 enum BlockType {
+  // Elementos de ação (apresentados como botões)
   TEXTO
   LINK
-  IMAGEM
-  VIDEO
+  WHATSAPP
+  TELEFONE
+  EMAIL
+  MAPA
+  WIFI
   PDF
+  // Elementos de conteúdo (apresentados diretamente na página)
+  IMAGEM
+  CARROSSEL
+  VIDEO
   // Tipos futuros
   CHAT
   FEED
   FORMULARIO
-  MAPA
   GALERIA
   PLAYLIST
 }
@@ -123,6 +130,10 @@ model QrCode {
   companyId     String   @map("company_id")
   templateId    String?  @map("template_id")
   logo          String?
+  imagemCapa    String?  @map("imagem_capa") // imagem horizontal no topo da página
+  logoTamanho   String   @default("M") @map("logo_tamanho") // P, M, G
+  logoForma     String   @default("circulo") @map("logo_forma") // quadrado, circulo
+  nomeTamanho   String   @default("M") @map("nome_tamanho") // P, M, G
   corPrimaria   String?  @map("cor_primaria")
   corSecundaria String?  @map("cor_secundaria")
   estado        String   @default("rascunho") // ex.: rascunho, ativo, arquivado
@@ -142,13 +153,15 @@ model QrCode {
   @@map("qr_codes")
 }
 
-// Botões apresentados quando alguém faz scan de um QR
+// Elementos apresentados quando alguém faz scan de um QR (ações e conteúdos)
 model QrBlock {
   id        String    @id @default(cuid())
   qrId      String    @map("qr_id")
   tipo      BlockType
   titulo    String
   icone     String?
+  cor       String? // cor opcional do elemento (sobrepõe a cor primária do QR)
+  descricao String? // descrição opcional do elemento
   conteudo  Json? // conteúdo flexível conforme o tipo (url, texto, ficheiro, etc.)
   ordem     Int       @default(0)
   ativo     Boolean   @default(true)

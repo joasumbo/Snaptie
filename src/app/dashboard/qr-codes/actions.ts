@@ -11,7 +11,45 @@ export type ActionResult =
   | { ok: false; message: string };
 
 const QR_ROLES = ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"] as const;
-const BLOCK_TYPES: BlockType[] = ["TEXTO", "LINK", "IMAGEM", "VIDEO", "PDF"];
+const BLOCK_TYPES: BlockType[] = [
+  "TEXTO",
+  "LINK",
+  "WHATSAPP",
+  "TELEFONE",
+  "EMAIL",
+  "MAPA",
+  "WIFI",
+  "PDF",
+  "IMAGEM",
+  "CARROSSEL",
+  "VIDEO",
+];
+
+type PageFields = {
+  logo?: string | null;
+  imagemCapa?: string | null;
+  logoTamanho?: string;
+  logoForma?: string;
+  nomeTamanho?: string;
+};
+
+const SIZES = ["P", "M", "G"];
+const SHAPES = ["quadrado", "circulo"];
+
+// Only includes keys explicitly provided, so the basic QR form never overwrites
+// the page customisation (and vice-versa).
+function pageData(input: PageFields) {
+  const data: Record<string, unknown> = {};
+  if (input.logo !== undefined) data.logo = input.logo?.trim() || null;
+  if (input.imagemCapa !== undefined) data.imagemCapa = input.imagemCapa?.trim() || null;
+  if (input.logoTamanho !== undefined)
+    data.logoTamanho = SIZES.includes(input.logoTamanho) ? input.logoTamanho : "M";
+  if (input.logoForma !== undefined)
+    data.logoForma = SHAPES.includes(input.logoForma) ? input.logoForma : "circulo";
+  if (input.nomeTamanho !== undefined)
+    data.nomeTamanho = SIZES.includes(input.nomeTamanho) ? input.nomeTamanho : "M";
+  return data;
+}
 
 async function requireQrManager() {
   const user = await getCurrentUser();
@@ -47,7 +85,7 @@ export async function createQrCode(input: {
   companyId?: string;
   corPrimaria?: string;
   corSecundaria?: string;
-}): Promise<ActionResult> {
+} & PageFields): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
   if (!input.nome?.trim()) return { ok: false, message: "O nome é obrigatório." };
@@ -75,6 +113,7 @@ export async function createQrCode(input: {
       companyId,
       corPrimaria: input.corPrimaria?.trim() || null,
       corSecundaria: input.corSecundaria?.trim() || null,
+      ...pageData(input),
     },
   });
 
@@ -88,7 +127,7 @@ export async function updateQrCode(input: {
   descricao?: string;
   corPrimaria?: string;
   corSecundaria?: string;
-}): Promise<ActionResult> {
+} & PageFields): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
   if (!input.nome?.trim()) return { ok: false, message: "O nome é obrigatório." };
@@ -103,6 +142,7 @@ export async function updateQrCode(input: {
       descricao: input.descricao?.trim() || null,
       corPrimaria: input.corPrimaria?.trim() || null,
       corSecundaria: input.corSecundaria?.trim() || null,
+      ...pageData(input),
     },
   });
 
@@ -145,17 +185,27 @@ export async function deleteQrCode(id: string): Promise<ActionResult> {
 // Blocks (the buttons shown on the scan page)
 // ---------------------------------------------------------------------------
 
-function buildConteudo(tipo: BlockType, value: string): Prisma.InputJsonValue {
-  if (tipo === "TEXTO") return { texto: value };
-  return { url: value };
+type BlockFields = {
+  titulo: string;
+  cor?: string | null;
+  descricao?: string | null;
+  icone?: string | null;
+  conteudo: Record<string, unknown>;
+};
+
+function blockData(input: BlockFields) {
+  return {
+    titulo: input.titulo.trim(),
+    cor: input.cor?.trim() || null,
+    descricao: input.descricao?.trim() || null,
+    icone: input.icone?.trim() || null,
+    conteudo: (input.conteudo ?? {}) as Prisma.InputJsonValue,
+  };
 }
 
-export async function addBlock(input: {
-  qrId: string;
-  tipo: BlockType;
-  titulo: string;
-  conteudo: string;
-}): Promise<ActionResult> {
+export async function addBlock(
+  input: { qrId: string; tipo: BlockType } & BlockFields,
+): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
   if (!BLOCK_TYPES.includes(input.tipo)) return { ok: false, message: "Tipo inválido." };
@@ -173,9 +223,8 @@ export async function addBlock(input: {
     data: {
       qrId: qr.id,
       tipo: input.tipo,
-      titulo: input.titulo.trim(),
-      conteudo: buildConteudo(input.tipo, input.conteudo.trim()),
       ordem: (last?.ordem ?? 0) + 1,
+      ...blockData(input),
     },
   });
 
@@ -183,12 +232,9 @@ export async function addBlock(input: {
   return { ok: true };
 }
 
-export async function updateBlock(input: {
-  id: string;
-  titulo: string;
-  conteudo: string;
-  ativo: boolean;
-}): Promise<ActionResult> {
+export async function updateBlock(
+  input: { id: string; ativo: boolean } & BlockFields,
+): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
   if (!input.titulo?.trim()) return { ok: false, message: "O título é obrigatório." };
@@ -205,9 +251,8 @@ export async function updateBlock(input: {
   await prisma.qrBlock.update({
     where: { id: input.id },
     data: {
-      titulo: input.titulo.trim(),
-      conteudo: buildConteudo(block.tipo, input.conteudo.trim()),
       ativo: input.ativo,
+      ...blockData(input),
     },
   });
 

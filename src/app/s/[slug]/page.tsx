@@ -2,20 +2,16 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { QrPage, type QrPageBlock } from "@/components/qr/qr-page";
 
 export const dynamic = "force-dynamic";
 
-function conteudoToString(value: unknown): string {
-  if (value && typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    if (typeof obj.url === "string") return obj.url;
-    if (typeof obj.texto === "string") return obj.texto;
-  }
-  return "";
-}
-
 function detectDevice(ua: string): string {
   return /mobile|android|iphone|ipad/i.test(ua) ? "Telemóvel" : "Computador";
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
 export async function generateMetadata({
@@ -73,78 +69,31 @@ export default async function ScanPage({
     // ignore analytics failures
   }
 
-  const primary = qr.corPrimaria ?? qr.company.corPrimaria ?? "#6366f1";
+  const blocks: QrPageBlock[] = qr.blocks.map((b) => ({
+    id: b.id,
+    tipo: b.tipo,
+    titulo: b.titulo,
+    cor: b.cor,
+    descricao: b.descricao,
+    conteudo: asRecord(b.conteudo),
+  }));
 
   return (
-    <main
-      className="min-h-screen px-5 py-12"
-      style={{
-        background: `radial-gradient(120% 60% at 50% 0%, ${primary}22, transparent 60%)`,
-      }}
-    >
-      <div className="mx-auto flex max-w-md flex-col items-center text-center duration-700 animate-in fade-in">
-        {qr.company.logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={qr.company.logo}
-            alt={qr.company.nome}
-            className="mb-4 max-h-16 object-contain"
-          />
-        ) : (
-          <div
-            className="mb-4 flex size-14 items-center justify-center rounded-2xl text-xl font-bold text-white"
-            style={{ backgroundColor: primary }}
-          >
-            {qr.company.nome.charAt(0)}
-          </div>
-        )}
-
-        <h1 className="text-xl font-semibold">{qr.nome}</h1>
-        {qr.descricao ? (
-          <p className="mt-1 text-sm text-muted-foreground">{qr.descricao}</p>
-        ) : null}
-
-        <div className="mt-8 flex w-full flex-col gap-3">
-          {qr.blocks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sem conteúdos.</p>
-          ) : (
-            qr.blocks.map((block, i) => {
-              const content = conteudoToString(block.conteudo);
-              const delay = { animationDelay: `${i * 70}ms` } as const;
-              if (block.tipo === "TEXTO") {
-                return (
-                  <div
-                    key={block.id}
-                    style={delay}
-                    className="rounded-xl border bg-card p-4 text-left duration-500 animate-in fade-in slide-in-from-bottom-3"
-                  >
-                    <div className="font-medium">{block.titulo}</div>
-                    <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
-                      {content}
-                    </p>
-                  </div>
-                );
-              }
-              return (
-                <a
-                  key={block.id}
-                  href={content}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-xl px-4 py-3 font-medium text-white shadow-sm duration-500 animate-in fade-in slide-in-from-bottom-3 hover:scale-[1.02] transition-transform"
-                  style={{ backgroundColor: primary, ...delay }}
-                >
-                  {block.titulo}
-                </a>
-              );
-            })
-          )}
-        </div>
-
-        <p className="mt-10 text-xs text-muted-foreground">
-          Powered by Snaptie
-        </p>
-      </div>
+    <main className="min-h-screen">
+      <QrPage
+        data={{
+          nome: qr.nome,
+          descricao: qr.descricao,
+          logo: qr.logo ?? qr.company.logo,
+          imagemCapa: qr.imagemCapa,
+          logoTamanho: qr.logoTamanho,
+          logoForma: qr.logoForma,
+          nomeTamanho: qr.nomeTamanho,
+          corPrimaria: qr.corPrimaria ?? qr.company.corPrimaria,
+          companyNome: qr.company.nome,
+          blocks,
+        }}
+      />
     </main>
   );
 }
