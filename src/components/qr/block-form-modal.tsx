@@ -335,8 +335,10 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                       if (v) setImagens((arr) => [...arr, v]);
                     }}
                   />
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-sm text-muted-foreground">Orientação:</span>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-sm text-muted-foreground">
+                      Formato das imagens:
+                    </span>
                     <div className="inline-flex rounded-lg border p-0.5">
                       {[
                         { label: "Vertical", value: "vertical" },

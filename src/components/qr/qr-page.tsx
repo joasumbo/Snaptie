@@ -142,31 +142,19 @@ function ContentElement({ block }: { block: QrPageBlock }) {
   if (block.tipo === "CARROSSEL") {
     const imgs = list(block.conteudo, "imagens");
     if (imgs.length === 0) return null;
-    const horizontal = str(block.conteudo, "orientacao") === "horizontal";
-    if (horizontal) {
-      return (
-        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-xl">
-          {imgs.map((src, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={i}
-              src={src}
-              alt={`${block.titulo} ${i + 1}`}
-              className="h-44 w-full shrink-0 snap-center rounded-xl object-cover"
-            />
-          ))}
-        </div>
-      );
-    }
+    // Always swipes horizontally; the orientation only controls the image shape
+    // (landscape rectangle vs portrait rectangle).
+    const landscape = str(block.conteudo, "orientacao") === "horizontal";
+    const aspect = landscape ? "aspect-[4/3]" : "aspect-[3/4]";
     return (
-      <div className="flex flex-col gap-2">
+      <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
         {imgs.map((src, i) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={i}
             src={src}
             alt={`${block.titulo} ${i + 1}`}
-            className="w-full rounded-xl object-cover"
+            className={`${aspect} w-full shrink-0 snap-center rounded-xl object-cover`}
           />
         ))}
       </div>
