@@ -27,6 +27,8 @@ export type PageSettings = {
   logoTamanho: string;
   logoForma: string;
   nomeTamanho: string;
+  mostrarLogo: boolean;
+  mostrarNome: boolean;
 };
 
 function Segmented<T extends string>({
@@ -74,6 +76,8 @@ export function PageSettingsModal({
   const [logoTamanho, setLogoTamanho] = useState(qr.logoTamanho);
   const [logoForma, setLogoForma] = useState(qr.logoForma);
   const [nomeTamanho, setNomeTamanho] = useState(qr.nomeTamanho);
+  const [mostrarLogo, setMostrarLogo] = useState(qr.mostrarLogo);
+  const [mostrarNome, setMostrarNome] = useState(qr.mostrarNome);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit() {
@@ -89,6 +93,8 @@ export function PageSettingsModal({
       logoTamanho,
       logoForma,
       nomeTamanho,
+      mostrarLogo,
+      mostrarNome,
     });
     setSubmitting(false);
     if (result.ok) {
@@ -124,6 +130,30 @@ export function PageSettingsModal({
           <div className="space-y-1.5">
             <Label>Logótipo</Label>
             <FileUpload kind="image" value={logo} onChange={setLogo} />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Mostrar logótipo</Label>
+            <Segmented
+              value={mostrarLogo ? "sim" : "nao"}
+              onChange={(v) => setMostrarLogo(v === "sim")}
+              options={[
+                { label: "Mostrar", value: "sim" },
+                { label: "Ocultar", value: "nao" },
+              ]}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label>Mostrar nome</Label>
+            <Segmented
+              value={mostrarNome ? "sim" : "nao"}
+              onChange={(v) => setMostrarNome(v === "sim")}
+              options={[
+                { label: "Mostrar", value: "sim" },
+                { label: "Ocultar", value: "nao" },
+              ]}
+            />
           </div>
 
           <div className="space-y-1.5">

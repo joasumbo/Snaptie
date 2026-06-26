@@ -40,6 +40,8 @@ export type QrPageData = {
   logoTamanho: string;
   logoForma: string;
   nomeTamanho: string;
+  mostrarLogo: boolean;
+  mostrarNome: boolean;
   corPrimaria: string | null;
   companyNome: string;
   blocks: QrPageBlock[];
@@ -140,15 +142,31 @@ function ContentElement({ block }: { block: QrPageBlock }) {
   if (block.tipo === "CARROSSEL") {
     const imgs = list(block.conteudo, "imagens");
     if (imgs.length === 0) return null;
+    const horizontal = str(block.conteudo, "orientacao") === "horizontal";
+    if (horizontal) {
+      return (
+        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-xl">
+          {imgs.map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={src}
+              alt={`${block.titulo} ${i + 1}`}
+              className="h-44 w-full shrink-0 snap-center rounded-xl object-cover"
+            />
+          ))}
+        </div>
+      );
+    }
     return (
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-xl">
+      <div className="flex flex-col gap-2">
         {imgs.map((src, i) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={i}
             src={src}
             alt={`${block.titulo} ${i + 1}`}
-            className="h-44 w-full shrink-0 snap-center rounded-xl object-cover"
+            className="w-full rounded-xl object-cover"
           />
         ))}
       </div>
@@ -181,26 +199,30 @@ export function QrPage({ data }: { data: QrPageData }) {
       ) : null}
 
       <div className="mx-auto flex max-w-md flex-col items-center px-5 py-8 text-center">
-        {logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logo}
-            alt={data.companyNome}
-            className={`${logoRounded} object-cover shadow-sm`}
-            style={{ width: logoSize, height: logoSize }}
-          />
-        ) : (
-          <div
-            className={`${logoRounded} flex items-center justify-center font-bold text-white shadow-sm`}
-            style={{ width: logoSize, height: logoSize, backgroundColor: primary }}
-          >
-            {data.companyNome.charAt(0)}
-          </div>
-        )}
+        {data.mostrarLogo ? (
+          logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logo}
+              alt={data.companyNome}
+              className={`${logoRounded} object-cover shadow-sm`}
+              style={{ width: logoSize, height: logoSize }}
+            />
+          ) : (
+            <div
+              className={`${logoRounded} flex items-center justify-center font-bold text-white shadow-sm`}
+              style={{ width: logoSize, height: logoSize, backgroundColor: primary }}
+            >
+              {data.companyNome.charAt(0)}
+            </div>
+          )
+        ) : null}
 
-        <h1 className={`mt-3 font-semibold text-zinc-900 ${nameClass}`}>
-          {data.nome}
-        </h1>
+        {data.mostrarNome ? (
+          <h1 className={`mt-3 font-semibold text-zinc-900 ${nameClass}`}>
+            {data.nome}
+          </h1>
+        ) : null}
         {data.descricao ? (
           <p className="mt-1 text-sm text-zinc-500">{data.descricao}</p>
         ) : null}

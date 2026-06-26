@@ -48,6 +48,8 @@ type Qr = {
   logoTamanho: string;
   logoForma: string;
   nomeTamanho: string;
+  mostrarLogo: boolean;
+  mostrarNome: boolean;
   publicado: boolean;
 };
 
@@ -96,6 +98,8 @@ export default function QrBuilder({
     logoTamanho: qr.logoTamanho,
     logoForma: qr.logoForma,
     nomeTamanho: qr.nomeTamanho,
+    mostrarLogo: qr.mostrarLogo,
+    mostrarNome: qr.mostrarNome,
     corPrimaria: qr.corPrimaria ?? company.corPrimaria,
     companyNome: company.nome,
     blocks: blocks

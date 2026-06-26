@@ -89,6 +89,8 @@ export default async function ScanPage({
           logoTamanho: qr.logoTamanho,
           logoForma: qr.logoForma,
           nomeTamanho: qr.nomeTamanho,
+          mostrarLogo: qr.mostrarLogo,
+          mostrarNome: qr.mostrarNome,
           corPrimaria: qr.corPrimaria ?? qr.company.corPrimaria,
           companyNome: qr.company.nome,
           blocks,

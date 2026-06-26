@@ -31,6 +31,8 @@ type PageFields = {
   logoTamanho?: string;
   logoForma?: string;
   nomeTamanho?: string;
+  mostrarLogo?: boolean;
+  mostrarNome?: boolean;
 };
 
 const SIZES = ["P", "M", "G"];
@@ -48,6 +50,8 @@ function pageData(input: PageFields) {
     data.logoForma = SHAPES.includes(input.logoForma) ? input.logoForma : "circulo";
   if (input.nomeTamanho !== undefined)
     data.nomeTamanho = SIZES.includes(input.nomeTamanho) ? input.nomeTamanho : "M";
+  if (input.mostrarLogo !== undefined) data.mostrarLogo = input.mostrarLogo;
+  if (input.mostrarNome !== undefined) data.mostrarNome = input.mostrarNome;
   return data;
 }
 

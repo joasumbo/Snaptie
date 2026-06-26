@@ -76,6 +76,9 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   const [imagens, setImagens] = useState<string[]>(
     Array.isArray(c.imagens) ? (c.imagens as string[]) : [],
   );
+  const [orientacao, setOrientacao] = useState<string>(
+    typeof c.orientacao === "string" ? (c.orientacao as string) : "vertical",
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +104,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
       case "pdf":
         return { url };
       case "carrossel":
-        return { imagens };
+        return { imagens, orientacao };
       default:
         return {};
     }
@@ -332,6 +335,29 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                       if (v) setImagens((arr) => [...arr, v]);
                     }}
                   />
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-sm text-muted-foreground">Orientação:</span>
+                    <div className="inline-flex rounded-lg border p-0.5">
+                      {[
+                        { label: "Vertical", value: "vertical" },
+                        { label: "Horizontal", value: "horizontal" },
+                      ].map((o) => (
+                        <button
+                          key={o.value}
+                          type="button"
+                          onClick={() => setOrientacao(o.value)}
+                          className={cn(
+                            "rounded-md px-3 py-1 text-sm transition-colors",
+                            orientacao === o.value
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </Field>
             ) : null}
