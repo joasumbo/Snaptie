@@ -50,6 +50,8 @@ type Qr = {
   nomeTamanho: string;
   mostrarLogo: boolean;
   mostrarNome: boolean;
+  edicaoPublica: boolean;
+  temPin: boolean;
   publicado: boolean;
 };
 

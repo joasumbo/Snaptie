@@ -4,7 +4,11 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Upload, X, FileText, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { requestUpload, type UploadKind } from "@/app/upload-actions";
+import {
+  requestUpload,
+  type UploadKind,
+  type UploadTicket,
+} from "@/app/upload-actions";
 
 const ACCEPT: Record<UploadKind, string> = {
   image: "image/*",
@@ -12,21 +16,29 @@ const ACCEPT: Record<UploadKind, string> = {
   pdf: "application/pdf",
 };
 
+type Uploader = (input: {
+  kind: UploadKind;
+  contentType: string;
+  size: number;
+}) => Promise<UploadTicket>;
+
 export function FileUpload({
   kind,
   value,
   onChange,
+  uploader,
 }: {
   kind: UploadKind;
   value: string | null;
   onChange: (url: string | null) => void;
+  uploader?: Uploader;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleFile(file: File) {
     setBusy(true);
-    const ticket = await requestUpload({
+    const ticket = await (uploader ?? requestUpload)({
       kind,
       contentType: file.type,
       size: file.size,

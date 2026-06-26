@@ -136,6 +136,8 @@ model QrCode {
   nomeTamanho   String   @default("M") @map("nome_tamanho") // P, M, G
   mostrarLogo   Boolean  @default(true) @map("mostrar_logo")
   mostrarNome   Boolean  @default(true) @map("mostrar_nome")
+  edicaoPublica Boolean  @default(false) @map("edicao_publica") // visitante pode editar conteúdos
+  edicaoPin     String?  @map("edicao_pin") // hash do código exigido para editar
   corPrimaria   String?  @map("cor_primaria")
   corSecundaria String?  @map("cor_secundaria")
   estado        String   @default("rascunho") // ex.: rascunho, ativo, arquivado

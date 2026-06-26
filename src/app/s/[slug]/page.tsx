@@ -2,7 +2,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { QrPage, type QrPageBlock } from "@/components/qr/qr-page";
+import { type QrPageBlock } from "@/components/qr/qr-page";
+import PublicQrView from "@/components/qr/public-qr-view";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,9 @@ export default async function ScanPage({
 
   return (
     <main className="min-h-screen">
-      <QrPage
+      <PublicQrView
+        slug={qr.slug}
+        edicaoPublica={qr.edicaoPublica}
         data={{
           nome: qr.nome,
           descricao: qr.descricao,

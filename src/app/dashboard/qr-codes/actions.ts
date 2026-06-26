@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, type BlockType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { hashPassword } from "@/lib/auth/password";
 import { slugify } from "@/lib/slug";
 
 export type ActionResult =
@@ -131,6 +132,8 @@ export async function updateQrCode(input: {
   descricao?: string;
   corPrimaria?: string;
   corSecundaria?: string;
+  edicaoPublica?: boolean;
+  novoPin?: string;
 } & PageFields): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
@@ -138,6 +141,18 @@ export async function updateQrCode(input: {
 
   const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.id);
   if (!qr) return { ok: false, message: "QR não encontrado." };
+
+  // Public editing: requires a PIN. When enabling without an existing PIN, one
+  // must be provided.
+  const editData: { edicaoPublica?: boolean; edicaoPin?: string } = {};
+  const novoPin = input.novoPin?.trim();
+  if (novoPin) editData.edicaoPin = await hashPassword(novoPin);
+  if (input.edicaoPublica !== undefined) {
+    if (input.edicaoPublica && !novoPin && !qr.edicaoPin) {
+      return { ok: false, message: "Defina um código para a edição pública." };
+    }
+    editData.edicaoPublica = input.edicaoPublica;
+  }
 
   await prisma.qrCode.update({
     where: { id: qr.id },
@@ -147,6 +162,7 @@ export async function updateQrCode(input: {
       corPrimaria: input.corPrimaria?.trim() || null,
       corSecundaria: input.corSecundaria?.trim() || null,
       ...pageData(input),
+      ...editData,
     },
   });
 

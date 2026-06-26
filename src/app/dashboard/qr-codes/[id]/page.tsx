@@ -47,6 +47,8 @@ export default async function QrBuilderPage({
         nomeTamanho: qr.nomeTamanho,
         mostrarLogo: qr.mostrarLogo,
         mostrarNome: qr.mostrarNome,
+        edicaoPublica: qr.edicaoPublica,
+        temPin: Boolean(qr.edicaoPin),
         publicado: qr.publicado,
       }}
       company={{

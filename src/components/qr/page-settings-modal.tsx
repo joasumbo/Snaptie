@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ export type PageSettings = {
   nomeTamanho: string;
   mostrarLogo: boolean;
   mostrarNome: boolean;
+  edicaoPublica: boolean;
+  temPin: boolean;
 };
 
 function Segmented<T extends string>({
@@ -78,9 +81,13 @@ export function PageSettingsModal({
   const [nomeTamanho, setNomeTamanho] = useState(qr.nomeTamanho);
   const [mostrarLogo, setMostrarLogo] = useState(qr.mostrarLogo);
   const [mostrarNome, setMostrarNome] = useState(qr.mostrarNome);
+  const [edicaoPublica, setEdicaoPublica] = useState(qr.edicaoPublica);
+  const [novoPin, setNovoPin] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
+    setError(null);
     setSubmitting(true);
     const result = await updateQrCode({
       id: qr.id,
@@ -95,11 +102,15 @@ export function PageSettingsModal({
       nomeTamanho,
       mostrarLogo,
       mostrarNome,
+      edicaoPublica,
+      novoPin: novoPin || undefined,
     });
     setSubmitting(false);
     if (result.ok) {
       onSaved();
       router.refresh();
+    } else {
+      setError(result.message);
     }
   }
 
@@ -183,6 +194,43 @@ export function PageSettingsModal({
               <Segmented value={nomeTamanho} onChange={setNomeTamanho} options={sizes} />
             </div>
           </div>
+
+          <div className="space-y-3 rounded-lg border p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Edição pelo visitante</Label>
+                <p className="text-xs text-muted-foreground">
+                  Permite editar os conteúdos na página pública (com código).
+                </p>
+              </div>
+              <Segmented
+                value={edicaoPublica ? "sim" : "nao"}
+                onChange={(v) => setEdicaoPublica(v === "sim")}
+                options={[
+                  { label: "Ligado", value: "sim" },
+                  { label: "Desligado", value: "nao" },
+                ]}
+              />
+            </div>
+            {edicaoPublica ? (
+              <div className="space-y-1.5">
+                <Label>Código de edição</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={qr.temPin ? "•••• (deixe vazio para manter)" : "Defina um código"}
+                  value={novoPin}
+                  onChange={(e) => setNovoPin(e.target.value)}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          {error ? (
+            <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
         </div>
 
         <DialogFooter>
