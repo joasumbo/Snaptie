@@ -3,8 +3,6 @@ import { COOKIE_NAME, decodeSession } from "@/lib/auth/jwt";
 
 // Auth screens: redirect signed-in users away from them.
 const AUTH_PATHS = ["/login", "/forgot-password", "/reset-password"];
-// Paths anyone may open without a session (landing page and public scan pages).
-const PUBLIC_PATHS = ["/", "/s", ...AUTH_PATHS];
 
 function matches(pathname: string, paths: string[]): boolean {
   return paths.some(
@@ -22,8 +20,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Everything outside the public paths requires a session.
-  if (!session && !matches(pathname, PUBLIC_PATHS)) {
+  // Only the dashboard requires a session. Everything else (landing page and the
+  // public QR pages at /{empresa}/{codigo}) is open.
+  if (!session && pathname.startsWith("/dashboard")) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);

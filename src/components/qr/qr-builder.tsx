@@ -232,7 +232,9 @@ export default function QrBuilder({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{block.titulo}</span>
+                        <span className="font-medium">
+                          {block.titulo || BLOCK_TYPE_LABELS[block.tipo]}
+                        </span>
                         <Badge variant="secondary">
                           {BLOCK_TYPE_LABELS[block.tipo]}
                         </Badge>

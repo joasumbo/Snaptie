@@ -3,6 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/auth/password";
+import { isContentBlock } from "@/lib/qr";
 import {
   prepareUpload,
   createUploadUrl,
@@ -12,9 +13,9 @@ import {
 
 // Public, PIN-gated editing of a QR's content. No login required, but every
 // action re-checks that the QR allows public editing and the PIN matches.
-async function authorize(slug: string, pin: string) {
+async function authorize(codigo: string, pin: string) {
   const qr = await prisma.qrCode.findFirst({
-    where: { slug, publicado: true, edicaoPublica: true },
+    where: { codigo, publicado: true, edicaoPublica: true },
   });
   if (!qr || !qr.edicaoPin) return null;
   const ok = await verifyPassword(pin ?? "", qr.edicaoPin);
@@ -22,28 +23,30 @@ async function authorize(slug: string, pin: string) {
 }
 
 export async function verifyEditPin(
-  slug: string,
+  codigo: string,
   pin: string,
 ): Promise<{ ok: boolean }> {
-  return { ok: Boolean(await authorize(slug, pin)) };
+  return { ok: Boolean(await authorize(codigo, pin)) };
 }
 
 export type EditResult = { ok: true } | { ok: false; message: string };
 
 export async function saveBlockContent(input: {
-  slug: string;
+  codigo: string;
   pin: string;
   blockId: string;
   titulo: string;
   conteudo: Record<string, unknown>;
 }): Promise<EditResult> {
-  const qr = await authorize(input.slug, input.pin);
+  const qr = await authorize(input.codigo, input.pin);
   if (!qr) return { ok: false, message: "Código inválido." };
-  if (!input.titulo?.trim()) return { ok: false, message: "O título é obrigatório." };
 
   const block = await prisma.qrBlock.findUnique({ where: { id: input.blockId } });
   if (!block || block.qrId !== qr.id) {
     return { ok: false, message: "Elemento não encontrado." };
+  }
+  if (!isContentBlock(block.tipo) && !input.titulo?.trim()) {
+    return { ok: false, message: "O título é obrigatório." };
   }
 
   // Only the content is editable here — never the type, order or existence.
@@ -62,13 +65,13 @@ export type UploadTicket =
   | { ok: false; message: string };
 
 export async function requestPublicUpload(input: {
-  slug: string;
+  codigo: string;
   pin: string;
   kind: UploadKind;
   contentType: string;
   size: number;
 }): Promise<UploadTicket> {
-  const qr = await authorize(input.slug, input.pin);
+  const qr = await authorize(input.codigo, input.pin);
   if (!qr) return { ok: false, message: "Código inválido." };
 
   const prepared = prepareUpload(input.kind, input.contentType, input.size);

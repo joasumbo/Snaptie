@@ -19,7 +19,7 @@ export default async function QrBuilderPage({
   const qr = await prisma.qrCode.findUnique({
     where: { id },
     include: {
-      company: { select: { nome: true, logo: true, corPrimaria: true } },
+      company: { select: { nome: true, slug: true, logo: true, corPrimaria: true } },
       blocks: { orderBy: { ordem: "asc" } },
     },
   });
@@ -29,7 +29,7 @@ export default async function QrBuilderPage({
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? "http";
-  const publicUrl = `${proto}://${host}/s/${qr.slug}`;
+  const publicUrl = `${proto}://${host}/${qr.company.slug}/${qr.codigo}`;
 
   return (
     <QrBuilder

@@ -195,9 +195,11 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         {/* Fields (once a type is chosen) */}
         {tipo ? (
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-            <Field label="Título">
-              <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
-            </Field>
+            {!isContentBlock(tipo) ? (
+              <Field label="Título">
+                <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+              </Field>
+            ) : null}
 
             {field === "url" ? (
               <Field label={tipo === "MAPA" ? "Link do Google Maps" : "URL"}>

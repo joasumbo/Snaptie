@@ -127,6 +127,7 @@ model QrCode {
   nome          String
   descricao     String?
   slug          String   @unique
+  codigo        String?  @unique // código curto aleatório usado no URL público
   companyId     String   @map("company_id")
   templateId    String?  @map("template_id")
   logo          String?

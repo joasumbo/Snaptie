@@ -16,13 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
-import { TYPE_FIELD, BLOCK_TYPE_LABELS } from "@/lib/qr";
+import { TYPE_FIELD, BLOCK_TYPE_LABELS, isContentBlock } from "@/lib/qr";
 import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
   saveBlockContent,
   requestPublicUpload,
-} from "@/app/s/[slug]/edit-actions";
+} from "@/app/[empresa]/[codigo]/edit-actions";
 import type { UploadKind } from "@/lib/storage";
 
 type EditBlock = {
@@ -38,11 +38,11 @@ function str(c: Record<string, unknown>, k: string): string {
 
 export default function PublicQrView({
   data,
-  slug,
+  codigo,
   edicaoPublica,
 }: {
   data: QrPageData;
-  slug: string;
+  codigo: string;
   edicaoPublica: boolean;
 }) {
   const router = useRouter();
@@ -58,7 +58,7 @@ export default function PublicQrView({
   async function checkPin() {
     setChecking(true);
     setPinError(null);
-    const r = await verifyEditPin(slug, pin);
+    const r = await verifyEditPin(codigo, pin);
     setChecking(false);
     if (!r.ok) {
       setPinError("Código inválido.");
@@ -92,7 +92,7 @@ export default function PublicQrView({
     setSaving(true);
     for (const b of edits) {
       const r = await saveBlockContent({
-        slug,
+        codigo,
         pin: authPin,
         blockId: b.id,
         titulo: b.titulo,
@@ -113,7 +113,7 @@ export default function PublicQrView({
   const uploaderFor =
     (kind: UploadKind) =>
     (input: { kind: UploadKind; contentType: string; size: number }) =>
-      requestPublicUpload({ ...input, kind, slug, pin: authPin });
+      requestPublicUpload({ ...input, kind, codigo, pin: authPin });
 
   return (
     <div className="min-h-screen">
@@ -182,13 +182,15 @@ export default function PublicQrView({
                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {BLOCK_TYPE_LABELS[b.tipo]}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Título</Label>
-                    <Input
-                      value={b.titulo}
-                      onChange={(e) => setTitulo(b.id, e.target.value)}
-                    />
-                  </div>
+                  {!isContentBlock(b.tipo) ? (
+                    <div className="space-y-1.5">
+                      <Label>Título</Label>
+                      <Input
+                        value={b.titulo}
+                        onChange={(e) => setTitulo(b.id, e.target.value)}
+                      />
+                    </div>
+                  ) : null}
                   <BlockFields
                     block={b}
                     setField={setField}

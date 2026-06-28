@@ -5,7 +5,8 @@ import { Prisma, type BlockType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
-import { slugify } from "@/lib/slug";
+import { slugify, randomCode } from "@/lib/slug";
+import { isContentBlock } from "@/lib/qr";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -76,6 +77,15 @@ async function uniqueQrSlug(nome: string): Promise<string> {
   }
 }
 
+// Random short code used in the public URL (snaptie.net/{empresa}/{codigo}).
+async function uniqueQrCode(): Promise<string> {
+  while (true) {
+    const codigo = randomCode(10);
+    const existing = await prisma.qrCode.findUnique({ where: { codigo } });
+    if (!existing) return codigo;
+  }
+}
+
 // Loads a QR and checks the actor may manage it (same company, or admin).
 async function ownedQr(actorId: string, isAdmin: boolean, companyId: string | null, qrId: string) {
   const qr = await prisma.qrCode.findUnique({ where: { id: qrId } });
@@ -115,6 +125,7 @@ export async function createQrCode(input: {
       nome: input.nome.trim(),
       descricao: input.descricao?.trim() || null,
       slug: await uniqueQrSlug(input.nome),
+      codigo: await uniqueQrCode(),
       companyId,
       corPrimaria: input.corPrimaria?.trim() || null,
       corSecundaria: input.corSecundaria?.trim() || null,
@@ -215,7 +226,7 @@ type BlockFields = {
 
 function blockData(input: BlockFields) {
   return {
-    titulo: input.titulo.trim(),
+    titulo: input.titulo?.trim() || "",
     cor: input.cor?.trim() || null,
     descricao: input.descricao?.trim() || null,
     icone: input.icone?.trim() || null,
@@ -229,7 +240,9 @@ export async function addBlock(
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
   if (!BLOCK_TYPES.includes(input.tipo)) return { ok: false, message: "Tipo inválido." };
-  if (!input.titulo?.trim()) return { ok: false, message: "O título é obrigatório." };
+  if (!isContentBlock(input.tipo) && !input.titulo?.trim()) {
+    return { ok: false, message: "O título é obrigatório." };
+  }
 
   const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.qrId);
   if (!qr) return { ok: false, message: "QR não encontrado." };
@@ -257,7 +270,6 @@ export async function updateBlock(
 ): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
-  if (!input.titulo?.trim()) return { ok: false, message: "O título é obrigatório." };
 
   const block = await prisma.qrBlock.findUnique({
     where: { id: input.id },
@@ -266,6 +278,9 @@ export async function updateBlock(
   if (!block) return { ok: false, message: "Botão não encontrado." };
   if (actor.role !== "ADMIN" && block.qr.companyId !== actor.companyId) {
     return { ok: false, message: "Sem permissão." };
+  }
+  if (!isContentBlock(block.tipo) && !input.titulo?.trim()) {
+    return { ok: false, message: "O título é obrigatório." };
   }
 
   await prisma.qrBlock.update({
