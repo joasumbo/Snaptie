@@ -250,17 +250,17 @@ function blockData(input: BlockFields) {
 export async function addBlock(
   input: { qrId: string; tipo: BlockType } & BlockFields,
 ): Promise<ActionResult> {
-  const actor = await requireQrManager();
-  if (!actor) return { ok: false, message: "Sem permissão." };
-  if (!BLOCK_TYPES.includes(input.tipo)) return { ok: false, message: "Tipo inválido." };
-  if (!isContentBlock(input.tipo) && !input.titulo?.trim()) {
-    return { ok: false, message: "O título é obrigatório." };
-  }
-
-  const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.qrId);
-  if (!qr) return { ok: false, message: "QR não encontrado." };
-
   try {
+    const actor = await requireQrManager();
+    if (!actor) return { ok: false, message: "Sem permissão." };
+    if (!BLOCK_TYPES.includes(input.tipo)) return { ok: false, message: "Tipo inválido." };
+    if (!isContentBlock(input.tipo) && !input.titulo?.trim()) {
+      return { ok: false, message: "O título é obrigatório." };
+    }
+
+    const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.qrId);
+    if (!qr) return { ok: false, message: "QR não encontrado." };
+
     const last = await prisma.qrBlock.findFirst({
       where: { qrId: qr.id },
       orderBy: { ordem: "desc" },
@@ -274,33 +274,33 @@ export async function addBlock(
         ...blockData(input),
       },
     });
+
+    revalidatePath(`/dashboard/qr-codes/${qr.id}`);
+    return { ok: true };
   } catch (e) {
     return fail("addBlock", e);
   }
-
-  revalidatePath(`/dashboard/qr-codes/${qr.id}`);
-  return { ok: true };
 }
 
 export async function updateBlock(
   input: { id: string; ativo: boolean } & BlockFields,
 ): Promise<ActionResult> {
-  const actor = await requireQrManager();
-  if (!actor) return { ok: false, message: "Sem permissão." };
-
-  const block = await prisma.qrBlock.findUnique({
-    where: { id: input.id },
-    include: { qr: true },
-  });
-  if (!block) return { ok: false, message: "Botão não encontrado." };
-  if (actor.role !== "ADMIN" && block.qr.companyId !== actor.companyId) {
-    return { ok: false, message: "Sem permissão." };
-  }
-  if (!isContentBlock(block.tipo) && !input.titulo?.trim()) {
-    return { ok: false, message: "O título é obrigatório." };
-  }
-
   try {
+    const actor = await requireQrManager();
+    if (!actor) return { ok: false, message: "Sem permissão." };
+
+    const block = await prisma.qrBlock.findUnique({
+      where: { id: input.id },
+      include: { qr: true },
+    });
+    if (!block) return { ok: false, message: "Botão não encontrado." };
+    if (actor.role !== "ADMIN" && block.qr.companyId !== actor.companyId) {
+      return { ok: false, message: "Sem permissão." };
+    }
+    if (!isContentBlock(block.tipo) && !input.titulo?.trim()) {
+      return { ok: false, message: "O título é obrigatório." };
+    }
+
     await prisma.qrBlock.update({
       where: { id: input.id },
       data: {
@@ -308,34 +308,34 @@ export async function updateBlock(
         ...blockData(input),
       },
     });
+
+    revalidatePath(`/dashboard/qr-codes/${block.qrId}`);
+    return { ok: true };
   } catch (e) {
     return fail("updateBlock", e);
   }
-
-  revalidatePath(`/dashboard/qr-codes/${block.qrId}`);
-  return { ok: true };
 }
 
 export async function deleteBlock(id: string): Promise<ActionResult> {
-  const actor = await requireQrManager();
-  if (!actor) return { ok: false, message: "Sem permissão." };
-
-  const block = await prisma.qrBlock.findUnique({
-    where: { id },
-    include: { qr: true },
-  });
-  if (!block) return { ok: false, message: "Botão não encontrado." };
-  if (actor.role !== "ADMIN" && block.qr.companyId !== actor.companyId) {
-    return { ok: false, message: "Sem permissão." };
-  }
-
   try {
+    const actor = await requireQrManager();
+    if (!actor) return { ok: false, message: "Sem permissão." };
+
+    const block = await prisma.qrBlock.findUnique({
+      where: { id },
+      include: { qr: true },
+    });
+    if (!block) return { ok: false, message: "Botão não encontrado." };
+    if (actor.role !== "ADMIN" && block.qr.companyId !== actor.companyId) {
+      return { ok: false, message: "Sem permissão." };
+    }
+
     await prisma.qrBlock.delete({ where: { id } });
+    revalidatePath(`/dashboard/qr-codes/${block.qrId}`);
+    return { ok: true };
   } catch (e) {
     return fail("deleteBlock", e);
   }
-  revalidatePath(`/dashboard/qr-codes/${block.qrId}`);
-  return { ok: true };
 }
 
 export async function moveBlock(
