@@ -6,13 +6,8 @@ import {
   createUploadUrl,
   publicUrlFor,
   type UploadKind,
+  type UploadTicket,
 } from "@/lib/storage";
-
-export type { UploadKind };
-
-export type UploadTicket =
-  | { ok: true; uploadUrl: string; publicUrl: string }
-  | { ok: false; message: string };
 
 export async function requestUpload(input: {
   kind: UploadKind;

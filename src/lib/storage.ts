@@ -30,6 +30,10 @@ export function buildKey(folder: string, ext: string): string {
 
 export type UploadKind = "image" | "video" | "pdf";
 
+export type UploadTicket =
+  | { ok: true; uploadUrl: string; publicUrl: string }
+  | { ok: false; message: string };
+
 const RULES: Record<
   UploadKind,
   { folder: string; types: Record<string, string>; maxMB: number }

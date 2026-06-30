@@ -4,11 +4,8 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Upload, X, FileText, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  requestUpload,
-  type UploadKind,
-  type UploadTicket,
-} from "@/app/upload-actions";
+import { requestUpload } from "@/app/upload-actions";
+import type { UploadKind, UploadTicket } from "@/lib/storage";
 
 const ACCEPT: Record<UploadKind, string> = {
   image: "image/*",
