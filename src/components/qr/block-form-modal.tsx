@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Upload, FileText, Film } from "lucide-react";
 import type { BlockType } from "@prisma/client";
 import {
   Dialog,
@@ -14,8 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { FileUpload } from "@/components/ui/file-upload";
 import { cn } from "@/lib/utils";
+import { uploadFile } from "@/lib/upload-client";
+import type { UploadKind } from "@/lib/storage";
 import {
   ACTION_TYPES,
   CONTENT_TYPES,
@@ -39,7 +40,14 @@ type Props = {
   qrId: string;
   block?: EditableBlock;
   onClose: () => void;
-  onSaved: () => void;
+  // On edit, receives the updated fields so the list can refresh instantly.
+  onSaved: (updated?: Partial<EditableBlock> & { id: string }) => void;
+};
+
+const ACCEPT: Record<UploadKind, string> = {
+  image: "image/*",
+  video: "video/*",
+  pdf: "application/pdf",
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -55,9 +63,13 @@ function str(c: Record<string, unknown>, k: string): string {
   return typeof c[k] === "string" ? (c[k] as string) : "";
 }
 
+// File chosen locally but not yet uploaded — keeps a preview URL for display.
+type Pending = { file: File; preview: string };
+
 export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   const router = useRouter();
   const isEdit = Boolean(block);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const [tipo, setTipo] = useState<BlockType | null>(block?.tipo ?? null);
   const [titulo, setTitulo] = useState(block?.titulo ?? "");
@@ -80,47 +92,89 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
     typeof c.orientacao === "string" ? (c.orientacao as string) : "vertical",
   );
 
+  // Files picked but not yet uploaded. Only sent to R2 on submit.
+  const [single, setSingle] = useState<Pending | null>(null);
+  const [novas, setNovas] = useState<Pending[]>([]);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const field = tipo ? TYPE_FIELD[tipo] : null;
+  const singleKind: UploadKind | null =
+    field === "imagem" ? "image" : field === "video" ? "video" : field === "pdf" ? "pdf" : null;
 
-  function buildConteudo(): Record<string, unknown> {
-    switch (field) {
-      case "url":
-        return { url };
-      case "texto":
-        return { texto };
-      case "telefone":
-        return { numero };
-      case "email":
-        return { email };
-      case "whatsapp":
-        return { numero, mensagem };
-      case "wifi":
-        return { ssid, password };
-      case "imagem":
-      case "video":
-      case "pdf":
-        return { url };
-      case "carrossel":
-        return { imagens, orientacao };
-      default:
-        return {};
-    }
+  function pickSingle(file: File) {
+    setSingle({ file, preview: URL.createObjectURL(file) });
+  }
+  function clearSingle() {
+    if (single) URL.revokeObjectURL(single.preview);
+    setSingle(null);
+    setUrl(""); // also drops a previously saved file (on edit)
+  }
+  function addCarouselFiles(files: FileList) {
+    const next = Array.from(files).map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+    setNovas((arr) => [...arr, ...next]);
+  }
+  function removeNova(i: number) {
+    setNovas((arr) => {
+      const target = arr[i];
+      if (target) URL.revokeObjectURL(target.preview);
+      return arr.filter((_, j) => j !== i);
+    });
   }
 
   async function handleSubmit() {
     if (!tipo) return;
     setError(null);
     setSubmitting(true);
-    const payload = {
-      titulo,
-      cor: isContentBlock(tipo) ? null : cor,
-      descricao: isContentBlock(tipo) ? null : descricao,
-      conteudo: buildConteudo(),
-    };
     try {
+      let conteudo: Record<string, unknown>;
+      switch (field) {
+        case "url":
+          conteudo = { url };
+          break;
+        case "texto":
+          conteudo = { texto };
+          break;
+        case "telefone":
+          conteudo = { numero };
+          break;
+        case "email":
+          conteudo = { email };
+          break;
+        case "whatsapp":
+          conteudo = { numero, mensagem };
+          break;
+        case "wifi":
+          conteudo = { ssid, password };
+          break;
+        case "imagem":
+        case "video":
+        case "pdf": {
+          // Upload the picked file now (only on confirm); keep the existing one otherwise.
+          const finalUrl = single ? await uploadFile(single.file, singleKind!) : url;
+          conteudo = { url: finalUrl };
+          break;
+        }
+        case "carrossel": {
+          const uploaded: string[] = [];
+          for (const p of novas) uploaded.push(await uploadFile(p.file, "image"));
+          conteudo = { imagens: [...imagens, ...uploaded], orientacao };
+          break;
+        }
+        default:
+          conteudo = {};
+      }
+
+      const payload = {
+        titulo,
+        cor: isContentBlock(tipo) ? null : cor,
+        descricao: isContentBlock(tipo) ? null : descricao,
+        conteudo,
+      };
       const result = isEdit
         ? await updateBlock({ id: block!.id, ativo, ...payload })
         : await addBlock({ qrId, tipo, ...payload });
@@ -128,7 +182,11 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         setError(result.message);
         return;
       }
-      onSaved();
+      onSaved(
+        isEdit
+          ? { id: block!.id, titulo, cor: payload.cor, descricao: payload.descricao, conteudo, ativo }
+          : undefined,
+      );
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ocorreu um erro. Tente novamente.");
@@ -136,6 +194,8 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
       setSubmitting(false);
     }
   }
+
+  const singlePreview = single?.preview ?? (url || null);
 
   return (
     <Dialog
@@ -279,32 +339,56 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
               </>
             ) : null}
 
-            {field === "imagem" ? (
-              <Field label="Imagem">
-                <FileUpload
-                  kind="image"
-                  value={url || null}
-                  onChange={(v) => setUrl(v ?? "")}
-                />
-              </Field>
-            ) : null}
-
-            {field === "video" ? (
-              <Field label="Vídeo">
-                <FileUpload
-                  kind="video"
-                  value={url || null}
-                  onChange={(v) => setUrl(v ?? "")}
-                />
-              </Field>
-            ) : null}
-
-            {field === "pdf" ? (
-              <Field label="Ficheiro PDF">
-                <FileUpload
-                  kind="pdf"
-                  value={url || null}
-                  onChange={(v) => setUrl(v ?? "")}
+            {/* Single file: image, video or pdf — preview only, uploaded on save */}
+            {singleKind ? (
+              <Field
+                label={field === "imagem" ? "Imagem" : field === "video" ? "Vídeo" : "Ficheiro PDF"}
+              >
+                {singlePreview ? (
+                  <div className="flex items-center gap-3 rounded-lg border p-2">
+                    {field === "imagem" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={singlePreview}
+                        alt=""
+                        className="size-14 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-14 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        {field === "video" ? (
+                          <Film className="size-5" />
+                        ) : (
+                          <FileText className="size-5" />
+                        )}
+                      </div>
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                      {single ? single.file.name : "Ficheiro carregado"}
+                    </span>
+                    <Button type="button" variant="ghost" size="icon-sm" onClick={clearSingle}>
+                      <X />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    <Upload />
+                    Carregar ficheiro
+                  </Button>
+                )}
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept={ACCEPT[singleKind]}
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) pickSingle(f);
+                    e.target.value = "";
+                  }}
                 />
               </Field>
             ) : null}
@@ -312,21 +396,32 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
             {field === "carrossel" ? (
               <Field label="Imagens">
                 <div className="space-y-2">
-                  {imagens.length > 0 ? (
+                  {imagens.length > 0 || novas.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {imagens.map((src, i) => (
-                        <div key={i} className="relative">
+                        <div key={`u${i}`} className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt="" className="size-16 rounded-md object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setImagens((arr) => arr.filter((_, j) => j !== i))}
+                            className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-foreground text-background"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {novas.map((p, i) => (
+                        <div key={`n${i}`} className="relative">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={src}
+                            src={p.preview}
                             alt=""
-                            className="size-16 rounded-md object-cover"
+                            className="size-16 rounded-md object-cover ring-2 ring-primary/40"
                           />
                           <button
                             type="button"
-                            onClick={() =>
-                              setImagens((arr) => arr.filter((_, j) => j !== i))
-                            }
+                            onClick={() => removeNova(i)}
                             className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-foreground text-background"
                           >
                             <X className="size-3" />
@@ -335,11 +430,23 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                       ))}
                     </div>
                   ) : null}
-                  <FileUpload
-                    kind="image"
-                    value={null}
-                    onChange={(v) => {
-                      if (v) setImagens((arr) => [...arr, v]);
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    <Upload />
+                    Carregar ficheiro
+                  </Button>
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.length) addCarouselFiles(e.target.files);
+                      e.target.value = "";
                     }}
                   />
                   <div className="flex flex-wrap items-center gap-2 pt-1">

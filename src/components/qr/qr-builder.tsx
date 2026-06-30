@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
@@ -72,7 +72,7 @@ function summary(b: BuilderBlock): string {
 export default function QrBuilder({
   qr,
   company,
-  blocks,
+  blocks: initialBlocks,
   publicUrl,
 }: {
   qr: Qr;
@@ -81,6 +81,10 @@ export default function QrBuilder({
   publicUrl: string;
 }) {
   const router = useRouter();
+  // Kept in local state so deletions and reordering show instantly, before the
+  // server round-trip and refresh complete.
+  const [blocks, setBlocks] = useState(initialBlocks);
+  useEffect(() => setBlocks(initialBlocks), [initialBlocks]);
   const [editingQr, setEditingQr] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [blockModal, setBlockModal] = useState<
@@ -130,13 +134,27 @@ export default function QrBuilder({
   }
 
   async function handleMove(id: string, direction: "up" | "down") {
+    // Reorder locally first for an immediate response.
+    setBlocks((arr) => {
+      const idx = arr.findIndex((b) => b.id === id);
+      const swap = direction === "up" ? idx - 1 : idx + 1;
+      if (idx < 0 || swap < 0 || swap >= arr.length) return arr;
+      const next = [...arr];
+      [next[idx], next[swap]] = [next[swap], next[idx]];
+      return next;
+    });
     setBusy(true);
     try {
       const r = await moveBlock(id, direction);
-      if (!r.ok) toast.error(r.message);
-      else router.refresh();
+      if (!r.ok) {
+        toast.error(r.message);
+        router.refresh(); // revert to the server order
+      } else {
+        router.refresh();
+      }
     } catch {
       toast.error("Ocorreu um erro. Tente novamente.");
+      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -144,17 +162,22 @@ export default function QrBuilder({
 
   async function handleDelete() {
     if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    // Remove it from the list immediately; restore on failure.
+    setBlocks((arr) => arr.filter((b) => b.id !== id));
+    setDeleteTarget(null);
     setBusy(true);
     try {
-      const r = await deleteBlock(deleteTarget.id);
+      const r = await deleteBlock(id);
       if (!r.ok) {
         toast.error(r.message);
+        router.refresh();
         return;
       }
-      setDeleteTarget(null);
       router.refresh();
     } catch {
       toast.error("Ocorreu um erro. Tente novamente.");
+      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -364,7 +387,14 @@ export default function QrBuilder({
           qrId={qr.id}
           block={blockModal.mode === "edit" ? blockModal.block : undefined}
           onClose={() => setBlockModal(null)}
-          onSaved={() => setBlockModal(null)}
+          onSaved={(updated) => {
+            if (updated) {
+              setBlocks((arr) =>
+                arr.map((b) => (b.id === updated.id ? { ...b, ...updated } : b)),
+              );
+            }
+            setBlockModal(null);
+          }}
         />
       ) : null}
 
