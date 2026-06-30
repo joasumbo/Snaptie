@@ -86,31 +86,43 @@ export function PageSettingsModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Enabling visitor editing requires a code: either an existing one or a new one.
+  const precisaCodigo = edicaoPublica && !qr.temPin && !novoPin.trim();
+
   async function handleSubmit() {
     setError(null);
+    if (precisaCodigo) {
+      setError("Defina um código de acesso para ativar a edição pelo visitante.");
+      return;
+    }
     setSubmitting(true);
-    const result = await updateQrCode({
-      id: qr.id,
-      nome: qr.nome,
-      descricao: qr.descricao ?? undefined,
-      corPrimaria: qr.corPrimaria ?? undefined,
-      corSecundaria: qr.corSecundaria ?? undefined,
-      logo,
-      imagemCapa,
-      logoTamanho,
-      logoForma,
-      nomeTamanho,
-      mostrarLogo,
-      mostrarNome,
-      edicaoPublica,
-      novoPin: novoPin || undefined,
-    });
-    setSubmitting(false);
-    if (result.ok) {
-      onSaved();
-      router.refresh();
-    } else {
-      setError(result.message);
+    try {
+      const result = await updateQrCode({
+        id: qr.id,
+        nome: qr.nome,
+        descricao: qr.descricao ?? undefined,
+        corPrimaria: qr.corPrimaria ?? undefined,
+        corSecundaria: qr.corSecundaria ?? undefined,
+        logo,
+        imagemCapa,
+        logoTamanho,
+        logoForma,
+        nomeTamanho,
+        mostrarLogo,
+        mostrarNome,
+        edicaoPublica,
+        novoPin: novoPin || undefined,
+      });
+      if (result.ok) {
+        onSaved();
+        router.refresh();
+      } else {
+        setError(result.message);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ocorreu um erro. Tente novamente.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -131,6 +143,12 @@ export function PageSettingsModal({
         <DialogHeader>
           <DialogTitle>Personalizar página</DialogTitle>
         </DialogHeader>
+
+        {error ? (
+          <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
 
         <div className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
           <div className="space-y-1.5">
@@ -214,23 +232,30 @@ export function PageSettingsModal({
             </div>
             {edicaoPublica ? (
               <div className="space-y-1.5">
-                <Label>Código de edição</Label>
+                <Label>Código de acesso</Label>
                 <Input
                   type="text"
                   inputMode="numeric"
-                  placeholder={qr.temPin ? "•••• (deixe vazio para manter)" : "Defina um código"}
+                  placeholder={
+                    qr.temPin ? "Deixe vazio para manter o atual" : "Defina um código (ex.: 1234)"
+                  }
                   value={novoPin}
                   onChange={(e) => setNovoPin(e.target.value)}
+                  aria-invalid={precisaCodigo}
                 />
+                <p
+                  className={cn(
+                    "text-xs",
+                    precisaCodigo ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {qr.temPin
+                    ? "Já tem um código definido. Escreva um novo para o alterar."
+                    : "Os visitantes precisam deste código para editar a página."}
+                </p>
               </div>
             ) : null}
           </div>
-
-          {error ? (
-            <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </div>
-          ) : null}
         </div>
 
         <DialogFooter>
