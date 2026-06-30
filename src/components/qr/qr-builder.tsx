@@ -118,25 +118,46 @@ export default function QrBuilder({
 
   async function handlePublish() {
     setBusy(true);
-    await setQrPublished(qr.id, !qr.publicado);
-    setBusy(false);
-    router.refresh();
+    try {
+      const r = await setQrPublished(qr.id, !qr.publicado);
+      if (!r.ok) toast.error(r.message);
+      else router.refresh();
+    } catch {
+      toast.error("Ocorreu um erro. Tente novamente.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleMove(id: string, direction: "up" | "down") {
     setBusy(true);
-    await moveBlock(id, direction);
-    setBusy(false);
-    router.refresh();
+    try {
+      const r = await moveBlock(id, direction);
+      if (!r.ok) toast.error(r.message);
+      else router.refresh();
+    } catch {
+      toast.error("Ocorreu um erro. Tente novamente.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     setBusy(true);
-    await deleteBlock(deleteTarget.id);
-    setBusy(false);
-    setDeleteTarget(null);
-    router.refresh();
+    try {
+      const r = await deleteBlock(deleteTarget.id);
+      if (!r.ok) {
+        toast.error(r.message);
+        return;
+      }
+      setDeleteTarget(null);
+      router.refresh();
+    } catch {
+      toast.error("Ocorreu um erro. Tente novamente.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function copyLink() {

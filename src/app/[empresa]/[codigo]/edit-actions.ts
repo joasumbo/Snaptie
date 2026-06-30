@@ -50,13 +50,19 @@ export async function saveBlockContent(input: {
   }
 
   // Only the content is editable here — never the type, order or existence.
-  await prisma.qrBlock.update({
-    where: { id: block.id },
-    data: {
-      titulo: input.titulo.trim(),
-      conteudo: (input.conteudo ?? {}) as Prisma.InputJsonValue,
-    },
-  });
+  try {
+    await prisma.qrBlock.update({
+      where: { id: block.id },
+      data: {
+        titulo: input.titulo.trim(),
+        conteudo: (input.conteudo ?? {}) as Prisma.InputJsonValue,
+      },
+    });
+  } catch (e) {
+    console.error("[public-edit:saveBlockContent]", e);
+    const message = e instanceof Error ? e.message : "Erro desconhecido.";
+    return { ok: false, message: `Não foi possível guardar: ${message}` };
+  }
   return { ok: true };
 }
 

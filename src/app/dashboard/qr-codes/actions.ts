@@ -12,6 +12,15 @@ export type ActionResult =
   | { ok: true; id?: string }
   | { ok: false; message: string };
 
+// Turns an unexpected error (e.g. a database failure) into a result the UI can
+// show, instead of letting the Server Action throw — a thrown action leaves the
+// client spinner running forever. The detail is logged for the server logs.
+function fail(context: string, error: unknown): ActionResult {
+  console.error(`[qr-action:${context}]`, error);
+  const message = error instanceof Error ? error.message : "Erro desconhecido.";
+  return { ok: false, message: `Não foi possível guardar: ${message}` };
+}
+
 const QR_ROLES = ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"] as const;
 const BLOCK_TYPES: BlockType[] = [
   "TEXTO",
@@ -191,10 +200,14 @@ export async function setQrPublished(
   const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, id);
   if (!qr) return { ok: false, message: "QR não encontrado." };
 
-  await prisma.qrCode.update({
-    where: { id },
-    data: { publicado, estado: publicado ? "ativo" : "rascunho" },
-  });
+  try {
+    await prisma.qrCode.update({
+      where: { id },
+      data: { publicado, estado: publicado ? "ativo" : "rascunho" },
+    });
+  } catch (e) {
+    return fail("setQrPublished", e);
+  }
 
   revalidatePath("/dashboard/qr-codes");
   revalidatePath(`/dashboard/qr-codes/${id}`);
@@ -247,19 +260,23 @@ export async function addBlock(
   const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.qrId);
   if (!qr) return { ok: false, message: "QR não encontrado." };
 
-  const last = await prisma.qrBlock.findFirst({
-    where: { qrId: qr.id },
-    orderBy: { ordem: "desc" },
-  });
+  try {
+    const last = await prisma.qrBlock.findFirst({
+      where: { qrId: qr.id },
+      orderBy: { ordem: "desc" },
+    });
 
-  await prisma.qrBlock.create({
-    data: {
-      qrId: qr.id,
-      tipo: input.tipo,
-      ordem: (last?.ordem ?? 0) + 1,
-      ...blockData(input),
-    },
-  });
+    await prisma.qrBlock.create({
+      data: {
+        qrId: qr.id,
+        tipo: input.tipo,
+        ordem: (last?.ordem ?? 0) + 1,
+        ...blockData(input),
+      },
+    });
+  } catch (e) {
+    return fail("addBlock", e);
+  }
 
   revalidatePath(`/dashboard/qr-codes/${qr.id}`);
   return { ok: true };
@@ -283,13 +300,17 @@ export async function updateBlock(
     return { ok: false, message: "O título é obrigatório." };
   }
 
-  await prisma.qrBlock.update({
-    where: { id: input.id },
-    data: {
-      ativo: input.ativo,
-      ...blockData(input),
-    },
-  });
+  try {
+    await prisma.qrBlock.update({
+      where: { id: input.id },
+      data: {
+        ativo: input.ativo,
+        ...blockData(input),
+      },
+    });
+  } catch (e) {
+    return fail("updateBlock", e);
+  }
 
   revalidatePath(`/dashboard/qr-codes/${block.qrId}`);
   return { ok: true };
@@ -308,7 +329,11 @@ export async function deleteBlock(id: string): Promise<ActionResult> {
     return { ok: false, message: "Sem permissão." };
   }
 
-  await prisma.qrBlock.delete({ where: { id } });
+  try {
+    await prisma.qrBlock.delete({ where: { id } });
+  } catch (e) {
+    return fail("deleteBlock", e);
+  }
   revalidatePath(`/dashboard/qr-codes/${block.qrId}`);
   return { ok: true };
 }

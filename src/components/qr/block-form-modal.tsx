@@ -120,16 +120,21 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
       descricao: isContentBlock(tipo) ? null : descricao,
       conteudo: buildConteudo(),
     };
-    const result = isEdit
-      ? await updateBlock({ id: block!.id, ativo, ...payload })
-      : await addBlock({ qrId, tipo, ...payload });
-    setSubmitting(false);
-    if (!result.ok) {
-      setError(result.message);
-      return;
+    try {
+      const result = isEdit
+        ? await updateBlock({ id: block!.id, ativo, ...payload })
+        : await addBlock({ qrId, tipo, ...payload });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      onSaved();
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ocorreu um erro. Tente novamente.");
+    } finally {
+      setSubmitting(false);
     }
-    onSaved();
-    router.refresh();
   }
 
   return (

@@ -90,24 +90,28 @@ export default function PublicQrView({
 
   async function saveAll() {
     setSaving(true);
-    for (const b of edits) {
-      const r = await saveBlockContent({
-        codigo,
-        pin: authPin,
-        blockId: b.id,
-        titulo: b.titulo,
-        conteudo: b.conteudo,
-      });
-      if (!r.ok) {
-        toast.error(r.message);
-        setSaving(false);
-        return;
+    try {
+      for (const b of edits) {
+        const r = await saveBlockContent({
+          codigo,
+          pin: authPin,
+          blockId: b.id,
+          titulo: b.titulo,
+          conteudo: b.conteudo,
+        });
+        if (!r.ok) {
+          toast.error(r.message);
+          return;
+        }
       }
+      toast.success("Alterações guardadas.");
+      setPanelOpen(false);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Ocorreu um erro. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    toast.success("Alterações guardadas.");
-    setPanelOpen(false);
-    router.refresh();
   }
 
   const uploaderFor =

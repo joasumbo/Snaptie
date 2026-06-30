@@ -38,17 +38,16 @@ export function FileUpload({
 
   async function handleFile(file: File) {
     setBusy(true);
-    const ticket = await (uploader ?? requestUpload)({
-      kind,
-      contentType: file.type,
-      size: file.size,
-    });
-    if (!ticket.ok) {
-      toast.error(ticket.message);
-      setBusy(false);
-      return;
-    }
     try {
+      const ticket = await (uploader ?? requestUpload)({
+        kind,
+        contentType: file.type,
+        size: file.size,
+      });
+      if (!ticket.ok) {
+        toast.error(ticket.message);
+        return;
+      }
       const res = await fetch(ticket.uploadUrl, {
         method: "PUT",
         body: file,
