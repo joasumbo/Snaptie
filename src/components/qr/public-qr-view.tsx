@@ -121,23 +121,25 @@ export default function PublicQrView({
 
   return (
     <div className="min-h-screen">
-      <QrPage data={data} />
-
-      {edicaoPublica ? (
-        <div className="pb-10 text-center">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setPin("");
-              setPinError(null);
-              setPinOpen(true);
-            }}
-          >
-            <Pencil />
-            Editar conteúdo
-          </Button>
-        </div>
-      ) : null}
+      <QrPage
+        data={data}
+        footer={
+          edicaoPublica ? (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setPin("");
+                setPinError(null);
+                setPinOpen(true);
+              }}
+            >
+              <Pencil />
+              Editar página
+            </Button>
+          ) : null
+        }
+      />
 
       <Dialog open={pinOpen} onOpenChange={(o) => !o && setPinOpen(false)}>
         <DialogContent>

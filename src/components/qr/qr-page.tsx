@@ -163,7 +163,13 @@ function ContentElement({ block }: { block: QrPageBlock }) {
   return null;
 }
 
-export function QrPage({ data }: { data: QrPageData }) {
+export function QrPage({
+  data,
+  footer,
+}: {
+  data: QrPageData;
+  footer?: React.ReactNode;
+}) {
   const primary = data.corPrimaria || "#6366f1";
   const logo = data.logo;
   const logoSize = LOGO_SIZE[data.logoTamanho] ?? 64;
@@ -228,6 +234,8 @@ export function QrPage({ data }: { data: QrPageData }) {
             )
           )}
         </div>
+
+        {footer ? <div className="mt-8 w-full">{footer}</div> : null}
 
         <p className="mt-10 text-xs text-zinc-400">Powered by Snaptie</p>
       </div>
