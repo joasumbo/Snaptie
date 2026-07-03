@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { BlockType } from "@prisma/client";
 import { DEFAULT_ICON, isContentBlock, actionHref } from "@/lib/qr";
+import { WifiCard } from "./wifi-card";
 
 const ICONS: Record<string, LucideIcon> = {
   Globe,
@@ -85,19 +86,14 @@ function ActionButton({
 
   // Wi-Fi and plain text do not navigate; render as a card.
   if (block.tipo === "WIFI") {
-    const ssid = str(block.conteudo, "ssid");
-    const pass = str(block.conteudo, "password");
     return (
-      <div
-        className="rounded-xl px-4 py-3 text-white shadow-sm"
-        style={{ backgroundColor: color }}
-      >
-        {inner}
-        <div className="mt-2 text-sm opacity-90">
-          <div>Rede: {ssid || "—"}</div>
-          <div>Palavra-passe: {pass || "—"}</div>
-        </div>
-      </div>
+      <WifiCard
+        titulo={block.titulo}
+        descricao={block.descricao}
+        ssid={str(block.conteudo, "ssid")}
+        password={str(block.conteudo, "password")}
+        color={color}
+      />
     );
   }
   if (block.tipo === "TEXTO") {
