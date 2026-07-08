@@ -43,6 +43,22 @@
     "invalidLink": "Invalid link.",
     "requestNewLink": "Request a new link"
   },
+  "Nav": {
+    "dashboard": "Dashboard",
+    "companies": "Companies",
+    "qrCodes": "QR Codes",
+    "users": "Users",
+    "profile": "Profile",
+    "navigation": "Navigation",
+    "tagline": "Snaptie · QR code platform",
+    "signOut": "Sign out"
+  },
+  "Roles": {
+    "ADMIN": "Administrator",
+    "GESTOR_EMPRESA": "Company manager",
+    "GESTOR_QR": "QR manager",
+    "VISUALIZADOR": "Viewer"
+  },
   "PublicPage": {
     "editPage": "Edit page",
     "editCode": "Edit code",

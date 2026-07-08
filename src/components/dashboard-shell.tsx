@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Building2,
@@ -15,8 +16,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
-import { ROLE_LABELS } from "@/lib/roles";
 import { Logo } from "@/components/brand/logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,32 +30,32 @@ import { logout } from "@/app/dashboard/actions";
 
 type NavItem = {
   href: string;
-  label: string;
+  key: string;
   icon: LucideIcon;
   roles?: UserRole[];
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
+  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
   {
     href: "/dashboard/companies",
-    label: "Empresas",
+    key: "companies",
     icon: Building2,
     roles: ["ADMIN"],
   },
   {
     href: "/dashboard/qr-codes",
-    label: "QR Codes",
+    key: "qrCodes",
     icon: QrCode,
     roles: ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"],
   },
   {
     href: "/dashboard/users",
-    label: "Utilizadores",
+    key: "users",
     icon: Users,
     roles: ["ADMIN", "GESTOR_EMPRESA"],
   },
-  { href: "/dashboard/profile", label: "Perfil", icon: UserRound },
+  { href: "/dashboard/profile", key: "profile", icon: UserRound },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -69,6 +70,8 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const t = useTranslations("Nav");
+  const tr = useTranslations("Roles");
   const items = NAV_ITEMS.filter((i) => !i.roles || i.roles.includes(user.role));
 
   return (
@@ -83,9 +86,9 @@ export default function DashboardShell({
 
         <nav className="flex flex-1 flex-col gap-1 p-3">
           <p className="px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-            Navegação
+            {t("navigation")}
           </p>
-          {items.map(({ href, label, icon: Icon }) => {
+          {items.map(({ href, key, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
               <Link
@@ -106,14 +109,14 @@ export default function DashboardShell({
                   />
                 ) : null}
                 <Icon className="relative z-10 size-4" />
-                <span className="relative z-10">{label}</span>
+                <span className="relative z-10">{t(key)}</span>
               </Link>
             );
           })}
         </nav>
 
         <div className="border-t p-4 text-xs text-muted-foreground">
-          Snaptie · Plataforma de QR codes
+          {t("tagline")}
         </div>
       </aside>
 
@@ -124,7 +127,9 @@ export default function DashboardShell({
             <Logo />
           </Link>
 
-          <DropdownMenu>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted aria-expanded:bg-muted" />
@@ -134,7 +139,7 @@ export default function DashboardShell({
               <span className="hidden text-left leading-tight sm:block">
                 <span className="block text-sm font-medium">{user.nome}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {ROLE_LABELS[user.role]}
+                  {tr(user.role)}
                 </span>
               </span>
               <ChevronDown className="size-4 text-muted-foreground" />
@@ -152,14 +157,15 @@ export default function DashboardShell({
                 render={<Link href="/dashboard/profile" />}
               >
                 <UserRound />
-                Perfil
+                {t("profile")}
               </DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={() => logout()}>
                 <LogOut />
-                Sair
+                {t("signOut")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </header>
 
         <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">
@@ -176,7 +182,7 @@ export default function DashboardShell({
 
       {/* Mobile bottom navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-card/90 backdrop-blur md:hidden">
-        {items.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, key, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (
             <Link
@@ -188,7 +194,7 @@ export default function DashboardShell({
               )}
             >
               <Icon className={cn("size-5", active && "fill-foreground/5")} />
-              {label}
+              {t(key)}
             </Link>
           );
         })}
