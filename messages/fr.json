@@ -1,0 +1,53 @@
+{
+  "Common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "enter": "Entrer",
+    "error": "Une erreur s'est produite. Veuillez réessayer."
+  },
+  "Language": {
+    "label": "Langue",
+    "en": "English",
+    "pt": "Português",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch"
+  },
+  "Landing": {
+    "badge": "Plateforme de QR codes interactifs",
+    "title": "QR codes interactifs pour les entreprises",
+    "subtitle": "Transformez un seul scan en menus, guides, liens et bien plus — et mettez à jour le contenu à tout moment, sans rien réimprimer.",
+    "signIn": "Se connecter"
+  },
+  "PublicPage": {
+    "editPage": "Modifier la page",
+    "editCode": "Code de modification",
+    "invalidCode": "Code invalide.",
+    "noEditable": "Aucun élément disponible à modifier.",
+    "saved": "Modifications enregistrées.",
+    "swipeMore": "Faites glisser pour voir plus",
+    "fieldTitle": "Titre",
+    "fieldText": "Texte",
+    "fieldUrl": "URL",
+    "fieldMapsLink": "Lien Google Maps",
+    "fieldNumber": "Numéro",
+    "fieldMessage": "Message",
+    "fieldEmail": "E-mail",
+    "fieldSsid": "Réseau (SSID)",
+    "fieldPassword": "Mot de passe",
+    "fieldFile": "Fichier",
+    "fieldImages": "Images"
+  },
+  "Wifi": {
+    "pointCamera": "Pointez la caméra de votre téléphone pour vous connecter",
+    "network": "Réseau",
+    "password": "Mot de passe",
+    "notConfigured": "Réseau non configuré."
+  },
+  "Upload": {
+    "uploadFile": "Téléverser un fichier",
+    "uploaded": "Fichier téléversé",
+    "success": "Fichier téléversé.",
+    "failed": "Échec du téléversement. Vérifiez la configuration CORS de R2."
+  }
+}

@@ -1,7 +1,7 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
 
-export const SUPPORTED_LOCALES = ["en", "pt", "es"] as const;
+export const SUPPORTED_LOCALES = ["en", "pt", "es", "fr", "de"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "snaptie_locale";

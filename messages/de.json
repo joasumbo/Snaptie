@@ -1,0 +1,53 @@
+{
+  "Common": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "enter": "Weiter",
+    "error": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "Language": {
+    "label": "Sprache",
+    "en": "English",
+    "pt": "Português",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch"
+  },
+  "Landing": {
+    "badge": "Plattform für interaktive QR-Codes",
+    "title": "Interaktive QR-Codes für Unternehmen",
+    "subtitle": "Verwandeln Sie einen einzigen Scan in Menüs, Anleitungen, Links und mehr — und aktualisieren Sie die Inhalte jederzeit, ohne etwas neu zu drucken.",
+    "signIn": "Anmelden"
+  },
+  "PublicPage": {
+    "editPage": "Seite bearbeiten",
+    "editCode": "Bearbeitungscode",
+    "invalidCode": "Ungültiger Code.",
+    "noEditable": "Keine bearbeitbaren Elemente verfügbar.",
+    "saved": "Änderungen gespeichert.",
+    "swipeMore": "Wischen für mehr",
+    "fieldTitle": "Titel",
+    "fieldText": "Text",
+    "fieldUrl": "URL",
+    "fieldMapsLink": "Google-Maps-Link",
+    "fieldNumber": "Nummer",
+    "fieldMessage": "Nachricht",
+    "fieldEmail": "E-Mail",
+    "fieldSsid": "Netzwerk (SSID)",
+    "fieldPassword": "Passwort",
+    "fieldFile": "Datei",
+    "fieldImages": "Bilder"
+  },
+  "Wifi": {
+    "pointCamera": "Richten Sie die Kamera Ihres Telefons darauf, um sich zu verbinden",
+    "network": "Netzwerk",
+    "password": "Passwort",
+    "notConfigured": "Netzwerk nicht konfiguriert."
+  },
+  "Upload": {
+    "uploadFile": "Datei hochladen",
+    "uploaded": "Datei hochgeladen",
+    "success": "Datei hochgeladen.",
+    "failed": "Upload fehlgeschlagen. Überprüfen Sie die R2-CORS-Konfiguration."
+  }
+}

@@ -5,7 +5,7 @@ import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const LOCALES = ["en", "pt", "es"] as const;
+const LOCALES = ["en", "pt", "es", "fr", "de"] as const;
 
 // Sets the locale cookie (read server-side by the i18n config) and refreshes.
 export function LanguageSwitcher({ className }: { className?: string }) {
