@@ -165,21 +165,20 @@ function ContentElement({ block }: { block: QrPageBlock }) {
     const many = imgs.length > 1;
     return (
       <div>
-        <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
+        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1">
           {imgs.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={i}
               src={src}
               alt={`${block.titulo} ${i + 1}`}
-              // Slightly under full width so the next photo peeks in — a clear cue
-              // that the carousel is swipeable.
-              className={`${aspect} ${many ? "w-[88%]" : "w-full"} shrink-0 snap-center rounded-xl object-cover`}
+              // Full width keeps the page clean; the hint below signals the swipe.
+              className={`${aspect} w-full shrink-0 snap-center rounded-xl object-cover`}
             />
           ))}
         </div>
         {many ? (
-          <div className="mt-1 flex items-center justify-center gap-1 text-xs text-zinc-400">
+          <div className="mt-1.5 flex items-center justify-center gap-1 text-xs text-zinc-400">
             <ChevronLeft className="size-3.5" />
             <span>Deslize para ver mais</span>
             <ChevronRight className="size-3.5" />
