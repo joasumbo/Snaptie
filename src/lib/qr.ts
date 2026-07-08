@@ -12,6 +12,8 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   IMAGEM: "Imagem",
   CARROSSEL: "Carrossel",
   VIDEO: "Vídeo",
+  TITULO: "Título",
+  LOGO: "Logótipo",
   CHAT: "Chat",
   FEED: "Feed",
   FORMULARIO: "Formulário",
@@ -31,7 +33,13 @@ export const ACTION_TYPES: BlockType[] = [
   "TEXTO",
 ];
 
-export const CONTENT_TYPES: BlockType[] = ["IMAGEM", "CARROSSEL", "VIDEO"];
+export const CONTENT_TYPES: BlockType[] = [
+  "TITULO",
+  "LOGO",
+  "IMAGEM",
+  "CARROSSEL",
+  "VIDEO",
+];
 
 export function isContentBlock(tipo: BlockType): boolean {
   return CONTENT_TYPES.includes(tipo);
@@ -53,6 +61,7 @@ export const DEFAULT_ICON: Partial<Record<BlockType, string>> = {
 export type FieldKind =
   | "url"
   | "texto"
+  | "titulo"
   | "telefone"
   | "email"
   | "whatsapp"
@@ -74,6 +83,8 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   IMAGEM: "imagem",
   VIDEO: "video",
   CARROSSEL: "carrossel",
+  TITULO: "titulo",
+  LOGO: "imagem",
   // unused future types fall back to a URL field
   CHAT: "url",
   FEED: "url",

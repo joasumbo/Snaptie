@@ -65,6 +65,8 @@ enum BlockType {
   IMAGEM
   CARROSSEL
   VIDEO
+  TITULO
+  LOGO
   // Tipos futuros
   CHAT
   FEED
@@ -170,6 +172,7 @@ model QrBlock {
   conteudo  Json? // conteúdo flexível conforme o tipo (url, texto, ficheiro, etc.)
   ordem     Int       @default(0)
   ativo     Boolean   @default(true)
+  editavelPublico Boolean @default(false) @map("editavel_publico") // visitante pode editar este elemento
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 

@@ -34,6 +34,8 @@ const BLOCK_TYPES: BlockType[] = [
   "IMAGEM",
   "CARROSSEL",
   "VIDEO",
+  "TITULO",
+  "LOGO",
 ];
 
 type PageFields = {
@@ -235,6 +237,7 @@ type BlockFields = {
   descricao?: string | null;
   icone?: string | null;
   conteudo: Record<string, unknown>;
+  editavelPublico?: boolean;
 };
 
 function blockData(input: BlockFields) {
@@ -244,6 +247,7 @@ function blockData(input: BlockFields) {
     descricao: input.descricao?.trim() || null,
     icone: input.icone?.trim() || null,
     conteudo: (input.conteudo ?? {}) as Prisma.InputJsonValue,
+    editavelPublico: input.editavelPublico ?? false,
   };
 }
 

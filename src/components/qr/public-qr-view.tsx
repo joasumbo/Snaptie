@@ -16,52 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
-import { cn } from "@/lib/utils";
 import { TYPE_FIELD, BLOCK_TYPE_LABELS, isContentBlock } from "@/lib/qr";
 import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
   saveBlockContent,
-  savePageSettings,
   requestPublicUpload,
 } from "@/app/[empresa]/[codigo]/edit-actions";
 import type { UploadKind } from "@/lib/storage";
-
-const SIZE_OPTIONS = [
-  { label: "Pequeno", value: "P" },
-  { label: "Médio", value: "M" },
-  { label: "Grande", value: "G" },
-];
-
-function Seg({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: { label: string; value: string }[];
-}) {
-  return (
-    <div className="inline-flex rounded-lg border p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "rounded-md px-3 py-1 text-sm transition-colors",
-            value === o.value
-              ? "bg-foreground text-background"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 type EditBlock = {
   id: string;
@@ -93,15 +55,6 @@ export default function PublicQrView({
   const [edits, setEdits] = useState<EditBlock[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Page customisation, editable by the visitor too.
-  const [pgLogo, setPgLogo] = useState<string | null>(data.logo);
-  const [pgCapa, setPgCapa] = useState<string | null>(data.imagemCapa);
-  const [pgLogoTamanho, setPgLogoTamanho] = useState(data.logoTamanho);
-  const [pgLogoForma, setPgLogoForma] = useState(data.logoForma);
-  const [pgNomeTamanho, setPgNomeTamanho] = useState(data.nomeTamanho);
-  const [pgMostrarLogo, setPgMostrarLogo] = useState(data.mostrarLogo);
-  const [pgMostrarNome, setPgMostrarNome] = useState(data.mostrarNome);
-
   async function checkPin() {
     setChecking(true);
     setPinError(null);
@@ -112,22 +65,17 @@ export default function PublicQrView({
       return;
     }
     setAuthPin(pin);
+    // Only the elements the owner marked as editable by the visitor.
     setEdits(
-      data.blocks.map((b) => ({
-        id: b.id,
-        tipo: b.tipo,
-        titulo: b.titulo,
-        conteudo: { ...b.conteudo },
-      })),
+      data.blocks
+        .filter((b) => b.editavelPublico)
+        .map((b) => ({
+          id: b.id,
+          tipo: b.tipo,
+          titulo: b.titulo,
+          conteudo: { ...b.conteudo },
+        })),
     );
-    // Start the customisation controls from the current page values.
-    setPgLogo(data.logo);
-    setPgCapa(data.imagemCapa);
-    setPgLogoTamanho(data.logoTamanho);
-    setPgLogoForma(data.logoForma);
-    setPgNomeTamanho(data.nomeTamanho);
-    setPgMostrarLogo(data.mostrarLogo);
-    setPgMostrarNome(data.mostrarNome);
     setPinOpen(false);
     setPanelOpen(true);
   }
@@ -146,21 +94,6 @@ export default function PublicQrView({
   async function saveAll() {
     setSaving(true);
     try {
-      const rs = await savePageSettings({
-        codigo,
-        pin: authPin,
-        logo: pgLogo,
-        imagemCapa: pgCapa,
-        logoTamanho: pgLogoTamanho,
-        logoForma: pgLogoForma,
-        nomeTamanho: pgNomeTamanho,
-        mostrarLogo: pgMostrarLogo,
-        mostrarNome: pgMostrarNome,
-      });
-      if (!rs.ok) {
-        toast.error(rs.message);
-        return;
-      }
       for (const b of edits) {
         const r = await saveBlockContent({
           codigo,
@@ -250,82 +183,10 @@ export default function PublicQrView({
             <DialogTitle>Editar página</DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-            <div className="space-y-3 rounded-lg border p-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Personalização
-              </div>
-              <div className="space-y-1.5">
-                <Label>Imagem de capa</Label>
-                <FileUpload
-                  kind="image"
-                  value={pgCapa}
-                  onChange={setPgCapa}
-                  uploader={uploaderFor("image")}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Logótipo</Label>
-                <FileUpload
-                  kind="image"
-                  value={pgLogo}
-                  onChange={setPgLogo}
-                  uploader={uploaderFor("image")}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label>Mostrar logótipo</Label>
-                <Seg
-                  value={pgMostrarLogo ? "sim" : "nao"}
-                  onChange={(v) => setPgMostrarLogo(v === "sim")}
-                  options={[
-                    { label: "Mostrar", value: "sim" },
-                    { label: "Ocultar", value: "nao" },
-                  ]}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label>Mostrar nome</Label>
-                <Seg
-                  value={pgMostrarNome ? "sim" : "nao"}
-                  onChange={(v) => setPgMostrarNome(v === "sim")}
-                  options={[
-                    { label: "Mostrar", value: "sim" },
-                    { label: "Ocultar", value: "nao" },
-                  ]}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Tamanho do logótipo</Label>
-                <div>
-                  <Seg value={pgLogoTamanho} onChange={setPgLogoTamanho} options={SIZE_OPTIONS} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Forma do logótipo</Label>
-                <div>
-                  <Seg
-                    value={pgLogoForma}
-                    onChange={setPgLogoForma}
-                    options={[
-                      { label: "Círculo", value: "circulo" },
-                      { label: "Quadrado", value: "quadrado" },
-                    ]}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Tamanho do nome</Label>
-                <div>
-                  <Seg value={pgNomeTamanho} onChange={setPgNomeTamanho} options={SIZE_OPTIONS} />
-                </div>
-              </div>
-            </div>
-
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Conteúdos
-            </div>
             {edits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem elementos.</p>
+              <p className="text-sm text-muted-foreground">
+                Não há elementos disponíveis para edição.
+              </p>
             ) : (
               edits.map((b) => (
                 <div key={b.id} className="space-y-2 rounded-lg border p-3">
@@ -399,6 +260,17 @@ function BlockFields({
           value={str(c, "texto")}
           onChange={(e) => setField(id, "texto", e.target.value)}
           className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
+      </div>
+    );
+  }
+  if (field === "titulo") {
+    return (
+      <div className="space-y-1.5">
+        <Label>Título</Label>
+        <Input
+          value={str(c, "texto")}
+          onChange={(e) => setField(id, "texto", e.target.value)}
         />
       </div>
     );

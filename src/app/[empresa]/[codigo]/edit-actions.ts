@@ -66,46 +66,6 @@ export async function saveBlockContent(input: {
   return { ok: true };
 }
 
-const SIZES = ["P", "M", "G"];
-const SHAPES = ["quadrado", "circulo"];
-
-// Lets the visitor change the page customisation (logo, cover, visibility and
-// sizes) — but never the QR's identity, publication state or the edit code.
-export async function savePageSettings(input: {
-  codigo: string;
-  pin: string;
-  logo?: string | null;
-  imagemCapa?: string | null;
-  logoTamanho?: string;
-  logoForma?: string;
-  nomeTamanho?: string;
-  mostrarLogo?: boolean;
-  mostrarNome?: boolean;
-}): Promise<EditResult> {
-  const qr = await authorize(input.codigo, input.pin);
-  if (!qr) return { ok: false, message: "Código inválido." };
-
-  try {
-    await prisma.qrCode.update({
-      where: { id: qr.id },
-      data: {
-        logo: input.logo?.trim() || null,
-        imagemCapa: input.imagemCapa?.trim() || null,
-        logoTamanho: SIZES.includes(input.logoTamanho ?? "") ? input.logoTamanho : "M",
-        logoForma: SHAPES.includes(input.logoForma ?? "") ? input.logoForma : "circulo",
-        nomeTamanho: SIZES.includes(input.nomeTamanho ?? "") ? input.nomeTamanho : "M",
-        mostrarLogo: input.mostrarLogo ?? true,
-        mostrarNome: input.mostrarNome ?? true,
-      },
-    });
-  } catch (e) {
-    console.error("[public-edit:savePageSettings]", e);
-    const message = e instanceof Error ? e.message : "Erro desconhecido.";
-    return { ok: false, message: `Não foi possível guardar: ${message}` };
-  }
-  return { ok: true };
-}
-
 export type UploadTicket =
   | { ok: true; uploadUrl: string; publicUrl: string }
   | { ok: false; message: string };

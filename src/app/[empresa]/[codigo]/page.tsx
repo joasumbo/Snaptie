@@ -82,6 +82,7 @@ export default async function ScanPage({
     cor: b.cor,
     descricao: b.descricao,
     conteudo: asRecord(b.conteudo),
+    editavelPublico: b.editavelPublico,
   }));
 
   return (

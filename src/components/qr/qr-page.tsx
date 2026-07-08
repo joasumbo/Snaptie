@@ -7,6 +7,8 @@ import {
   FileText,
   MessageCircle,
   Type,
+  ChevronLeft,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import type { BlockType } from "@prisma/client";
@@ -31,6 +33,7 @@ export type QrPageBlock = {
   cor: string | null;
   descricao: string | null;
   conteudo: Record<string, unknown>;
+  editavelPublico?: boolean;
 };
 
 export type QrPageData = {
@@ -122,6 +125,23 @@ function ActionButton({
 }
 
 function ContentElement({ block }: { block: QrPageBlock }) {
+  if (block.tipo === "TITULO") {
+    const texto = str(block.conteudo, "texto");
+    if (!texto) return null;
+    return (
+      <h2 className="text-center text-xl font-semibold text-zinc-900">{texto}</h2>
+    );
+  }
+  if (block.tipo === "LOGO") {
+    const url = str(block.conteudo, "url");
+    if (!url) return null;
+    return (
+      <div className="flex justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" className="size-24 rounded-full object-cover shadow-sm" />
+      </div>
+    );
+  }
   if (block.tipo === "IMAGEM") {
     const url = str(block.conteudo, "url");
     if (!url) return null;
@@ -142,17 +162,29 @@ function ContentElement({ block }: { block: QrPageBlock }) {
     // (landscape rectangle vs portrait rectangle).
     const landscape = str(block.conteudo, "orientacao") === "horizontal";
     const aspect = landscape ? "aspect-[4/3]" : "aspect-[3/4]";
+    const many = imgs.length > 1;
     return (
-      <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
-        {imgs.map((src, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={i}
-            src={src}
-            alt={`${block.titulo} ${i + 1}`}
-            className={`${aspect} w-full shrink-0 snap-center rounded-xl object-cover`}
-          />
-        ))}
+      <div>
+        <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
+          {imgs.map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={src}
+              alt={`${block.titulo} ${i + 1}`}
+              // Slightly under full width so the next photo peeks in — a clear cue
+              // that the carousel is swipeable.
+              className={`${aspect} ${many ? "w-[88%]" : "w-full"} shrink-0 snap-center rounded-xl object-cover`}
+            />
+          ))}
+        </div>
+        {many ? (
+          <div className="mt-1 flex items-center justify-center gap-1 text-xs text-zinc-400">
+            <ChevronLeft className="size-3.5" />
+            <span>Deslize para ver mais</span>
+            <ChevronRight className="size-3.5" />
+          </div>
+        ) : null}
       </div>
     );
   }

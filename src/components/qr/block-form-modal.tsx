@@ -34,6 +34,7 @@ export type EditableBlock = {
   descricao: string | null;
   conteudo: Record<string, unknown>;
   ativo: boolean;
+  editavelPublico: boolean;
 };
 
 type Props = {
@@ -76,6 +77,9 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   const [cor, setCor] = useState(block?.cor ?? "");
   const [descricao, setDescricao] = useState(block?.descricao ?? "");
   const [ativo, setAtivo] = useState(block?.ativo ?? true);
+  const [editavelPublico, setEditavelPublico] = useState(
+    block?.editavelPublico ?? false,
+  );
 
   const c = block?.conteudo ?? {};
   const [url, setUrl] = useState(str(c, "url"));
@@ -137,6 +141,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
           conteudo = { url };
           break;
         case "texto":
+        case "titulo":
           conteudo = { texto };
           break;
         case "telefone":
@@ -174,6 +179,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         cor: isContentBlock(tipo) ? null : cor,
         descricao: isContentBlock(tipo) ? null : descricao,
         conteudo,
+        editavelPublico,
       };
       const result = isEdit
         ? await updateBlock({ id: block!.id, ativo, ...payload })
@@ -184,7 +190,15 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
       }
       onSaved(
         isEdit
-          ? { id: block!.id, titulo, cor: payload.cor, descricao: payload.descricao, conteudo, ativo }
+          ? {
+              id: block!.id,
+              titulo,
+              cor: payload.cor,
+              descricao: payload.descricao,
+              conteudo,
+              ativo,
+              editavelPublico,
+            }
           : undefined,
       );
       router.refresh();
@@ -287,6 +301,16 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
               </Field>
             ) : null}
 
+            {field === "titulo" ? (
+              <Field label="Título">
+                <Input
+                  placeholder="Escreva o título"
+                  value={texto}
+                  onChange={(e) => setTexto(e.target.value)}
+                />
+              </Field>
+            ) : null}
+
             {field === "telefone" ? (
               <Field label="Número de telefone">
                 <Input
@@ -342,7 +366,15 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
             {/* Single file: image, video or pdf — preview only, uploaded on save */}
             {singleKind ? (
               <Field
-                label={field === "imagem" ? "Imagem" : field === "video" ? "Vídeo" : "Ficheiro PDF"}
+                label={
+                  tipo === "LOGO"
+                    ? "Logótipo"
+                    : field === "imagem"
+                      ? "Imagem"
+                      : field === "video"
+                        ? "Vídeo"
+                        : "Ficheiro PDF"
+                }
               >
                 {singlePreview ? (
                   <div className="flex items-center gap-3 rounded-lg border p-2">
@@ -514,6 +546,21 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                 </Field>
               </>
             ) : null}
+
+            <label className="flex items-center gap-2 rounded-lg border p-3 text-sm">
+              <input
+                type="checkbox"
+                checked={editavelPublico}
+                onChange={(e) => setEditavelPublico(e.target.checked)}
+                className="size-4"
+              />
+              <span>
+                Permitir edição pelo visitante
+                <span className="block text-xs text-muted-foreground">
+                  O visitante (com código) pode alterar este elemento na página pública.
+                </span>
+              </span>
+            </label>
 
             {isEdit ? (
               <label className="flex items-center gap-2 text-sm">

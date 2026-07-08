@@ -65,6 +65,7 @@ export default async function QrBuilderPage({
         conteudo: asRecord(b.conteudo),
         ativo: b.ativo,
         ordem: b.ordem,
+        editavelPublico: b.editavelPublico,
       }))}
       publicUrl={publicUrl}
     />

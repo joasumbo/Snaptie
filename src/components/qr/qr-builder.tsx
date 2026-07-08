@@ -60,7 +60,7 @@ type Company = { nome: string; logo: string | null; corPrimaria: string | null }
 function summary(b: BuilderBlock): string {
   const c = b.conteudo;
   const s = (k: string) => (typeof c[k] === "string" ? (c[k] as string) : "");
-  if (b.tipo === "TEXTO") return s("texto");
+  if (b.tipo === "TEXTO" || b.tipo === "TITULO") return s("texto");
   if (b.tipo === "WHATSAPP" || b.tipo === "TELEFONE") return s("numero");
   if (b.tipo === "EMAIL") return s("email");
   if (b.tipo === "WIFI") return s("ssid");
