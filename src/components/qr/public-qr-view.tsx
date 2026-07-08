@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Pencil, Loader2, X } from "lucide-react";
 import type { BlockType } from "@prisma/client";
@@ -46,6 +47,8 @@ export default function PublicQrView({
   edicaoPublica: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("PublicPage");
+  const tc = useTranslations("Common");
   const [pinOpen, setPinOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [pin, setPin] = useState("");
@@ -61,7 +64,7 @@ export default function PublicQrView({
     const r = await verifyEditPin(codigo, pin);
     setChecking(false);
     if (!r.ok) {
-      setPinError("Código inválido.");
+      setPinError(t("invalidCode"));
       return;
     }
     setAuthPin(pin);
@@ -107,11 +110,11 @@ export default function PublicQrView({
           return;
         }
       }
-      toast.success("Alterações guardadas.");
+      toast.success(t("saved"));
       setPanelOpen(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Ocorreu um erro. Tente novamente.");
+      toast.error(e instanceof Error ? e.message : tc("error"));
     } finally {
       setSaving(false);
     }
@@ -138,7 +141,7 @@ export default function PublicQrView({
               }}
             >
               <Pencil />
-              Editar página
+              {t("editPage")}
             </Button>
           ) : null
         }
@@ -147,10 +150,10 @@ export default function PublicQrView({
       <Dialog open={pinOpen} onOpenChange={(o) => !o && setPinOpen(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar página</DialogTitle>
+            <DialogTitle>{t("editPage")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="edit-pin">Código de edição</Label>
+            <Label htmlFor="edit-pin">{t("editCode")}</Label>
             <Input
               id="edit-pin"
               type="password"
@@ -164,11 +167,11 @@ export default function PublicQrView({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPinOpen(false)}>
-              Cancelar
+              {tc("cancel")}
             </Button>
             <Button onClick={checkPin} disabled={checking}>
               {checking ? <Loader2 className="animate-spin" /> : null}
-              Entrar
+              {tc("enter")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -180,13 +183,11 @@ export default function PublicQrView({
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Editar página</DialogTitle>
+            <DialogTitle>{t("editPage")}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
             {edits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Não há elementos disponíveis para edição.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("noEditable")}</p>
             ) : (
               edits.map((b) => (
                 <div key={b.id} className="space-y-2 rounded-lg border p-3">
@@ -195,7 +196,7 @@ export default function PublicQrView({
                   </div>
                   {!isContentBlock(b.tipo) ? (
                     <div className="space-y-1.5">
-                      <Label>Título</Label>
+                      <Label>{t("fieldTitle")}</Label>
                       <Input
                         value={b.titulo}
                         onChange={(e) => setTitulo(b.id, e.target.value)}
@@ -221,7 +222,7 @@ export default function PublicQrView({
             </Button>
             <Button onClick={saveAll} disabled={saving}>
               {saving ? <Loader2 className="animate-spin" /> : null}
-              Guardar
+              {tc("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -247,6 +248,7 @@ function BlockFields({
     { ok: true; uploadUrl: string; publicUrl: string } | { ok: false; message: string }
   >;
 }) {
+  const t = useTranslations("PublicPage");
   const field = TYPE_FIELD[block.tipo];
   const c = block.conteudo;
   const id = block.id;
@@ -254,7 +256,7 @@ function BlockFields({
   if (field === "texto") {
     return (
       <div className="space-y-1.5">
-        <Label>Texto</Label>
+        <Label>{t("fieldText")}</Label>
         <textarea
           rows={3}
           value={str(c, "texto")}
@@ -267,7 +269,7 @@ function BlockFields({
   if (field === "titulo") {
     return (
       <div className="space-y-1.5">
-        <Label>Título</Label>
+        <Label>{t("fieldTitle")}</Label>
         <Input
           value={str(c, "texto")}
           onChange={(e) => setField(id, "texto", e.target.value)}
@@ -278,7 +280,7 @@ function BlockFields({
   if (field === "url") {
     return (
       <div className="space-y-1.5">
-        <Label>{block.tipo === "MAPA" ? "Link do Google Maps" : "URL"}</Label>
+        <Label>{block.tipo === "MAPA" ? t("fieldMapsLink") : t("fieldUrl")}</Label>
         <Input
           placeholder="https://"
           value={str(c, "url")}
@@ -291,7 +293,7 @@ function BlockFields({
     return (
       <>
         <div className="space-y-1.5">
-          <Label>Número</Label>
+          <Label>{t("fieldNumber")}</Label>
           <Input
             value={str(c, "numero")}
             onChange={(e) => setField(id, "numero", e.target.value)}
@@ -299,7 +301,7 @@ function BlockFields({
         </div>
         {field === "whatsapp" ? (
           <div className="space-y-1.5">
-            <Label>Mensagem</Label>
+            <Label>{t("fieldMessage")}</Label>
             <Input
               value={str(c, "mensagem")}
               onChange={(e) => setField(id, "mensagem", e.target.value)}
@@ -312,7 +314,7 @@ function BlockFields({
   if (field === "email") {
     return (
       <div className="space-y-1.5">
-        <Label>Email</Label>
+        <Label>{t("fieldEmail")}</Label>
         <Input
           type="email"
           value={str(c, "email")}
@@ -325,14 +327,14 @@ function BlockFields({
     return (
       <>
         <div className="space-y-1.5">
-          <Label>Rede (SSID)</Label>
+          <Label>{t("fieldSsid")}</Label>
           <Input
             value={str(c, "ssid")}
             onChange={(e) => setField(id, "ssid", e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Palavra-passe</Label>
+          <Label>{t("fieldPassword")}</Label>
           <Input
             value={str(c, "password")}
             onChange={(e) => setField(id, "password", e.target.value)}
@@ -346,7 +348,7 @@ function BlockFields({
       field === "imagem" ? "image" : field === "video" ? "video" : "pdf";
     return (
       <div className="space-y-1.5">
-        <Label>Ficheiro</Label>
+        <Label>{t("fieldFile")}</Label>
         <FileUpload
           kind={kind}
           value={str(c, "url") || null}
@@ -360,7 +362,7 @@ function BlockFields({
     const imgs = Array.isArray(c.imagens) ? (c.imagens as string[]) : [];
     return (
       <div className="space-y-2">
-        <Label>Imagens</Label>
+        <Label>{t("fieldImages")}</Label>
         {imgs.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {imgs.map((src, i) => (

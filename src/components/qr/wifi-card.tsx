@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { Wifi, Copy, Check } from "lucide-react";
 
@@ -26,6 +27,7 @@ export function WifiCard({
   color: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const t = useTranslations("Wifi");
 
   const payload = password
     ? `WIFI:T:WPA;S:${esc(ssid)};P:${esc(password)};;`
@@ -60,18 +62,18 @@ export function WifiCard({
               <QRCodeSVG value={payload} size={150} level="M" />
             </div>
             <p className="text-center text-xs opacity-90">
-              Aponte a câmara do telemóvel para ligar
+              {t("pointCamera")}
             </p>
           </div>
 
           <div className="mt-3 space-y-1 text-sm">
             <div className="flex items-center justify-between gap-2">
-              <span className="opacity-90">Rede</span>
+              <span className="opacity-90">{t("network")}</span>
               <span className="font-medium">{ssid}</span>
             </div>
             {password ? (
               <div className="flex items-center justify-between gap-2">
-                <span className="opacity-90">Palavra-passe</span>
+                <span className="opacity-90">{t("password")}</span>
                 <button
                   type="button"
                   onClick={copy}
@@ -89,7 +91,7 @@ export function WifiCard({
           </div>
         </>
       ) : (
-        <div className="mt-2 text-sm opacity-90">Rede não configurada.</div>
+        <div className="mt-2 text-sm opacity-90">{t("notConfigured")}</div>
       )}
     </div>
   );

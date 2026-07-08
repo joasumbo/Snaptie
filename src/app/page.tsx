@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { ArrowRight, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
@@ -43,9 +45,14 @@ function Aurora() {
 }
 
 export default function Home() {
+  const t = useTranslations("Landing");
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
       <Aurora />
+
+      <div className="absolute right-4 top-4 z-20">
+        <LanguageSwitcher />
+      </div>
 
       <motion.div
         variants={container}
@@ -58,22 +65,21 @@ export default function Home() {
           className="mb-6 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-card/60 px-3 py-1 text-sm text-muted-foreground backdrop-blur"
         >
           <QrCode className="size-4" />
-          Plataforma de QR codes interativos
+          {t("badge")}
         </motion.div>
 
         <motion.h1
           variants={item}
           className="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-6xl"
         >
-          QR codes interativos para empresas
+          {t("title")}
         </motion.h1>
 
         <motion.p
           variants={item}
           className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground"
         >
-          Transforme um único scan em menus, guias, links e muito mais — e
-          atualize o conteúdo a qualquer momento, sem reimprimir nada.
+          {t("subtitle")}
         </motion.p>
 
         <motion.div variants={item} className="mt-10 flex justify-center">
@@ -83,7 +89,7 @@ export default function Home() {
             nativeButton={false}
             render={<Link href="/login" />}
           >
-            Iniciar sessão
+            {t("signIn")}
             <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
           </Button>
         </motion.div>

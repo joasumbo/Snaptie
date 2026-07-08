@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import {
   Globe,
   Phone,
@@ -125,6 +128,7 @@ function ActionButton({
 }
 
 function ContentElement({ block }: { block: QrPageBlock }) {
+  const t = useTranslations("PublicPage");
   if (block.tipo === "TITULO") {
     const texto = str(block.conteudo, "texto");
     if (!texto) return null;
@@ -180,7 +184,7 @@ function ContentElement({ block }: { block: QrPageBlock }) {
         {many ? (
           <div className="mt-1.5 flex items-center justify-center gap-1 text-xs text-zinc-400">
             <ChevronLeft className="size-3.5" />
-            <span>Deslize para ver mais</span>
+            <span>{t("swipeMore")}</span>
             <ChevronRight className="size-3.5" />
           </div>
         ) : null}

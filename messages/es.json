@@ -1,0 +1,51 @@
+{
+  "Common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "enter": "Entrar",
+    "error": "Se produjo un error. Inténtelo de nuevo."
+  },
+  "Language": {
+    "label": "Idioma",
+    "en": "English",
+    "pt": "Português",
+    "es": "Español"
+  },
+  "Landing": {
+    "badge": "Plataforma de códigos QR interactivos",
+    "title": "Códigos QR interactivos para empresas",
+    "subtitle": "Convierta un solo escaneo en menús, guías, enlaces y mucho más — y actualice el contenido en cualquier momento, sin reimprimir nada.",
+    "signIn": "Iniciar sesión"
+  },
+  "PublicPage": {
+    "editPage": "Editar página",
+    "editCode": "Código de edición",
+    "invalidCode": "Código no válido.",
+    "noEditable": "No hay elementos disponibles para editar.",
+    "saved": "Cambios guardados.",
+    "swipeMore": "Deslice para ver más",
+    "fieldTitle": "Título",
+    "fieldText": "Texto",
+    "fieldUrl": "URL",
+    "fieldMapsLink": "Enlace de Google Maps",
+    "fieldNumber": "Número",
+    "fieldMessage": "Mensaje",
+    "fieldEmail": "Correo electrónico",
+    "fieldSsid": "Red (SSID)",
+    "fieldPassword": "Contraseña",
+    "fieldFile": "Archivo",
+    "fieldImages": "Imágenes"
+  },
+  "Wifi": {
+    "pointCamera": "Apunte la cámara del teléfono para conectar",
+    "network": "Red",
+    "password": "Contraseña",
+    "notConfigured": "Red no configurada."
+  },
+  "Upload": {
+    "uploadFile": "Cargar archivo",
+    "uploaded": "Archivo cargado",
+    "success": "Archivo subido.",
+    "failed": "Error al subir. Verifique la configuración de CORS de R2."
+  }
+}

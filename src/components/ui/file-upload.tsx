@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Upload, X, FileText, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export function FileUpload({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const t = useTranslations("Upload");
 
   async function handleFile(file: File) {
     setBusy(true);
@@ -52,9 +54,9 @@ export function FileUpload({
       });
       if (!res.ok) throw new Error("upload failed");
       onChange(ticket.publicUrl);
-      toast.success("Ficheiro carregado.");
+      toast.success(t("success"));
     } catch {
-      toast.error("Falha no upload. Verifique a configuração de CORS do R2.");
+      toast.error(t("failed"));
     } finally {
       setBusy(false);
     }
@@ -98,7 +100,7 @@ export function FileUpload({
             rel="noreferrer"
             className="min-w-0 flex-1 truncate text-sm text-primary hover:underline"
           >
-            Ficheiro carregado
+            {t("uploaded")}
           </a>
           <Button
             type="button"
@@ -117,7 +119,7 @@ export function FileUpload({
           disabled={busy}
         >
           {busy ? <Loader2 className="animate-spin" /> : <Upload />}
-          Carregar ficheiro
+          {t("uploadFile")}
         </Button>
       )}
     </div>

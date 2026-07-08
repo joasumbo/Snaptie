@@ -1,0 +1,51 @@
+{
+  "Common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "enter": "Enter",
+    "error": "Something went wrong. Please try again."
+  },
+  "Language": {
+    "label": "Language",
+    "en": "English",
+    "pt": "Português",
+    "es": "Español"
+  },
+  "Landing": {
+    "badge": "Interactive QR code platform",
+    "title": "Interactive QR codes for businesses",
+    "subtitle": "Turn a single scan into menus, guides, links and more — and update the content anytime, without reprinting anything.",
+    "signIn": "Sign in"
+  },
+  "PublicPage": {
+    "editPage": "Edit page",
+    "editCode": "Edit code",
+    "invalidCode": "Invalid code.",
+    "noEditable": "There are no elements available to edit.",
+    "saved": "Changes saved.",
+    "swipeMore": "Swipe to see more",
+    "fieldTitle": "Title",
+    "fieldText": "Text",
+    "fieldUrl": "URL",
+    "fieldMapsLink": "Google Maps link",
+    "fieldNumber": "Number",
+    "fieldMessage": "Message",
+    "fieldEmail": "Email",
+    "fieldSsid": "Network (SSID)",
+    "fieldPassword": "Password",
+    "fieldFile": "File",
+    "fieldImages": "Images"
+  },
+  "Wifi": {
+    "pointCamera": "Point your phone's camera to connect",
+    "network": "Network",
+    "password": "Password",
+    "notConfigured": "Network not set."
+  },
+  "Upload": {
+    "uploadFile": "Upload file",
+    "uploaded": "Uploaded file",
+    "success": "File uploaded.",
+    "failed": "Upload failed. Check the R2 CORS configuration."
+  }
+}
