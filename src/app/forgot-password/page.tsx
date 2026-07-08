@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { requestReset } from "./actions";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations("Auth");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -31,34 +33,29 @@ export default function ForgotPasswordPage() {
         <div className="rounded-2xl bg-card p-6 ring-1 ring-foreground/10 shadow-xl shadow-foreground/5">
           {sent ? (
             <div className="space-y-3 text-center">
-              <h1 className="text-lg font-semibold">Verifique o seu email</h1>
-              <p className="text-sm text-muted-foreground">
-                Se existir uma conta com esse email, enviámos um link para repor a
-                palavra-passe. O link expira em 1 hora.
-              </p>
+              <h1 className="text-lg font-semibold">{t("checkEmailTitle")}</h1>
+              <p className="text-sm text-muted-foreground">{t("checkEmailText")}</p>
               <Button
                 variant="outline"
                 className="w-full"
                 nativeButton={false}
                 render={<Link href="/login" />}
               >
-                Voltar ao início de sessão
+                {t("backToLogin")}
               </Button>
             </div>
           ) : (
             <>
-              <h1 className="text-lg font-semibold">Recuperar palavra-passe</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Introduza o seu email e enviamos-lhe um link de recuperação.
-              </p>
+              <h1 className="text-lg font-semibold">{t("forgotTitle")}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{t("forgotSubtitle")}</p>
               <form onSubmit={onSubmit} className="mt-5 space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t("email")}</Label>
                   <Input
                     id="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="nome@empresa.pt"
+                    placeholder={t("emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -67,12 +64,12 @@ export default function ForgotPasswordPage() {
                 </div>
                 <Button type="submit" className="h-9 w-full" disabled={busy}>
                   {busy ? <Loader2 className="animate-spin" /> : null}
-                  Enviar link
+                  {t("sendLink")}
                 </Button>
               </form>
               <div className="mt-4 text-center text-sm">
                 <Link href="/login" className="text-muted-foreground hover:text-foreground">
-                  Voltar ao início de sessão
+                  {t("backToLogin")}
                 </Link>
               </div>
             </>

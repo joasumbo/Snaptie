@@ -4,11 +4,13 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/brand/logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { login } from "./actions";
 
 export default function LoginPage() {
@@ -21,6 +23,7 @@ export default function LoginPage() {
 
 function LoginForm() {
   const router = useRouter();
+  const t = useTranslations("Auth");
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,6 +48,9 @@ function LoginForm() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
+      <div className="absolute right-4 top-4 z-20">
+        <LanguageSwitcher />
+      </div>
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           aria-hidden
@@ -71,10 +77,8 @@ function LoginForm() {
         </div>
 
         <div className="rounded-2xl bg-card p-6 ring-1 ring-foreground/10 shadow-xl shadow-foreground/5">
-          <h1 className="text-lg font-semibold">Iniciar sessão</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Aceda à sua conta para gerir a plataforma.
-          </p>
+          <h1 className="text-lg font-semibold">{t("signInTitle")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("signInSubtitle")}</p>
 
           {error ? (
             <motion.div
@@ -89,12 +93,12 @@ function LoginForm() {
 
           <form onSubmit={onSubmit} className="mt-5 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("email")}</Label>
               <Input
                 id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="nome@empresa.pt"
+                placeholder={t("emailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -103,7 +107,7 @@ function LoginForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Palavra-passe</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -117,7 +121,7 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShow((v) => !v)}
-                  aria-label={show ? "Ocultar palavra-passe" : "Mostrar palavra-passe"}
+                  aria-label={show ? t("hidePassword") : t("showPassword")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -130,13 +134,13 @@ function LoginForm() {
                 href="/forgot-password"
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
-                Esqueceu a palavra-passe?
+                {t("forgot")}
               </Link>
             </div>
 
             <Button type="submit" className="h-9 w-full" disabled={submitting}>
               {submitting ? <Loader2 className="animate-spin" /> : null}
-              Entrar
+              {t("signInButton")}
             </Button>
           </form>
         </div>

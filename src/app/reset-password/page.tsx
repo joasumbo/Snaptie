@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
@@ -21,6 +22,7 @@ export default function ResetPasswordPage() {
 
 function ResetForm() {
   const router = useRouter();
+  const t = useTranslations("Auth");
   const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -31,7 +33,7 @@ function ResetForm() {
     e.preventDefault();
     setError(null);
     if (password !== confirm) {
-      setError("As palavras-passe não coincidem.");
+      setError(t("passwordsDontMatch"));
       return;
     }
     setBusy(true);
@@ -41,7 +43,7 @@ function ResetForm() {
       setError(result.message);
       return;
     }
-    toast.success("Palavra-passe alterada. Inicie sessão.");
+    toast.success(t("passwordChanged"));
     router.replace("/login");
   }
 
@@ -52,10 +54,8 @@ function ResetForm() {
           <Logo markClassName="size-7" />
         </div>
         <div className="rounded-2xl bg-card p-6 ring-1 ring-foreground/10 shadow-xl shadow-foreground/5">
-          <h1 className="text-lg font-semibold">Nova palavra-passe</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Defina a sua nova palavra-passe.
-          </p>
+          <h1 className="text-lg font-semibold">{t("newPasswordTitle")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("newPasswordSubtitle")}</p>
 
           {error ? (
             <div
@@ -68,15 +68,15 @@ function ResetForm() {
 
           {!token ? (
             <div className="mt-4 text-sm text-muted-foreground">
-              Ligação inválida.{" "}
+              {t("invalidLink")}{" "}
               <Link href="/forgot-password" className="text-primary hover:underline">
-                Pedir um novo link
+                {t("requestNewLink")}
               </Link>
             </div>
           ) : (
             <form onSubmit={onSubmit} className="mt-5 space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="password">Nova palavra-passe</Label>
+                <Label htmlFor="password">{t("newPassword")}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -88,7 +88,7 @@ function ResetForm() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="confirm">Confirmar palavra-passe</Label>
+                <Label htmlFor="confirm">{t("confirmPassword")}</Label>
                 <Input
                   id="confirm"
                   type="password"
@@ -101,7 +101,7 @@ function ResetForm() {
               </div>
               <Button type="submit" className="h-9 w-full" disabled={busy}>
                 {busy ? <Loader2 className="animate-spin" /> : null}
-                Alterar palavra-passe
+                {t("changePassword")}
               </Button>
             </form>
           )}
