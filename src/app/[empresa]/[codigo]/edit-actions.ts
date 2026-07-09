@@ -2,7 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/auth/password";
+import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { isContentBlock } from "@/lib/qr";
 import {
   prepareUpload,
@@ -60,6 +60,32 @@ export async function saveBlockContent(input: {
     });
   } catch (e) {
     console.error("[public-edit:saveBlockContent]", e);
+    const message = e instanceof Error ? e.message : "Erro desconhecido.";
+    return { ok: false, message: `Não foi possível guardar: ${message}` };
+  }
+  return { ok: true };
+}
+
+// Lets the visitor change the edit code itself (after proving the current one).
+export async function changeEditCode(input: {
+  codigo: string;
+  pin: string;
+  newPin: string;
+}): Promise<EditResult> {
+  const qr = await authorize(input.codigo, input.pin);
+  if (!qr) return { ok: false, message: "Código inválido." };
+
+  const novo = input.newPin?.trim();
+  if (!novo || novo.length < 4) {
+    return { ok: false, message: "O novo código deve ter pelo menos 4 caracteres." };
+  }
+  try {
+    await prisma.qrCode.update({
+      where: { id: qr.id },
+      data: { edicaoPin: await hashPassword(novo) },
+    });
+  } catch (e) {
+    console.error("[public-edit:changeEditCode]", e);
     const message = e instanceof Error ? e.message : "Erro desconhecido.";
     return { ok: false, message: `Não foi possível guardar: ${message}` };
   }

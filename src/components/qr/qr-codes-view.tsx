@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Eye, Plus } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ export default function QrCodesView({
   isAdmin: boolean;
 }) {
   const router = useRouter();
+  const ts = useTranslations("Stats");
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<
     { mode: "create" } | { mode: "edit"; qr: EditableQr } | null
@@ -67,12 +69,18 @@ export default function QrCodesView({
       sortable: true,
       sortValue: (r) => r.nome.toLowerCase(),
       cell: (r) => (
-        <Link
-          href={`/dashboard/qr-codes/${r.id}`}
-          className="font-medium hover:underline"
-        >
-          {r.nome}
-        </Link>
+        <div>
+          <Link
+            href={`/dashboard/qr-codes/${r.id}`}
+            className="font-medium hover:underline"
+          >
+            {r.nome}
+          </Link>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground sm:hidden">
+            <Eye className="size-3" />
+            {r.scansTotal} {ts("views")}
+          </div>
+        </div>
       ),
     },
     ...(isAdmin

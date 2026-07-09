@@ -50,6 +50,7 @@ export default async function QrBuilderPage({
         edicaoPublica: qr.edicaoPublica,
         temPin: Boolean(qr.edicaoPin),
         publicado: qr.publicado,
+        scansTotal: qr.scansTotal,
       }}
       company={{
         nome: qr.company.nome,

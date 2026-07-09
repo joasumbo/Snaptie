@@ -61,9 +61,15 @@
     "GESTOR_QR": "Gestionnaire de QR",
     "VISUALIZADOR": "Lecteur"
   },
+  "Stats": {
+    "views": "vues"
+  },
   "PublicPage": {
     "editPage": "Modifier la page",
     "editCode": "Code de modification",
+    "changeCodeLabel": "Changer le code de modification",
+    "changeCodeHint": "Laissez vide pour conserver le code actuel.",
+    "newCodePlaceholder": "Nouveau code",
     "invalidCode": "Code invalide.",
     "noEditable": "Aucun élément disponible à modifier.",
     "saved": "Modifications enregistrées.",

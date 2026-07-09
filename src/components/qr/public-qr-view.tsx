@@ -22,6 +22,7 @@ import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
   saveBlockContent,
+  changeEditCode,
   requestPublicUpload,
 } from "@/app/[empresa]/[codigo]/edit-actions";
 import type { UploadKind } from "@/lib/storage";
@@ -57,6 +58,7 @@ export default function PublicQrView({
   const [checking, setChecking] = useState(false);
   const [edits, setEdits] = useState<EditBlock[]>([]);
   const [saving, setSaving] = useState(false);
+  const [newCode, setNewCode] = useState("");
 
   async function checkPin() {
     setChecking(true);
@@ -79,6 +81,7 @@ export default function PublicQrView({
           conteudo: { ...b.conteudo },
         })),
     );
+    setNewCode("");
     setPinOpen(false);
     setPanelOpen(true);
   }
@@ -109,6 +112,14 @@ export default function PublicQrView({
           toast.error(r.message);
           return;
         }
+      }
+      if (newCode.trim()) {
+        const rc = await changeEditCode({ codigo, pin: authPin, newPin: newCode.trim() });
+        if (!rc.ok) {
+          toast.error(rc.message);
+          return;
+        }
+        setAuthPin(newCode.trim());
       }
       toast.success(t("saved"));
       setPanelOpen(false);
@@ -211,6 +222,18 @@ export default function PublicQrView({
                 </div>
               ))
             )}
+
+            <div className="space-y-1.5 rounded-lg border p-3">
+              <Label>{t("changeCodeLabel")}</Label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder={t("newCodePlaceholder")}
+                value={newCode}
+                onChange={(e) => setNewCode(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t("changeCodeHint")}</p>
+            </div>
           </div>
           <DialogFooter>
             <Button

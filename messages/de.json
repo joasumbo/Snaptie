@@ -61,9 +61,15 @@
     "GESTOR_QR": "QR-Verwalter",
     "VISUALIZADOR": "Betrachter"
   },
+  "Stats": {
+    "views": "Aufrufe"
+  },
   "PublicPage": {
     "editPage": "Seite bearbeiten",
     "editCode": "Bearbeitungscode",
+    "changeCodeLabel": "Bearbeitungscode ändern",
+    "changeCodeHint": "Leer lassen, um den aktuellen Code zu behalten.",
+    "newCodePlaceholder": "Neuer Code",
     "invalidCode": "Ungültiger Code.",
     "noEditable": "Keine bearbeitbaren Elemente verfügbar.",
     "saved": "Änderungen gespeichert.",

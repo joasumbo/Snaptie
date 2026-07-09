@@ -16,7 +16,9 @@ import {
   Download,
   ExternalLink,
   Palette,
+  Eye,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { BlockType } from "@prisma/client";
 import { BLOCK_TYPE_LABELS } from "@/lib/qr";
 import { Button } from "@/components/ui/button";
@@ -53,6 +55,7 @@ type Qr = {
   edicaoPublica: boolean;
   temPin: boolean;
   publicado: boolean;
+  scansTotal: number;
 };
 
 type Company = { nome: string; logo: string | null; corPrimaria: string | null };
@@ -81,6 +84,7 @@ export default function QrBuilder({
   publicUrl: string;
 }) {
   const router = useRouter();
+  const ts = useTranslations("Stats");
   // Kept in local state so deletions and reordering show instantly, before the
   // server round-trip and refresh complete.
   const [blocks, setBlocks] = useState(initialBlocks);
@@ -211,11 +215,15 @@ export default function QrBuilder({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{qr.nome}</h1>
           <StatusBadge tone={qr.publicado ? "success" : "neutral"}>
             {qr.publicado ? "Publicado" : "Rascunho"}
           </StatusBadge>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-sm font-medium text-muted-foreground">
+            <Eye className="size-4" />
+            {qr.scansTotal} {ts("views")}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2 sm:shrink-0">
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/dashboard/qr-codes" />}>
