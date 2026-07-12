@@ -55,6 +55,9 @@ type Qr = {
   edicaoPublica: boolean;
   edicaoPersonalizacao: boolean;
   temPin: boolean;
+  acessoModo: string;
+  temAcessoPin: boolean;
+  ativado: boolean;
   publicado: boolean;
   scansTotal: number;
 };

@@ -112,5 +112,15 @@
     "uploaded": "Fichier téléversé",
     "success": "Fichier téléversé.",
     "failed": "Échec du téléversement. Vérifiez la configuration CORS de R2."
+  },
+  "Gate": {
+    "activateTitle": "Activer ce QR",
+    "activateHint": "Saisissez le code PIN fourni avec {nome} pour l'activer. Ensuite, tout le monde pourra ouvrir la page.",
+    "privateTitle": "Page privée",
+    "privateHint": "Saisissez le code PIN pour ouvrir cette page.",
+    "pin": "Code PIN",
+    "activate": "Activer",
+    "open": "Ouvrir",
+    "invalidPin": "Code PIN incorrect."
   }
 }

@@ -1,9 +1,11 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { accessCookieName, hasAccess } from "@/lib/auth/qr-access";
 import { type QrPageBlock } from "@/components/qr/qr-page";
 import PublicQrView from "@/components/qr/public-qr-view";
+import QrGate from "@/components/qr/qr-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,20 @@ export default async function ScanPage({
   // Keep the URL canonical: /{empresa}/{codigo} where empresa is the company slug.
   if (qr.company.slug !== empresa) {
     redirect(`/${qr.company.slug}/${codigo}`);
+  }
+
+  // A QR that is not open stops here: the visitor sees the gate, and the scan is
+  // not recorded, because the page was never shown.
+  //   ativacao — open once someone activated it with the PIN
+  //   privado  — open to whoever proved the PIN on this device
+  if (qr.acessoModo === "ativacao" && !qr.ativadoEm) {
+    return <QrGate codigo={qr.codigo ?? ""} modo="ativacao" nome={qr.nome} />;
+  }
+  if (qr.acessoModo === "privado") {
+    const token = (await cookies()).get(accessCookieName(qr.id))?.value;
+    if (!(await hasAccess(token, qr.id))) {
+      return <QrGate codigo={qr.codigo ?? ""} modo="privado" nome={qr.nome} />;
+    }
   }
 
   // Record the scan. Failures here must not break the visitor's page.

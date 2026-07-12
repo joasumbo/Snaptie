@@ -112,5 +112,15 @@
     "uploaded": "Datei hochgeladen",
     "success": "Datei hochgeladen.",
     "failed": "Upload fehlgeschlagen. Überprüfen Sie die R2-CORS-Konfiguration."
+  },
+  "Gate": {
+    "activateTitle": "Diesen QR aktivieren",
+    "activateHint": "Geben Sie die PIN ein, die {nome} beilag, um ihn zu aktivieren. Danach kann jeder die Seite öffnen.",
+    "privateTitle": "Private Seite",
+    "privateHint": "Geben Sie die PIN ein, um diese Seite zu öffnen.",
+    "pin": "PIN",
+    "activate": "Aktivieren",
+    "open": "Öffnen",
+    "invalidPin": "Falsche PIN."
   }
 }

@@ -1,5 +1,22 @@
 import type { BlockType } from "@prisma/client";
 
+// How a visitor reaches the page.
+//   aberto   — anyone who scans sees it (the hotel plaque)
+//   ativacao — the first visitor holding the PIN activates the QR; from then on
+//              it behaves like "aberto" (the souvenir)
+//   privado  — the PIN is asked on every visit
+export const ACCESS_MODES = ["aberto", "ativacao", "privado"] as const;
+export type AccessMode = (typeof ACCESS_MODES)[number];
+
+export function isAccessMode(value: string): value is AccessMode {
+  return (ACCESS_MODES as readonly string[]).includes(value);
+}
+
+// Whether the mode needs a PIN to be set at all.
+export function accessNeedsPin(modo: string): boolean {
+  return modo === "ativacao" || modo === "privado";
+}
+
 export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   TEXTO: "Texto",
   LINK: "Link",

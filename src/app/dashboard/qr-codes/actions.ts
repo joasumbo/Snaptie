@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
 import { slugify, randomCode } from "@/lib/slug";
-import { isContentBlock } from "@/lib/qr";
+import { isContentBlock, isAccessMode, accessNeedsPin } from "@/lib/qr";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -157,6 +157,9 @@ export async function updateQrCode(input: {
   edicaoPublica?: boolean;
   edicaoPersonalizacao?: boolean;
   novoPin?: string;
+  acessoModo?: string;
+  novoAcessoPin?: string;
+  reiniciarAtivacao?: boolean;
 } & PageFields): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
@@ -187,6 +190,30 @@ export async function updateQrCode(input: {
     editData.edicaoPersonalizacao = input.edicaoPersonalizacao;
   }
 
+  // How the visitor reaches the page. The activation and private modes are
+  // meaningless without a PIN, so one must exist or be given.
+  const acessoData: {
+    acessoModo?: string;
+    acessoPin?: string;
+    ativadoEm?: Date | null;
+  } = {};
+  const novoAcessoPin = input.novoAcessoPin?.trim();
+  if (novoAcessoPin) acessoData.acessoPin = await hashPassword(novoAcessoPin);
+
+  if (input.acessoModo !== undefined) {
+    if (!isAccessMode(input.acessoModo)) {
+      return { ok: false, message: "Modo de acesso inválido." };
+    }
+    if (accessNeedsPin(input.acessoModo) && !novoAcessoPin && !qr.acessoPin) {
+      return { ok: false, message: "Defina um PIN para este modo de acesso." };
+    }
+    acessoData.acessoModo = input.acessoModo;
+    // Leaving the activation mode clears the stamp, so coming back to it asks
+    // for the PIN again instead of silently staying open.
+    if (input.acessoModo !== "ativacao") acessoData.ativadoEm = null;
+  }
+  if (input.reiniciarAtivacao) acessoData.ativadoEm = null;
+
   await prisma.qrCode.update({
     where: { id: qr.id },
     data: {
@@ -196,6 +223,7 @@ export async function updateQrCode(input: {
       corSecundaria: input.corSecundaria?.trim() || null,
       ...pageData(input),
       ...editData,
+      ...acessoData,
     },
   });
 

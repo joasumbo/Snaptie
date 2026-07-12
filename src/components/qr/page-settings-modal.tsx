@@ -34,6 +34,9 @@ export type PageSettings = {
   edicaoPublica: boolean;
   edicaoPersonalizacao: boolean;
   temPin: boolean;
+  acessoModo: string;
+  temAcessoPin: boolean;
+  ativado: boolean;
 };
 
 export function PageSettingsModal({
@@ -58,6 +61,9 @@ export function PageSettingsModal({
     qr.edicaoPersonalizacao,
   );
   const [novoPin, setNovoPin] = useState("");
+  const [acessoModo, setAcessoModo] = useState(qr.acessoModo);
+  const [novoAcessoPin, setNovoAcessoPin] = useState("");
+  const [reiniciarAtivacao, setReiniciarAtivacao] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,10 +72,18 @@ export function PageSettingsModal({
   const algumaEdicao = edicaoPublica || edicaoPersonalizacao;
   const precisaCodigo = algumaEdicao && !qr.temPin && !novoPin.trim();
 
+  // The activation and private modes are meaningless without a PIN.
+  const acessoComPin = acessoModo === "ativacao" || acessoModo === "privado";
+  const precisaPinAcesso = acessoComPin && !qr.temAcessoPin && !novoAcessoPin.trim();
+
   async function handleSubmit() {
     setError(null);
     if (precisaCodigo) {
       setError("Defina um código de acesso para ativar a edição pelo visitante.");
+      return;
+    }
+    if (precisaPinAcesso) {
+      setError("Defina um PIN para este modo de acesso.");
       return;
     }
     setSubmitting(true);
@@ -90,6 +104,9 @@ export function PageSettingsModal({
         edicaoPublica,
         edicaoPersonalizacao,
         novoPin: novoPin || undefined,
+        acessoModo,
+        novoAcessoPin: novoAcessoPin || undefined,
+        reiniciarAtivacao: reiniciarAtivacao || undefined,
       });
       if (result.ok) {
         onSaved();
@@ -257,6 +274,82 @@ export function PageSettingsModal({
                     ? "Já tem um código definido. Escreva um novo para o alterar."
                     : "Os visitantes precisam deste código para editar a página."}
                 </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-3 rounded-lg border p-3">
+            <div>
+              <Label>Acesso à página</Label>
+              <p className="text-xs text-muted-foreground">
+                Quem consegue ver a página depois de fazer scan.
+              </p>
+            </div>
+
+            <div>
+              <Segmented
+                value={acessoModo}
+                onChange={setAcessoModo}
+                options={[
+                  { label: "Aberto", value: "aberto" },
+                  { label: "Ativação", value: "ativacao" },
+                  { label: "Privado", value: "privado" },
+                ]}
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {acessoModo === "aberto"
+                ? "Qualquer pessoa que faça scan vê a página."
+                : acessoModo === "ativacao"
+                  ? "O primeiro visitante que souber o PIN ativa o QR. A partir daí, a página fica visível para todos."
+                  : "O PIN é pedido sempre que alguém abre a página."}
+            </p>
+
+            {acessoComPin ? (
+              <div className="space-y-1.5">
+                <Label>PIN de acesso</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={
+                    qr.temAcessoPin
+                      ? "Deixe vazio para manter o atual"
+                      : "Defina um PIN (ex.: 1234)"
+                  }
+                  value={novoAcessoPin}
+                  onChange={(e) => setNovoAcessoPin(e.target.value)}
+                  aria-invalid={precisaPinAcesso}
+                />
+                <p
+                  className={cn(
+                    "text-xs",
+                    precisaPinAcesso ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {acessoModo === "ativacao"
+                    ? "Este é o PIN a imprimir junto do QR (por exemplo, na embalagem)."
+                    : "Sem este PIN, ninguém consegue abrir a página."}
+                </p>
+              </div>
+            ) : null}
+
+            {acessoModo === "ativacao" && qr.ativado ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 p-2.5">
+                <div>
+                  <Label>Este QR já foi ativado</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Reinicie se o objeto mudou de dono e o PIN voltar a ser pedido.
+                  </p>
+                </div>
+                <Segmented
+                  value={reiniciarAtivacao ? "sim" : "nao"}
+                  onChange={(v) => setReiniciarAtivacao(v === "sim")}
+                  options={[
+                    { label: "Manter", value: "nao" },
+                    { label: "Reiniciar", value: "sim" },
+                  ]}
+                />
               </div>
             ) : null}
           </div>

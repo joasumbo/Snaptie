@@ -110,5 +110,15 @@
     "uploaded": "Archivo cargado",
     "success": "Archivo subido.",
     "failed": "Error al subir. Verifique la configuración de CORS de R2."
+  },
+  "Gate": {
+    "activateTitle": "Activar este QR",
+    "activateHint": "Introduzca el PIN que vino con {nome} para activarlo. Después, cualquiera podrá abrir la página.",
+    "privateTitle": "Página privada",
+    "privateHint": "Introduzca el PIN para abrir esta página.",
+    "pin": "PIN",
+    "activate": "Activar",
+    "open": "Abrir",
+    "invalidPin": "PIN incorrecto."
   }
 }
