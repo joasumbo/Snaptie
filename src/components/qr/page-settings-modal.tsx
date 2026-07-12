@@ -31,6 +31,7 @@ export type PageSettings = {
   mostrarLogo: boolean;
   mostrarNome: boolean;
   edicaoPublica: boolean;
+  edicaoPersonalizacao: boolean;
   temPin: boolean;
 };
 
@@ -82,12 +83,17 @@ export function PageSettingsModal({
   const [mostrarLogo, setMostrarLogo] = useState(qr.mostrarLogo);
   const [mostrarNome, setMostrarNome] = useState(qr.mostrarNome);
   const [edicaoPublica, setEdicaoPublica] = useState(qr.edicaoPublica);
+  const [edicaoPersonalizacao, setEdicaoPersonalizacao] = useState(
+    qr.edicaoPersonalizacao,
+  );
   const [novoPin, setNovoPin] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Enabling visitor editing requires a code: either an existing one or a new one.
-  const precisaCodigo = edicaoPublica && !qr.temPin && !novoPin.trim();
+  // Both permissions share the same code, so either one being on requires it —
+  // an existing code or a new one.
+  const algumaEdicao = edicaoPublica || edicaoPersonalizacao;
+  const precisaCodigo = algumaEdicao && !qr.temPin && !novoPin.trim();
 
   async function handleSubmit() {
     setError(null);
@@ -111,6 +117,7 @@ export function PageSettingsModal({
         mostrarLogo,
         mostrarNome,
         edicaoPublica,
+        edicaoPersonalizacao,
         novoPin: novoPin || undefined,
       });
       if (result.ok) {
@@ -214,11 +221,19 @@ export function PageSettingsModal({
           </div>
 
           <div className="space-y-3 rounded-lg border p-3">
-            <div className="flex items-center justify-between">
+            <div>
+              <Label>Edição pelo visitante</Label>
+              <p className="text-xs text-muted-foreground">
+                O que o visitante pode alterar na página pública, depois de
+                introduzir o código de acesso.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <Label>Edição pelo visitante</Label>
+                <Label>Conteúdos</Label>
                 <p className="text-xs text-muted-foreground">
-                  Permite editar os conteúdos na página pública (com código).
+                  Os elementos marcados como editáveis.
                 </p>
               </div>
               <Segmented
@@ -230,7 +245,25 @@ export function PageSettingsModal({
                 ]}
               />
             </div>
-            {edicaoPublica ? (
+
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Personalização</Label>
+                <p className="text-xs text-muted-foreground">
+                  A capa, o logótipo, os tamanhos e a forma.
+                </p>
+              </div>
+              <Segmented
+                value={edicaoPersonalizacao ? "sim" : "nao"}
+                onChange={(v) => setEdicaoPersonalizacao(v === "sim")}
+                options={[
+                  { label: "Ligado", value: "sim" },
+                  { label: "Desligado", value: "nao" },
+                ]}
+              />
+            </div>
+
+            {algumaEdicao ? (
               <div className="space-y-1.5">
                 <Label>Código de acesso</Label>
                 <Input

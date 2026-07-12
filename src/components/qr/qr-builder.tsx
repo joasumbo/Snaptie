@@ -53,6 +53,7 @@ type Qr = {
   mostrarLogo: boolean;
   mostrarNome: boolean;
   edicaoPublica: boolean;
+  edicaoPersonalizacao: boolean;
   temPin: boolean;
   publicado: boolean;
   scansTotal: number;

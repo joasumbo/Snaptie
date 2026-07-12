@@ -155,6 +155,7 @@ export async function updateQrCode(input: {
   corPrimaria?: string;
   corSecundaria?: string;
   edicaoPublica?: boolean;
+  edicaoPersonalizacao?: boolean;
   novoPin?: string;
 } & PageFields): Promise<ActionResult> {
   const actor = await requireQrManager();
@@ -164,16 +165,26 @@ export async function updateQrCode(input: {
   const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.id);
   if (!qr) return { ok: false, message: "QR não encontrado." };
 
-  // Public editing: requires a PIN. When enabling without an existing PIN, one
-  // must be provided.
-  const editData: { edicaoPublica?: boolean; edicaoPin?: string } = {};
+  // The visitor may be allowed to edit the content, the appearance, or both.
+  // Either one is gated by the same code, so turning either on without a code
+  // already in place requires a new one.
+  const editData: {
+    edicaoPublica?: boolean;
+    edicaoPersonalizacao?: boolean;
+    edicaoPin?: string;
+  } = {};
   const novoPin = input.novoPin?.trim();
   if (novoPin) editData.edicaoPin = await hashPassword(novoPin);
-  if (input.edicaoPublica !== undefined) {
-    if (input.edicaoPublica && !novoPin && !qr.edicaoPin) {
-      return { ok: false, message: "Defina um código para a edição pública." };
-    }
-    editData.edicaoPublica = input.edicaoPublica;
+
+  const querEditar =
+    (input.edicaoPublica ?? qr.edicaoPublica) ||
+    (input.edicaoPersonalizacao ?? qr.edicaoPersonalizacao);
+  if (querEditar && !novoPin && !qr.edicaoPin) {
+    return { ok: false, message: "Defina um código para a edição pública." };
+  }
+  if (input.edicaoPublica !== undefined) editData.edicaoPublica = input.edicaoPublica;
+  if (input.edicaoPersonalizacao !== undefined) {
+    editData.edicaoPersonalizacao = input.edicaoPersonalizacao;
   }
 
   await prisma.qrCode.update({
