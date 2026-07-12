@@ -90,6 +90,7 @@ export default async function ScanPage({
       <PublicQrView
         codigo={qr.codigo ?? ""}
         edicaoPublica={qr.edicaoPublica}
+        edicaoPersonalizacao={qr.edicaoPersonalizacao}
         data={{
           nome: qr.nome,
           descricao: qr.descricao,

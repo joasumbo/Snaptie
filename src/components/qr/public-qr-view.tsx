@@ -17,11 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
+import { Segmented } from "@/components/ui/segmented";
 import { TYPE_FIELD, BLOCK_TYPE_LABELS, isContentBlock } from "@/lib/qr";
 import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
   saveBlockContent,
+  savePageSettings,
   changeEditCode,
   requestPublicUpload,
 } from "@/app/[empresa]/[codigo]/edit-actions";
@@ -34,6 +36,28 @@ type EditBlock = {
   conteudo: Record<string, unknown>;
 };
 
+// The appearance of the page, as the visitor may change it.
+type Look = {
+  logo: string | null;
+  imagemCapa: string | null;
+  logoTamanho: string;
+  logoForma: string;
+  nomeTamanho: string;
+  mostrarLogo: boolean;
+  mostrarNome: boolean;
+};
+
+// Hands a FileUpload the PIN-checked ticket it needs to upload a file.
+type Uploader = (
+  kind: UploadKind,
+) => (input: {
+  kind: UploadKind;
+  contentType: string;
+  size: number;
+}) => Promise<
+  { ok: true; uploadUrl: string; publicUrl: string } | { ok: false; message: string }
+>;
+
 function str(c: Record<string, unknown>, k: string): string {
   return typeof c[k] === "string" ? (c[k] as string) : "";
 }
@@ -42,10 +66,12 @@ export default function PublicQrView({
   data,
   codigo,
   edicaoPublica,
+  edicaoPersonalizacao,
 }: {
   data: QrPageData;
   codigo: string;
   edicaoPublica: boolean;
+  edicaoPersonalizacao: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("PublicPage");
@@ -57,8 +83,24 @@ export default function PublicQrView({
   const [pinError, setPinError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [edits, setEdits] = useState<EditBlock[]>([]);
+  // What the code actually unlocked — the server decides, not the page.
+  const [podeConteudo, setPodeConteudo] = useState(false);
+  const [podePersonalizar, setPodePersonalizar] = useState(false);
+  const [look, setLook] = useState<Look>(lookFrom(data));
   const [saving, setSaving] = useState(false);
   const [newCode, setNewCode] = useState("");
+
+  function lookFrom(d: QrPageData): Look {
+    return {
+      logo: d.logo,
+      imagemCapa: d.imagemCapa,
+      logoTamanho: d.logoTamanho,
+      logoForma: d.logoForma,
+      nomeTamanho: d.nomeTamanho,
+      mostrarLogo: d.mostrarLogo,
+      mostrarNome: d.mostrarNome,
+    };
+  }
 
   async function checkPin() {
     setChecking(true);
@@ -70,6 +112,8 @@ export default function PublicQrView({
       return;
     }
     setAuthPin(pin);
+    setPodeConteudo(r.podeConteudo);
+    setPodePersonalizar(r.podePersonalizar);
     // Only the elements the owner marked as editable by the visitor.
     setEdits(
       data.blocks
@@ -81,6 +125,7 @@ export default function PublicQrView({
           conteudo: { ...b.conteudo },
         })),
     );
+    setLook(lookFrom(data));
     setNewCode("");
     setPinOpen(false);
     setPanelOpen(true);
@@ -97,17 +142,30 @@ export default function PublicQrView({
     setEdits((arr) => arr.map((b) => (b.id === id ? { ...b, titulo: value } : b)));
   }
 
+  function setLookField<K extends keyof Look>(key: K, value: Look[K]) {
+    setLook((l) => ({ ...l, [key]: value }));
+  }
+
   async function saveAll() {
     setSaving(true);
     try {
-      for (const b of edits) {
-        const r = await saveBlockContent({
-          codigo,
-          pin: authPin,
-          blockId: b.id,
-          titulo: b.titulo,
-          conteudo: b.conteudo,
-        });
+      if (podeConteudo) {
+        for (const b of edits) {
+          const r = await saveBlockContent({
+            codigo,
+            pin: authPin,
+            blockId: b.id,
+            titulo: b.titulo,
+            conteudo: b.conteudo,
+          });
+          if (!r.ok) {
+            toast.error(r.message);
+            return;
+          }
+        }
+      }
+      if (podePersonalizar) {
+        const r = await savePageSettings({ codigo, pin: authPin, ...look });
         if (!r.ok) {
           toast.error(r.message);
           return;
@@ -141,7 +199,7 @@ export default function PublicQrView({
       <QrPage
         data={data}
         footer={
-          edicaoPublica ? (
+          edicaoPublica || edicaoPersonalizacao ? (
             <Button
               variant="outline"
               className="w-full"
@@ -197,31 +255,41 @@ export default function PublicQrView({
             <DialogTitle>{t("editPage")}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-            {edits.length === 0 ? (
+            {podeConteudo && edits.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noEditable")}</p>
-            ) : (
-              edits.map((b) => (
-                <div key={b.id} className="space-y-2 rounded-lg border p-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {BLOCK_TYPE_LABELS[b.tipo]}
-                  </div>
-                  {!isContentBlock(b.tipo) ? (
-                    <div className="space-y-1.5">
-                      <Label>{t("fieldTitle")}</Label>
-                      <Input
-                        value={b.titulo}
-                        onChange={(e) => setTitulo(b.id, e.target.value)}
-                      />
+            ) : null}
+
+            {podeConteudo
+              ? edits.map((b) => (
+                  <div key={b.id} className="space-y-2 rounded-lg border p-3">
+                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {BLOCK_TYPE_LABELS[b.tipo]}
                     </div>
-                  ) : null}
-                  <BlockFields
-                    block={b}
-                    setField={setField}
-                    uploaderFor={uploaderFor}
-                  />
-                </div>
-              ))
-            )}
+                    {!isContentBlock(b.tipo) ? (
+                      <div className="space-y-1.5">
+                        <Label>{t("fieldTitle")}</Label>
+                        <Input
+                          value={b.titulo}
+                          onChange={(e) => setTitulo(b.id, e.target.value)}
+                        />
+                      </div>
+                    ) : null}
+                    <BlockFields
+                      block={b}
+                      setField={setField}
+                      uploaderFor={uploaderFor}
+                    />
+                  </div>
+                ))
+              : null}
+
+            {podePersonalizar ? (
+              <LookFields
+                look={look}
+                setLookField={setLookField}
+                uploaderFor={uploaderFor}
+              />
+            ) : null}
 
             <div className="space-y-1.5 rounded-lg border p-3">
               <Label>{t("changeCodeLabel")}</Label>
@@ -254,6 +322,111 @@ export default function PublicQrView({
   );
 }
 
+// The same appearance controls the owner has in the dashboard, offered to the
+// visitor when the owner granted that permission.
+function LookFields({
+  look,
+  setLookField,
+  uploaderFor,
+}: {
+  look: Look;
+  setLookField: <K extends keyof Look>(key: K, value: Look[K]) => void;
+  uploaderFor: Uploader;
+}) {
+  const t = useTranslations("PublicPage");
+  const sizes = [
+    { label: t("sizeSmall"), value: "P" },
+    { label: t("sizeMedium"), value: "M" },
+    { label: t("sizeLarge"), value: "G" },
+  ];
+  const showHide = [
+    { label: t("show"), value: "sim" },
+    { label: t("hide"), value: "nao" },
+  ];
+
+  return (
+    <div className="space-y-4 rounded-lg border p-3">
+      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {t("customise")}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t("cover")}</Label>
+        <FileUpload
+          kind="image"
+          value={look.imagemCapa}
+          onChange={(v) => setLookField("imagemCapa", v)}
+          uploader={uploaderFor("image")}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t("logo")}</Label>
+        <FileUpload
+          kind="image"
+          value={look.logo}
+          onChange={(v) => setLookField("logo", v)}
+          uploader={uploaderFor("image")}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <Label>{t("showLogo")}</Label>
+        <Segmented
+          value={look.mostrarLogo ? "sim" : "nao"}
+          onChange={(v) => setLookField("mostrarLogo", v === "sim")}
+          options={showHide}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <Label>{t("showName")}</Label>
+        <Segmented
+          value={look.mostrarNome ? "sim" : "nao"}
+          onChange={(v) => setLookField("mostrarNome", v === "sim")}
+          options={showHide}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t("logoSize")}</Label>
+        <div>
+          <Segmented
+            value={look.logoTamanho}
+            onChange={(v) => setLookField("logoTamanho", v)}
+            options={sizes}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t("logoShape")}</Label>
+        <div>
+          <Segmented
+            value={look.logoForma}
+            onChange={(v) => setLookField("logoForma", v)}
+            options={[
+              { label: t("shapeCircle"), value: "circulo" },
+              { label: t("shapeSquare"), value: "quadrado" },
+            ]}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>{t("nameSize")}</Label>
+        <div>
+          <Segmented
+            value={look.nomeTamanho}
+            onChange={(v) => setLookField("nomeTamanho", v)}
+            options={sizes}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlockFields({
   block,
   setField,
@@ -261,15 +434,7 @@ function BlockFields({
 }: {
   block: EditBlock;
   setField: (id: string, key: string, value: unknown) => void;
-  uploaderFor: (
-    kind: UploadKind,
-  ) => (input: {
-    kind: UploadKind;
-    contentType: string;
-    size: number;
-  }) => Promise<
-    { ok: true; uploadUrl: string; publicUrl: string } | { ok: false; message: string }
-  >;
+  uploaderFor: Uploader;
 }) {
   const t = useTranslations("PublicPage");
   const field = TYPE_FIELD[block.tipo];

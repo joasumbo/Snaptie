@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
+import { Segmented } from "@/components/ui/segmented";
 import { cn } from "@/lib/utils";
 import { updateQrCode } from "@/app/dashboard/qr-codes/actions";
 
@@ -34,36 +35,6 @@ export type PageSettings = {
   edicaoPersonalizacao: boolean;
   temPin: boolean;
 };
-
-function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { label: string; value: T }[];
-}) {
-  return (
-    <div className="inline-flex rounded-lg border p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "rounded-md px-3 py-1 text-sm transition-colors",
-            value === o.value
-              ? "bg-foreground text-background"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export function PageSettingsModal({
   qr,

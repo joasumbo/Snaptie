@@ -11,22 +11,33 @@ import {
   type UploadKind,
 } from "@/lib/storage";
 
-// Public, PIN-gated editing of a QR's content. No login required, but every
-// action re-checks that the QR allows public editing and the PIN matches.
+// Public, PIN-gated editing of a QR. No login required, but every action
+// re-checks the PIN and, on top of that, the specific permission it needs:
+// content and appearance are granted separately by the owner.
 async function authorize(codigo: string, pin: string) {
   const qr = await prisma.qrCode.findFirst({
-    where: { codigo, publicado: true, edicaoPublica: true },
+    where: {
+      codigo,
+      publicado: true,
+      OR: [{ edicaoPublica: true }, { edicaoPersonalizacao: true }],
+    },
   });
   if (!qr || !qr.edicaoPin) return null;
   const ok = await verifyPassword(pin ?? "", qr.edicaoPin);
   return ok ? qr : null;
 }
 
+// Tells the page not only that the code is right, but what it unlocks.
 export async function verifyEditPin(
   codigo: string,
   pin: string,
-): Promise<{ ok: boolean }> {
-  return { ok: Boolean(await authorize(codigo, pin)) };
+): Promise<{ ok: boolean; podeConteudo: boolean; podePersonalizar: boolean }> {
+  const qr = await authorize(codigo, pin);
+  return {
+    ok: Boolean(qr),
+    podeConteudo: qr?.edicaoPublica ?? false,
+    podePersonalizar: qr?.edicaoPersonalizacao ?? false,
+  };
 }
 
 export type EditResult = { ok: true } | { ok: false; message: string };
@@ -40,11 +51,15 @@ export async function saveBlockContent(input: {
 }): Promise<EditResult> {
   const qr = await authorize(input.codigo, input.pin);
   if (!qr) return { ok: false, message: "Código inválido." };
+  if (!qr.edicaoPublica) return { ok: false, message: "Sem permissão." };
 
   const block = await prisma.qrBlock.findUnique({ where: { id: input.blockId } });
   if (!block || block.qrId !== qr.id) {
     return { ok: false, message: "Elemento não encontrado." };
   }
+  // The page only offers the editable elements, but the check belongs here too:
+  // the code alone must not open up every block on the page.
+  if (!block.editavelPublico) return { ok: false, message: "Sem permissão." };
   if (!isContentBlock(block.tipo) && !input.titulo?.trim()) {
     return { ok: false, message: "O título é obrigatório." };
   }
@@ -60,6 +75,48 @@ export async function saveBlockContent(input: {
     });
   } catch (e) {
     console.error("[public-edit:saveBlockContent]", e);
+    const message = e instanceof Error ? e.message : "Erro desconhecido.";
+    return { ok: false, message: `Não foi possível guardar: ${message}` };
+  }
+  return { ok: true };
+}
+
+const SIZES = ["P", "M", "G"];
+const SHAPES = ["quadrado", "circulo"];
+
+// The appearance of the page, when the owner granted that permission. The
+// visitor never chooses the value freely: sizes and shapes are checked against
+// the same lists the dashboard offers.
+export async function savePageSettings(input: {
+  codigo: string;
+  pin: string;
+  logo: string | null;
+  imagemCapa: string | null;
+  logoTamanho: string;
+  logoForma: string;
+  nomeTamanho: string;
+  mostrarLogo: boolean;
+  mostrarNome: boolean;
+}): Promise<EditResult> {
+  const qr = await authorize(input.codigo, input.pin);
+  if (!qr) return { ok: false, message: "Código inválido." };
+  if (!qr.edicaoPersonalizacao) return { ok: false, message: "Sem permissão." };
+
+  try {
+    await prisma.qrCode.update({
+      where: { id: qr.id },
+      data: {
+        logo: input.logo?.trim() || null,
+        imagemCapa: input.imagemCapa?.trim() || null,
+        logoTamanho: SIZES.includes(input.logoTamanho) ? input.logoTamanho : "M",
+        logoForma: SHAPES.includes(input.logoForma) ? input.logoForma : "circulo",
+        nomeTamanho: SIZES.includes(input.nomeTamanho) ? input.nomeTamanho : "M",
+        mostrarLogo: Boolean(input.mostrarLogo),
+        mostrarNome: Boolean(input.mostrarNome),
+      },
+    });
+  } catch (e) {
+    console.error("[public-edit:savePageSettings]", e);
     const message = e instanceof Error ? e.message : "Erro desconhecido.";
     return { ok: false, message: `Não foi possível guardar: ${message}` };
   }

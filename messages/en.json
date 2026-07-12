@@ -82,7 +82,22 @@
     "fieldSsid": "Network (SSID)",
     "fieldPassword": "Password",
     "fieldFile": "File",
-    "fieldImages": "Images"
+    "fieldImages": "Images",
+    "customise": "Customise page",
+    "cover": "Cover image",
+    "logo": "Logo",
+    "showLogo": "Show logo",
+    "showName": "Show name",
+    "logoSize": "Logo size",
+    "logoShape": "Logo shape",
+    "nameSize": "Name size",
+    "sizeSmall": "Small",
+    "sizeMedium": "Medium",
+    "sizeLarge": "Large",
+    "shapeCircle": "Circle",
+    "shapeSquare": "Square",
+    "show": "Show",
+    "hide": "Hide"
   },
   "Wifi": {
     "pointCamera": "Point your phone's camera to connect",
