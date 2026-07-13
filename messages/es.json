@@ -97,7 +97,8 @@
     "shapeCircle": "Círculo",
     "shapeSquare": "Cuadrado",
     "show": "Mostrar",
-    "hide": "Ocultar"
+    "hide": "Ocultar",
+    "tooMany": "Demasiados intentos. Inténtelo de nuevo en {minutos} min."
   },
   "Wifi": {
     "pointCamera": "Apunte la cámara del teléfono para conectar",
@@ -119,6 +120,7 @@
     "pin": "PIN",
     "activate": "Activar",
     "open": "Abrir",
-    "invalidPin": "PIN incorrecto."
+    "invalidPin": "PIN incorrecto.",
+    "tooMany": "Demasiados intentos. Inténtelo de nuevo en {minutos} min."
   }
 }

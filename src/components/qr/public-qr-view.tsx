@@ -108,7 +108,9 @@ export default function PublicQrView({
     const r = await verifyEditPin(codigo, pin);
     setChecking(false);
     if (!r.ok) {
-      setPinError(t("invalidCode"));
+      setPinError(
+        r.espera ? t("tooMany", { minutos: r.espera }) : t("invalidCode"),
+      );
       return;
     }
     setAuthPin(pin);

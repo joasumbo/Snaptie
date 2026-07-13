@@ -206,6 +206,18 @@ model QrMessage {
   @@map("qr_messages")
 }
 
+// Tentativas falhadas de PIN, por visitante e por QR. Os PINs públicos são
+// curtos e estão expostos na internet, por isso contam-se as falhas aqui (e não
+// em memória, que em serverless seria um contador por instância).
+model PinAttempt {
+  chave        String   @id // ex.: "edit:<qrId>:<ip>"
+  tentativas   Int      @default(0)
+  bloqueadoAte DateTime? @map("bloqueado_ate")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("pin_attempts")
+}
+
 // Modelos reutilizáveis para acelerar a criação de novos QRs
 model Template {
   id            String   @id @default(cuid())

@@ -97,7 +97,8 @@
     "shapeCircle": "Círculo",
     "shapeSquare": "Quadrado",
     "show": "Mostrar",
-    "hide": "Ocultar"
+    "hide": "Ocultar",
+    "tooMany": "Demasiadas tentativas. Tente novamente dentro de {minutos} min."
   },
   "Wifi": {
     "pointCamera": "Aponte a câmara do telemóvel para ligar",
@@ -119,6 +120,7 @@
     "pin": "PIN",
     "activate": "Ativar",
     "open": "Abrir",
-    "invalidPin": "PIN incorreto."
+    "invalidPin": "PIN incorreto.",
+    "tooMany": "Demasiadas tentativas. Tente novamente dentro de {minutos} min."
   }
 }

@@ -34,7 +34,9 @@ export default function QrGate({
     try {
       const r = await unlockQr(codigo, pin);
       if (!r.ok) {
-        setError(t("invalidPin"));
+        setError(
+          r.espera ? t("tooMany", { minutos: r.espera }) : t("invalidPin"),
+        );
         return;
       }
       router.refresh(); // the page renders for real now

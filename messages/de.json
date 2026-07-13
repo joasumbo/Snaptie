@@ -99,7 +99,8 @@
     "shapeCircle": "Kreis",
     "shapeSquare": "Quadrat",
     "show": "Anzeigen",
-    "hide": "Ausblenden"
+    "hide": "Ausblenden",
+    "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut."
   },
   "Wifi": {
     "pointCamera": "Richten Sie die Kamera Ihres Telefons darauf, um sich zu verbinden",
@@ -121,6 +122,7 @@
     "pin": "PIN",
     "activate": "Aktivieren",
     "open": "Öffnen",
-    "invalidPin": "Falsche PIN."
+    "invalidPin": "Falsche PIN.",
+    "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut."
   }
 }
