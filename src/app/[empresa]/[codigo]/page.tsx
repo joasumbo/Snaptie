@@ -1,9 +1,11 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { accessCookieName, hasAccess } from "@/lib/auth/qr-access";
 import { type QrPageBlock } from "@/components/qr/qr-page";
 import PublicQrView from "@/components/qr/public-qr-view";
+import QrGate from "@/components/qr/qr-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +42,15 @@ export default async function ScanPage({
     where: { codigo, publicado: true },
     include: {
       company: true,
-      blocks: { where: { ativo: true }, orderBy: { ordem: "asc" } },
+      blocks: {
+        where: { ativo: true },
+        orderBy: { ordem: "asc" },
+        // The wall shows the most recent messages; older ones stay in the
+        // database but do not turn the page into an endless scroll.
+        include: {
+          mensagens: { orderBy: { createdAt: "desc" }, take: 30 },
+        },
+      },
     },
   });
   if (!qr) notFound();
@@ -48,6 +58,20 @@ export default async function ScanPage({
   // Keep the URL canonical: /{empresa}/{codigo} where empresa is the company slug.
   if (qr.company.slug !== empresa) {
     redirect(`/${qr.company.slug}/${codigo}`);
+  }
+
+  // A QR that is not open stops here: the visitor sees the gate, and the scan is
+  // not recorded, because the page was never shown.
+  //   ativacao — open once someone activated it with the PIN
+  //   privado  — open to whoever proved the PIN on this device
+  if (qr.acessoModo === "ativacao" && !qr.ativadoEm) {
+    return <QrGate codigo={qr.codigo ?? ""} modo="ativacao" nome={qr.nome} />;
+  }
+  if (qr.acessoModo === "privado") {
+    const token = (await cookies()).get(accessCookieName(qr.id))?.value;
+    if (!(await hasAccess(token, qr.id))) {
+      return <QrGate codigo={qr.codigo ?? ""} modo="privado" nome={qr.nome} />;
+    }
   }
 
   // Record the scan. Failures here must not break the visitor's page.
@@ -83,6 +107,12 @@ export default async function ScanPage({
     descricao: b.descricao,
     conteudo: asRecord(b.conteudo),
     editavelPublico: b.editavelPublico,
+    mensagens: b.mensagens.map((m) => ({
+      id: m.id,
+      nome: m.nome,
+      mensagem: m.mensagem,
+      createdAt: m.createdAt.toISOString(),
+    })),
   }));
 
   return (
@@ -90,6 +120,7 @@ export default async function ScanPage({
       <PublicQrView
         codigo={qr.codigo ?? ""}
         edicaoPublica={qr.edicaoPublica}
+        edicaoPersonalizacao={qr.edicaoPersonalizacao}
         data={{
           nome: qr.nome,
           descricao: qr.descricao,

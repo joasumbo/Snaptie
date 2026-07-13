@@ -84,7 +84,23 @@
     "fieldSsid": "Netzwerk (SSID)",
     "fieldPassword": "Passwort",
     "fieldFile": "Datei",
-    "fieldImages": "Bilder"
+    "fieldImages": "Bilder",
+    "customise": "Seite anpassen",
+    "cover": "Titelbild",
+    "logo": "Logo",
+    "showLogo": "Logo anzeigen",
+    "showName": "Name anzeigen",
+    "logoSize": "Logogröße",
+    "logoShape": "Logoform",
+    "nameSize": "Namensgröße",
+    "sizeSmall": "Klein",
+    "sizeMedium": "Mittel",
+    "sizeLarge": "Groß",
+    "shapeCircle": "Kreis",
+    "shapeSquare": "Quadrat",
+    "show": "Anzeigen",
+    "hide": "Ausblenden",
+    "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut."
   },
   "Wifi": {
     "pointCamera": "Richten Sie die Kamera Ihres Telefons darauf, um sich zu verbinden",
@@ -97,5 +113,26 @@
     "uploaded": "Datei hochgeladen",
     "success": "Datei hochgeladen.",
     "failed": "Upload fehlgeschlagen. Überprüfen Sie die R2-CORS-Konfiguration."
+  },
+  "Gate": {
+    "activateTitle": "Diesen QR aktivieren",
+    "activateHint": "Geben Sie die PIN ein, die {nome} beilag, um ihn zu aktivieren. Danach kann jeder die Seite öffnen.",
+    "privateTitle": "Private Seite",
+    "privateHint": "Geben Sie die PIN ein, um diese Seite zu öffnen.",
+    "pin": "PIN",
+    "activate": "Aktivieren",
+    "open": "Öffnen",
+    "invalidPin": "Falsche PIN.",
+    "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut."
+  },
+  "Wall": {
+    "title": "Nachrichtenwand",
+    "yourName": "Ihr Name",
+    "yourMessage": "Ihre Nachricht",
+    "send": "Nachricht hinterlassen",
+    "posted": "Nachricht veröffentlicht.",
+    "empty": "Noch keine Nachrichten. Seien Sie der Erste.",
+    "tooMany": "Sie haben gerade veröffentlicht. Versuchen Sie es in einigen Minuten erneut.",
+    "failed": "Die Nachricht konnte nicht veröffentlicht werden."
   }
 }

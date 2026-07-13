@@ -274,10 +274,19 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         {/* Fields (once a type is chosen) */}
         {tipo ? (
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-            {!isContentBlock(tipo) ? (
+            {/* The wall is a content element, but it is the one the owner names. */}
+            {!isContentBlock(tipo) || tipo === "FEED" ? (
               <Field label="Título">
                 <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
               </Field>
+            ) : null}
+
+            {field === "mural" ? (
+              <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                São os visitantes que escrevem aqui: cada um deixa o nome e uma
+                mensagem, e as mais recentes aparecem primeiro. Pode apagar
+                qualquer mensagem a partir desta página.
+              </p>
             ) : null}
 
             {field === "url" ? (

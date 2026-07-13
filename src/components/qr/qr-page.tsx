@@ -17,6 +17,7 @@ import {
 import type { BlockType } from "@prisma/client";
 import { DEFAULT_ICON, isContentBlock, actionHref } from "@/lib/qr";
 import { WifiCard } from "./wifi-card";
+import { MessageWall, type WallMessage } from "./message-wall";
 
 const ICONS: Record<string, LucideIcon> = {
   Globe,
@@ -37,6 +38,7 @@ export type QrPageBlock = {
   descricao: string | null;
   conteudo: Record<string, unknown>;
   editavelPublico?: boolean;
+  mensagens?: WallMessage[]; // only on a FEED block
 };
 
 export type QrPageData = {
@@ -127,8 +129,28 @@ function ActionButton({
   );
 }
 
-function ContentElement({ block }: { block: QrPageBlock }) {
+function ContentElement({
+  block,
+  codigo,
+  primary,
+}: {
+  block: QrPageBlock;
+  codigo?: string;
+  primary: string;
+}) {
   const t = useTranslations("PublicPage");
+  if (block.tipo === "FEED") {
+    return (
+      <MessageWall
+        blockId={block.id}
+        titulo={block.titulo}
+        descricao={block.descricao}
+        mensagens={block.mensagens ?? []}
+        codigo={codigo}
+        color={block.cor || primary}
+      />
+    );
+  }
   if (block.tipo === "TITULO") {
     const texto = str(block.conteudo, "texto");
     if (!texto) return null;
@@ -197,9 +219,13 @@ function ContentElement({ block }: { block: QrPageBlock }) {
 export function QrPage({
   data,
   footer,
+  codigo,
 }: {
   data: QrPageData;
   footer?: React.ReactNode;
+  // Present on the real page, absent in the dashboard preview — which is what
+  // makes the message wall read-only there.
+  codigo?: string;
 }) {
   const primary = data.corPrimaria || "#6366f1";
   const logo = data.logo;
@@ -258,7 +284,12 @@ export function QrPage({
           ) : (
             data.blocks.map((block) =>
               isContentBlock(block.tipo) ? (
-                <ContentElement key={block.id} block={block} />
+                <ContentElement
+                  key={block.id}
+                  block={block}
+                  codigo={codigo}
+                  primary={primary}
+                />
               ) : (
                 <ActionButton key={block.id} block={block} primary={primary} />
               ),

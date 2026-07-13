@@ -82,7 +82,23 @@
     "fieldSsid": "Network (SSID)",
     "fieldPassword": "Password",
     "fieldFile": "File",
-    "fieldImages": "Images"
+    "fieldImages": "Images",
+    "customise": "Customise page",
+    "cover": "Cover image",
+    "logo": "Logo",
+    "showLogo": "Show logo",
+    "showName": "Show name",
+    "logoSize": "Logo size",
+    "logoShape": "Logo shape",
+    "nameSize": "Name size",
+    "sizeSmall": "Small",
+    "sizeMedium": "Medium",
+    "sizeLarge": "Large",
+    "shapeCircle": "Circle",
+    "shapeSquare": "Square",
+    "show": "Show",
+    "hide": "Hide",
+    "tooMany": "Too many attempts. Try again in {minutos} min."
   },
   "Wifi": {
     "pointCamera": "Point your phone's camera to connect",
@@ -95,5 +111,26 @@
     "uploaded": "Uploaded file",
     "success": "File uploaded.",
     "failed": "Upload failed. Check the R2 CORS configuration."
+  },
+  "Gate": {
+    "activateTitle": "Activate this QR",
+    "activateHint": "Enter the PIN that came with {nome} to activate it. After that, anyone can open the page.",
+    "privateTitle": "Private page",
+    "privateHint": "Enter the PIN to open this page.",
+    "pin": "PIN",
+    "activate": "Activate",
+    "open": "Open",
+    "invalidPin": "Wrong PIN.",
+    "tooMany": "Too many attempts. Try again in {minutos} min."
+  },
+  "Wall": {
+    "title": "Message wall",
+    "yourName": "Your name",
+    "yourMessage": "Your message",
+    "send": "Leave message",
+    "posted": "Message posted.",
+    "empty": "No messages yet. Be the first.",
+    "tooMany": "You have just posted. Try again in a few minutes.",
+    "failed": "The message could not be posted."
   }
 }

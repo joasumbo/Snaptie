@@ -140,7 +140,14 @@ model QrCode {
   mostrarLogo   Boolean  @default(true) @map("mostrar_logo")
   mostrarNome   Boolean  @default(true) @map("mostrar_nome")
   edicaoPublica Boolean  @default(false) @map("edicao_publica") // visitante pode editar conteúdos
+  edicaoPersonalizacao Boolean @default(false) @map("edicao_personalizacao") // visitante pode editar a aparência
   edicaoPin     String?  @map("edicao_pin") // hash do código exigido para editar
+  // Como o visitante chega à página: "aberto" (qualquer um vê), "ativacao" (o
+  // primeiro visitante com o PIN ativa o QR e depois fica aberto) ou "privado"
+  // (pede o PIN em todas as visitas).
+  acessoModo    String   @default("aberto") @map("acesso_modo")
+  acessoPin     String?  @map("acesso_pin") // hash do PIN de acesso/ativação
+  ativadoEm     DateTime? @map("ativado_em") // quando o QR foi ativado (modo "ativacao")
   corPrimaria   String?  @map("cor_primaria")
   corSecundaria String?  @map("cor_secundaria")
   estado        String   @default("rascunho") // ex.: rascunho, ativo, arquivado
@@ -176,10 +183,39 @@ model QrBlock {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  qr QrCode @relation(fields: [qrId], references: [id], onDelete: Cascade)
+  qr       QrCode      @relation(fields: [qrId], references: [id], onDelete: Cascade)
+  mensagens QrMessage[]
 
   @@index([qrId])
   @@map("qr_blocks")
+}
+
+// Mensagens deixadas pelos visitantes num bloco do tipo FEED (mural).
+model QrMessage {
+  id        String   @id @default(cuid())
+  blockId   String   @map("block_id")
+  nome      String
+  mensagem  String
+  imagem    String?
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  block QrBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@index([blockId, createdAt])
+  @@map("qr_messages")
+}
+
+// Tentativas falhadas de PIN, por visitante e por QR. Os PINs públicos são
+// curtos e estão expostos na internet, por isso contam-se as falhas aqui (e não
+// em memória, que em serverless seria um contador por instância).
+model PinAttempt {
+  chave        String   @id // ex.: "edit:<qrId>:<ip>"
+  tentativas   Int      @default(0)
+  bloqueadoAte DateTime? @map("bloqueado_ate")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("pin_attempts")
 }
 
 // Modelos reutilizáveis para acelerar a criação de novos QRs

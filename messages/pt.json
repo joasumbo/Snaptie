@@ -82,7 +82,23 @@
     "fieldSsid": "Rede (SSID)",
     "fieldPassword": "Palavra-passe",
     "fieldFile": "Ficheiro",
-    "fieldImages": "Imagens"
+    "fieldImages": "Imagens",
+    "customise": "Personalizar página",
+    "cover": "Imagem de capa",
+    "logo": "Logótipo",
+    "showLogo": "Mostrar logótipo",
+    "showName": "Mostrar nome",
+    "logoSize": "Tamanho do logótipo",
+    "logoShape": "Forma do logótipo",
+    "nameSize": "Tamanho do nome",
+    "sizeSmall": "Pequeno",
+    "sizeMedium": "Médio",
+    "sizeLarge": "Grande",
+    "shapeCircle": "Círculo",
+    "shapeSquare": "Quadrado",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "tooMany": "Demasiadas tentativas. Tente novamente dentro de {minutos} min."
   },
   "Wifi": {
     "pointCamera": "Aponte a câmara do telemóvel para ligar",
@@ -95,5 +111,26 @@
     "uploaded": "Ficheiro carregado",
     "success": "Ficheiro carregado.",
     "failed": "Falha no upload. Verifique a configuração de CORS do R2."
+  },
+  "Gate": {
+    "activateTitle": "Ativar este QR",
+    "activateHint": "Introduza o PIN que veio com {nome} para o ativar. Depois disso, qualquer pessoa pode abrir a página.",
+    "privateTitle": "Página privada",
+    "privateHint": "Introduza o PIN para abrir esta página.",
+    "pin": "PIN",
+    "activate": "Ativar",
+    "open": "Abrir",
+    "invalidPin": "PIN incorreto.",
+    "tooMany": "Demasiadas tentativas. Tente novamente dentro de {minutos} min."
+  },
+  "Wall": {
+    "title": "Mural de mensagens",
+    "yourName": "O seu nome",
+    "yourMessage": "A sua mensagem",
+    "send": "Deixar mensagem",
+    "posted": "Mensagem publicada.",
+    "empty": "Ainda não há mensagens. Seja o primeiro.",
+    "tooMany": "Acabou de publicar. Tente novamente dentro de alguns minutos.",
+    "failed": "Não foi possível publicar a mensagem."
   }
 }

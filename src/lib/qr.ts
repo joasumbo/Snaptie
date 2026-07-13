@@ -1,5 +1,22 @@
 import type { BlockType } from "@prisma/client";
 
+// How a visitor reaches the page.
+//   aberto   — anyone who scans sees it (the hotel plaque)
+//   ativacao — the first visitor holding the PIN activates the QR; from then on
+//              it behaves like "aberto" (the souvenir)
+//   privado  — the PIN is asked on every visit
+export const ACCESS_MODES = ["aberto", "ativacao", "privado"] as const;
+export type AccessMode = (typeof ACCESS_MODES)[number];
+
+export function isAccessMode(value: string): value is AccessMode {
+  return (ACCESS_MODES as readonly string[]).includes(value);
+}
+
+// Whether the mode needs a PIN to be set at all.
+export function accessNeedsPin(modo: string): boolean {
+  return modo === "ativacao" || modo === "privado";
+}
+
 export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   TEXTO: "Texto",
   LINK: "Link",
@@ -15,7 +32,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   TITULO: "Título",
   LOGO: "Logótipo",
   CHAT: "Chat",
-  FEED: "Feed",
+  FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
   GALERIA: "Galeria",
   PLAYLIST: "Playlist",
@@ -39,6 +56,7 @@ export const CONTENT_TYPES: BlockType[] = [
   "IMAGEM",
   "CARROSSEL",
   "VIDEO",
+  "FEED",
 ];
 
 export function isContentBlock(tipo: BlockType): boolean {
@@ -69,7 +87,8 @@ export type FieldKind =
   | "imagem"
   | "video"
   | "pdf"
-  | "carrossel";
+  | "carrossel"
+  | "mural";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -85,9 +104,10 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   CARROSSEL: "carrossel",
   TITULO: "titulo",
   LOGO: "imagem",
+  // The wall has no content to fill in: the visitors write it.
+  FEED: "mural",
   // unused future types fall back to a URL field
   CHAT: "url",
-  FEED: "url",
   FORMULARIO: "url",
   GALERIA: "carrossel",
   PLAYLIST: "url",

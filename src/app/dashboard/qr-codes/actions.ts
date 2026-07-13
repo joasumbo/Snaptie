@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
 import { slugify, randomCode } from "@/lib/slug";
-import { isContentBlock } from "@/lib/qr";
+import { isContentBlock, isAccessMode, accessNeedsPin } from "@/lib/qr";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -36,6 +36,7 @@ const BLOCK_TYPES: BlockType[] = [
   "VIDEO",
   "TITULO",
   "LOGO",
+  "FEED",
 ];
 
 type PageFields = {
@@ -155,7 +156,11 @@ export async function updateQrCode(input: {
   corPrimaria?: string;
   corSecundaria?: string;
   edicaoPublica?: boolean;
+  edicaoPersonalizacao?: boolean;
   novoPin?: string;
+  acessoModo?: string;
+  novoAcessoPin?: string;
+  reiniciarAtivacao?: boolean;
 } & PageFields): Promise<ActionResult> {
   const actor = await requireQrManager();
   if (!actor) return { ok: false, message: "Sem permissão." };
@@ -164,17 +169,51 @@ export async function updateQrCode(input: {
   const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.id);
   if (!qr) return { ok: false, message: "QR não encontrado." };
 
-  // Public editing: requires a PIN. When enabling without an existing PIN, one
-  // must be provided.
-  const editData: { edicaoPublica?: boolean; edicaoPin?: string } = {};
+  // The visitor may be allowed to edit the content, the appearance, or both.
+  // Either one is gated by the same code, so turning either on without a code
+  // already in place requires a new one.
+  const editData: {
+    edicaoPublica?: boolean;
+    edicaoPersonalizacao?: boolean;
+    edicaoPin?: string;
+  } = {};
   const novoPin = input.novoPin?.trim();
   if (novoPin) editData.edicaoPin = await hashPassword(novoPin);
-  if (input.edicaoPublica !== undefined) {
-    if (input.edicaoPublica && !novoPin && !qr.edicaoPin) {
-      return { ok: false, message: "Defina um código para a edição pública." };
-    }
-    editData.edicaoPublica = input.edicaoPublica;
+
+  const querEditar =
+    (input.edicaoPublica ?? qr.edicaoPublica) ||
+    (input.edicaoPersonalizacao ?? qr.edicaoPersonalizacao);
+  if (querEditar && !novoPin && !qr.edicaoPin) {
+    return { ok: false, message: "Defina um código para a edição pública." };
   }
+  if (input.edicaoPublica !== undefined) editData.edicaoPublica = input.edicaoPublica;
+  if (input.edicaoPersonalizacao !== undefined) {
+    editData.edicaoPersonalizacao = input.edicaoPersonalizacao;
+  }
+
+  // How the visitor reaches the page. The activation and private modes are
+  // meaningless without a PIN, so one must exist or be given.
+  const acessoData: {
+    acessoModo?: string;
+    acessoPin?: string;
+    ativadoEm?: Date | null;
+  } = {};
+  const novoAcessoPin = input.novoAcessoPin?.trim();
+  if (novoAcessoPin) acessoData.acessoPin = await hashPassword(novoAcessoPin);
+
+  if (input.acessoModo !== undefined) {
+    if (!isAccessMode(input.acessoModo)) {
+      return { ok: false, message: "Modo de acesso inválido." };
+    }
+    if (accessNeedsPin(input.acessoModo) && !novoAcessoPin && !qr.acessoPin) {
+      return { ok: false, message: "Defina um PIN para este modo de acesso." };
+    }
+    acessoData.acessoModo = input.acessoModo;
+    // Leaving the activation mode clears the stamp, so coming back to it asks
+    // for the PIN again instead of silently staying open.
+    if (input.acessoModo !== "ativacao") acessoData.ativadoEm = null;
+  }
+  if (input.reiniciarAtivacao) acessoData.ativadoEm = null;
 
   await prisma.qrCode.update({
     where: { id: qr.id },
@@ -185,6 +224,7 @@ export async function updateQrCode(input: {
       corSecundaria: input.corSecundaria?.trim() || null,
       ...pageData(input),
       ...editData,
+      ...acessoData,
     },
   });
 
@@ -339,6 +379,30 @@ export async function deleteBlock(id: string): Promise<ActionResult> {
     return { ok: true };
   } catch (e) {
     return fail("deleteBlock", e);
+  }
+}
+
+// The wall is written by visitors, so the owner needs a way to take a message
+// down. Deleting the block itself removes them all, via the cascade.
+export async function deleteWallMessage(id: string): Promise<ActionResult> {
+  try {
+    const actor = await requireQrManager();
+    if (!actor) return { ok: false, message: "Sem permissão." };
+
+    const message = await prisma.qrMessage.findUnique({
+      where: { id },
+      include: { block: { include: { qr: true } } },
+    });
+    if (!message) return { ok: false, message: "Mensagem não encontrada." };
+    if (actor.role !== "ADMIN" && message.block.qr.companyId !== actor.companyId) {
+      return { ok: false, message: "Sem permissão." };
+    }
+
+    await prisma.qrMessage.delete({ where: { id } });
+    revalidatePath(`/dashboard/qr-codes/${message.block.qrId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail("deleteWallMessage", e);
   }
 }
 
