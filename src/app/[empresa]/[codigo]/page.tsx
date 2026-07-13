@@ -42,7 +42,15 @@ export default async function ScanPage({
     where: { codigo, publicado: true },
     include: {
       company: true,
-      blocks: { where: { ativo: true }, orderBy: { ordem: "asc" } },
+      blocks: {
+        where: { ativo: true },
+        orderBy: { ordem: "asc" },
+        // The wall shows the most recent messages; older ones stay in the
+        // database but do not turn the page into an endless scroll.
+        include: {
+          mensagens: { orderBy: { createdAt: "desc" }, take: 30 },
+        },
+      },
     },
   });
   if (!qr) notFound();
@@ -99,6 +107,12 @@ export default async function ScanPage({
     descricao: b.descricao,
     conteudo: asRecord(b.conteudo),
     editavelPublico: b.editavelPublico,
+    mensagens: b.mensagens.map((m) => ({
+      id: m.id,
+      nome: m.nome,
+      mensagem: m.mensagem,
+      createdAt: m.createdAt.toISOString(),
+    })),
   }));
 
   return (

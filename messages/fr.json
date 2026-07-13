@@ -124,5 +124,15 @@
     "open": "Ouvrir",
     "invalidPin": "Code PIN incorrect.",
     "tooMany": "Trop de tentatives. Réessayez dans {minutos} min."
+  },
+  "Wall": {
+    "title": "Mur de messages",
+    "yourName": "Votre nom",
+    "yourMessage": "Votre message",
+    "send": "Laisser un message",
+    "posted": "Message publié.",
+    "empty": "Aucun message pour l'instant. Soyez le premier.",
+    "tooMany": "Vous venez de publier. Réessayez dans quelques minutes.",
+    "failed": "Le message n'a pas pu être publié."
   }
 }

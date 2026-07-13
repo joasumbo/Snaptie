@@ -124,5 +124,15 @@
     "open": "Öffnen",
     "invalidPin": "Falsche PIN.",
     "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut."
+  },
+  "Wall": {
+    "title": "Nachrichtenwand",
+    "yourName": "Ihr Name",
+    "yourMessage": "Ihre Nachricht",
+    "send": "Nachricht hinterlassen",
+    "posted": "Nachricht veröffentlicht.",
+    "empty": "Noch keine Nachrichten. Seien Sie der Erste.",
+    "tooMany": "Sie haben gerade veröffentlicht. Versuchen Sie es in einigen Minuten erneut.",
+    "failed": "Die Nachricht konnte nicht veröffentlicht werden."
   }
 }

@@ -32,7 +32,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   TITULO: "Título",
   LOGO: "Logótipo",
   CHAT: "Chat",
-  FEED: "Feed",
+  FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
   GALERIA: "Galeria",
   PLAYLIST: "Playlist",
@@ -56,6 +56,7 @@ export const CONTENT_TYPES: BlockType[] = [
   "IMAGEM",
   "CARROSSEL",
   "VIDEO",
+  "FEED",
 ];
 
 export function isContentBlock(tipo: BlockType): boolean {
@@ -86,7 +87,8 @@ export type FieldKind =
   | "imagem"
   | "video"
   | "pdf"
-  | "carrossel";
+  | "carrossel"
+  | "mural";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -102,9 +104,10 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   CARROSSEL: "carrossel",
   TITULO: "titulo",
   LOGO: "imagem",
+  // The wall has no content to fill in: the visitors write it.
+  FEED: "mural",
   // unused future types fall back to a URL field
   CHAT: "url",
-  FEED: "url",
   FORMULARIO: "url",
   GALERIA: "carrossel",
   PLAYLIST: "url",

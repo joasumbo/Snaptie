@@ -20,7 +20,10 @@ export default async function QrBuilderPage({
     where: { id },
     include: {
       company: { select: { nome: true, slug: true, logo: true, corPrimaria: true } },
-      blocks: { orderBy: { ordem: "asc" } },
+      blocks: {
+        orderBy: { ordem: "asc" },
+        include: { mensagens: { orderBy: { createdAt: "desc" } } },
+      },
     },
   });
   if (!qr) notFound();
@@ -71,6 +74,12 @@ export default async function QrBuilderPage({
         ativo: b.ativo,
         ordem: b.ordem,
         editavelPublico: b.editavelPublico,
+        mensagens: b.mensagens.map((m) => ({
+          id: m.id,
+          nome: m.nome,
+          mensagem: m.mensagem,
+          createdAt: m.createdAt.toISOString(),
+        })),
       }))}
       publicUrl={publicUrl}
     />

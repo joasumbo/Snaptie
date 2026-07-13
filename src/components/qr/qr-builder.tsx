@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Palette,
   Eye,
+  MessagesSquare,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { BlockType } from "@prisma/client";
@@ -30,13 +31,15 @@ import { QrPage, type QrPageData } from "./qr-page";
 import { QrFormModal, type EditableQr } from "./qr-form-modal";
 import { BlockFormModal, type EditableBlock } from "./block-form-modal";
 import { PageSettingsModal, type PageSettings } from "./page-settings-modal";
+import { WallMessagesModal } from "./wall-messages-modal";
+import type { WallMessage } from "./message-wall";
 import {
   deleteBlock,
   moveBlock,
   setQrPublished,
 } from "@/app/dashboard/qr-codes/actions";
 
-type BuilderBlock = EditableBlock & { ordem: number };
+type BuilderBlock = EditableBlock & { ordem: number; mensagens: WallMessage[] };
 
 type Qr = {
   id: string;
@@ -73,6 +76,10 @@ function summary(b: BuilderBlock): string {
   if (b.tipo === "WIFI") return s("ssid");
   if (b.tipo === "CARROSSEL")
     return `${Array.isArray(c.imagens) ? (c.imagens as unknown[]).length : 0} imagens`;
+  if (b.tipo === "FEED") {
+    const n = b.mensagens.length;
+    return n === 1 ? "1 mensagem" : `${n} mensagens`;
+  }
   return s("url");
 }
 
@@ -99,6 +106,7 @@ export default function QrBuilder({
     { mode: "create" } | { mode: "edit"; block: EditableBlock } | null
   >(null);
   const [deleteTarget, setDeleteTarget] = useState<BuilderBlock | null>(null);
+  const [wallTarget, setWallTarget] = useState<BuilderBlock | null>(null);
   const [busy, setBusy] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -125,6 +133,7 @@ export default function QrBuilder({
         cor: b.cor,
         descricao: b.descricao,
         conteudo: b.conteudo,
+        mensagens: b.mensagens,
       })),
   };
 
@@ -303,6 +312,16 @@ export default function QrBuilder({
                       </div>
                     </div>
                     <div className="flex gap-1">
+                      {block.tipo === "FEED" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title="Ver mensagens"
+                          onClick={() => setWallTarget(block)}
+                        >
+                          <MessagesSquare />
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -407,6 +426,14 @@ export default function QrBuilder({
             }
             setBlockModal(null);
           }}
+        />
+      ) : null}
+
+      {wallTarget ? (
+        <WallMessagesModal
+          titulo={wallTarget.titulo}
+          mensagens={wallTarget.mensagens}
+          onClose={() => setWallTarget(null)}
         />
       ) : null}
 

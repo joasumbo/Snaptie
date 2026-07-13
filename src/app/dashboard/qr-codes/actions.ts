@@ -36,6 +36,7 @@ const BLOCK_TYPES: BlockType[] = [
   "VIDEO",
   "TITULO",
   "LOGO",
+  "FEED",
 ];
 
 type PageFields = {
@@ -378,6 +379,30 @@ export async function deleteBlock(id: string): Promise<ActionResult> {
     return { ok: true };
   } catch (e) {
     return fail("deleteBlock", e);
+  }
+}
+
+// The wall is written by visitors, so the owner needs a way to take a message
+// down. Deleting the block itself removes them all, via the cascade.
+export async function deleteWallMessage(id: string): Promise<ActionResult> {
+  try {
+    const actor = await requireQrManager();
+    if (!actor) return { ok: false, message: "Sem permissão." };
+
+    const message = await prisma.qrMessage.findUnique({
+      where: { id },
+      include: { block: { include: { qr: true } } },
+    });
+    if (!message) return { ok: false, message: "Mensagem não encontrada." };
+    if (actor.role !== "ADMIN" && message.block.qr.companyId !== actor.companyId) {
+      return { ok: false, message: "Sem permissão." };
+    }
+
+    await prisma.qrMessage.delete({ where: { id } });
+    revalidatePath(`/dashboard/qr-codes/${message.block.qrId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail("deleteWallMessage", e);
   }
 }
 

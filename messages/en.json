@@ -122,5 +122,15 @@
     "open": "Open",
     "invalidPin": "Wrong PIN.",
     "tooMany": "Too many attempts. Try again in {minutos} min."
+  },
+  "Wall": {
+    "title": "Message wall",
+    "yourName": "Your name",
+    "yourMessage": "Your message",
+    "send": "Leave message",
+    "posted": "Message posted.",
+    "empty": "No messages yet. Be the first.",
+    "tooMany": "You have just posted. Try again in a few minutes.",
+    "failed": "The message could not be posted."
   }
 }

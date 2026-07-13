@@ -200,6 +200,7 @@ export default function PublicQrView({
     <div className="min-h-screen">
       <QrPage
         data={data}
+        codigo={codigo}
         footer={
           edicaoPublica || edicaoPersonalizacao ? (
             <Button
