@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, type CompanyStatus, type Plano } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { slugify } from "@/lib/slug";
+import { isReservedSlug, slugify } from "@/lib/slug";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -25,10 +25,14 @@ async function uniqueSlug(nome: string, ignoreId?: string): Promise<string> {
   const base = slugify(nome) || "empresa";
   let slug = base;
   let n = 1;
-  // Append a counter until the slug is free (ignoring the company being edited).
+  // Append a counter until the slug is free (ignoring the company being edited)
+  // and is not one an application route would shadow at /{empresa}.
   while (true) {
-    const existing = await prisma.company.findUnique({ where: { slug } });
-    if (!existing || existing.id === ignoreId) return slug;
+    const taken = isReservedSlug(slug);
+    if (!taken) {
+      const existing = await prisma.company.findUnique({ where: { slug } });
+      if (!existing || existing.id === ignoreId) return slug;
+    }
     n += 1;
     slug = `${base}-${n}`;
   }

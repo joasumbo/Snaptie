@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Globe,
@@ -299,7 +300,19 @@ export function QrPage({
 
         {footer ? <div className="mt-8 w-full">{footer}</div> : null}
 
-        <p className="mt-10 text-xs text-zinc-400">Powered by Snaptie</p>
+        {/* Na página real a assinatura leva ao Snaptie; na pré-visualização do
+            dashboard fica texto simples, para não tirar quem está a editar
+            de dentro do editor. */}
+        {codigo ? (
+          <Link
+            href="/"
+            className="mt-10 text-xs text-zinc-400 underline-offset-4 hover:text-zinc-600 hover:underline"
+          >
+            Powered by Snaptie
+          </Link>
+        ) : (
+          <p className="mt-10 text-xs text-zinc-400">Powered by Snaptie</p>
+        )}
       </div>
     </div>
   );
