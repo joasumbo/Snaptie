@@ -149,7 +149,7 @@ export default async function CompanyPage({
         </div>
 
         <Link
-          href="/"
+          href="/produtos"
           className="mt-10 text-xs text-zinc-400 underline-offset-4 hover:text-zinc-600 hover:underline"
         >
           Powered by Snaptie

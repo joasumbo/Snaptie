@@ -5,7 +5,7 @@ import { Prisma, type BlockType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
-import { slugify, randomCode } from "@/lib/slug";
+import { uniqueQrCode, uniqueQrSlug } from "@/lib/qr-identity";
 import { isContentBlock, isAccessMode, accessNeedsPin } from "@/lib/qr";
 
 export type ActionResult =
@@ -75,27 +75,6 @@ async function requireQrManager() {
     return null;
   }
   return user;
-}
-
-async function uniqueQrSlug(nome: string): Promise<string> {
-  const base = slugify(nome) || "qr";
-  let slug = base;
-  let n = 1;
-  while (true) {
-    const existing = await prisma.qrCode.findUnique({ where: { slug } });
-    if (!existing) return slug;
-    n += 1;
-    slug = `${base}-${n}`;
-  }
-}
-
-// Random short code used in the public URL (snaptie.net/{empresa}/{codigo}).
-async function uniqueQrCode(): Promise<string> {
-  while (true) {
-    const codigo = randomCode(10);
-    const existing = await prisma.qrCode.findUnique({ where: { codigo } });
-    if (!existing) return codigo;
-  }
 }
 
 // Loads a QR and checks the actor may manage it (same company, or admin).

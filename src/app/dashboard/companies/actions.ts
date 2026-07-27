@@ -5,6 +5,7 @@ import { Prisma, type CompanyStatus, type Plano } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { isReservedSlug, slugify } from "@/lib/slug";
+import { uniqueQrCode, uniqueQrSlug } from "@/lib/qr-identity";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -62,6 +63,61 @@ function clean(value: string | undefined): string | null {
   return v ? v : null;
 }
 
+// Every new company starts with a page ready to print: a QR whose blocks come
+// from the contact details just filled in. Without this the client has to build
+// a page from nothing before the code is worth anything.
+async function createDefaultQr(company: {
+  id: string;
+  nome: string;
+  slug: string;
+  email: string;
+  telefone: string | null;
+  website: string | null;
+  logo: string | null;
+  corPrimaria: string | null;
+  corSecundaria: string | null;
+}): Promise<void> {
+  const blocks: Prisma.QrBlockCreateManyQrInput[] = [];
+  if (company.website) {
+    blocks.push({
+      tipo: "LINK",
+      titulo: "Website",
+      conteudo: { url: company.website },
+      ordem: blocks.length,
+    });
+  }
+  if (company.telefone) {
+    blocks.push({
+      tipo: "TELEFONE",
+      titulo: "Telefone",
+      conteudo: { numero: company.telefone },
+      ordem: blocks.length,
+    });
+  }
+  blocks.push({
+    tipo: "EMAIL",
+    titulo: "Email",
+    conteudo: { email: company.email },
+    ordem: blocks.length,
+  });
+
+  await prisma.qrCode.create({
+    data: {
+      nome: company.nome,
+      descricao: "Página principal",
+      slug: await uniqueQrSlug(company.slug),
+      codigo: await uniqueQrCode(),
+      companyId: company.id,
+      logo: company.logo,
+      corPrimaria: company.corPrimaria,
+      corSecundaria: company.corSecundaria,
+      publicado: true,
+      estado: "ativo",
+      blocks: { createMany: { data: blocks } },
+    },
+  });
+}
+
 export async function createCompany(input: CompanyInput): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (!admin) return { ok: false, message: "Sem permissão." };
@@ -85,6 +141,7 @@ export async function createCompany(input: CompanyInput): Promise<ActionResult> 
         plano: input.plano,
       },
     });
+    await createDefaultQr(company);
     revalidatePath("/dashboard/companies");
     return { ok: true, id: company.id };
   } catch (e) {
