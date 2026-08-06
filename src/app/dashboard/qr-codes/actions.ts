@@ -37,6 +37,7 @@ const BLOCK_TYPES: BlockType[] = [
   "TITULO",
   "LOGO",
   "FEED",
+  "CHAT",
 ];
 
 type PageFields = {
