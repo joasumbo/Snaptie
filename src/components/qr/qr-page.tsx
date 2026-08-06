@@ -19,6 +19,7 @@ import type { BlockType } from "@prisma/client";
 import { DEFAULT_ICON, isContentBlock, actionHref } from "@/lib/qr";
 import { WifiCard } from "./wifi-card";
 import { MessageWall, type WallMessage } from "./message-wall";
+import { EventLog } from "./event-log";
 
 const ICONS: Record<string, LucideIcon> = {
   Globe,
@@ -140,6 +141,26 @@ function ContentElement({
   primary: string;
 }) {
   const t = useTranslations("PublicPage");
+  if (block.tipo === "CHAT") {
+    // Registo: o visitante não escreve, escolhe uma das ações configuradas e
+    // fica a marca com a hora.
+    const acoes = Array.isArray(block.conteudo.acoes)
+      ? (block.conteudo.acoes as unknown[]).filter(
+          (a): a is string => typeof a === "string",
+        )
+      : [];
+    return (
+      <EventLog
+        blockId={block.id}
+        titulo={block.titulo}
+        descricao={block.descricao}
+        acoes={acoes}
+        mensagens={block.mensagens ?? []}
+        codigo={codigo}
+        color={block.cor || primary}
+      />
+    );
+  }
   if (block.tipo === "FEED") {
     return (
       <MessageWall

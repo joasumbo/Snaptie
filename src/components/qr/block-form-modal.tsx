@@ -95,6 +95,11 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   const [orientacao, setOrientacao] = useState<string>(
     typeof c.orientacao === "string" ? (c.orientacao as string) : "vertical",
   );
+  // As ações do bloco de registo, uma por linha — é a forma mais direta de
+  // editar uma lista curta sem inventar um construtor.
+  const [acoes, setAcoes] = useState<string>(
+    Array.isArray(c.acoes) ? (c.acoes as string[]).join("\n") : "",
+  );
 
   // Files picked but not yet uploaded. Only sent to R2 on submit.
   const [single, setSingle] = useState<Pending | null>(null);
@@ -170,6 +175,14 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
           conteudo = { imagens: [...imagens, ...uploaded], orientacao };
           break;
         }
+        case "registo":
+          conteudo = {
+            acoes: acoes
+              .split("\n")
+              .map((a) => a.trim())
+              .filter(Boolean),
+          };
+          break;
         default:
           conteudo = {};
       }
@@ -287,6 +300,22 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                 mensagem, e as mais recentes aparecem primeiro. Pode apagar
                 qualquer mensagem a partir desta página.
               </p>
+            ) : null}
+
+            {field === "registo" ? (
+              <Field label="Ações (uma por linha)">
+                <textarea
+                  value={acoes}
+                  onChange={(e) => setAcoes(e.target.value)}
+                  rows={5}
+                  placeholder={"Entrou no transporte\nSaiu do transporte\nEntrou na escola\nSaiu da escola"}
+                  className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cada linha vira um botão. O visitante toca e fica registado
+                  com a data e a hora — não escreve texto.
+                </p>
+              </Field>
             ) : null}
 
             {field === "url" ? (

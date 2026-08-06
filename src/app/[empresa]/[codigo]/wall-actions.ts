@@ -53,3 +53,58 @@ export async function postWallMessage(input: {
   revalidatePath(`/${block.qr.company.slug}/${input.codigo}`);
   return { ok: true };
 }
+
+// Marca um acontecimento num bloco de registo. Ao contrário do mural, o
+// visitante não escreve texto: só escolhe uma das ações configuradas, e é essa
+// escolha que fica guardada. Aceitar texto livre aqui abriria a porta a que
+// qualquer pessoa escrevesse o que quisesse no histórico.
+export async function registarEvento(input: {
+  codigo: string;
+  blockId: string;
+  acao: string;
+}): Promise<WallResult> {
+  const block = await prisma.qrBlock.findFirst({
+    where: {
+      id: input.blockId,
+      tipo: "CHAT",
+      ativo: true,
+      qr: { codigo: input.codigo, publicado: true },
+    },
+    select: {
+      id: true,
+      conteudo: true,
+      qr: { select: { company: { select: { slug: true } } } },
+    },
+  });
+  if (!block) return { ok: false, motivo: "invalido" };
+
+  // A ação tem de ser uma das do bloco. Sem esta verificação, o blockId
+  // sozinho bastava para escrever qualquer coisa no histórico.
+  const conteudo =
+    block.conteudo && typeof block.conteudo === "object"
+      ? (block.conteudo as Record<string, unknown>)
+      : {};
+  const acoes = Array.isArray(conteudo.acoes)
+    ? conteudo.acoes.filter((a): a is string => typeof a === "string")
+    : [];
+  if (!acoes.includes(input.acao)) {
+    return { ok: false, motivo: "invalido" };
+  }
+
+  const ip = await visitorIp();
+  const desde = new Date(Date.now() - JANELA_MINUTOS * 60_000);
+  const recentes = await prisma.qrMessage.count({
+    where: { blockId: block.id, ip, createdAt: { gte: desde } },
+  });
+  // Um percurso tem várias marcas seguidas (entrou, saiu, entrou), por isso o
+  // limite é mais folgado do que no mural — mas continua a existir.
+  if (recentes >= MAX_POR_JANELA * 4) return { ok: false, motivo: "muitas" };
+
+  await prisma.qrMessage.create({
+    data: { blockId: block.id, nome: "", mensagem: input.acao, ip },
+  });
+
+  revalidatePath(`/${block.qr.company.slug}/${input.codigo}`);
+  revalidatePath(`/${block.qr.company.slug}`);
+  return { ok: true };
+}
