@@ -9,10 +9,15 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const isAdmin = user?.role === "ADMIN";
 
+  // Fora do papel de administrador, os números só podem contar a própria
+  // empresa — tal como as listagens de utilizadores e de QR codes já fazem.
+  // Sem este filtro, um gestor via o total da plataforma e não o seu.
+  const escopo = isAdmin ? {} : { companyId: user?.companyId ?? "__none__" };
+
   const [totalUsers, totalCompanies, totalQr] = await Promise.all([
-    prisma.user.count(),
-    prisma.company.count({ where: { deletedAt: null } }),
-    prisma.qrCode.count(),
+    prisma.user.count({ where: escopo }),
+    isAdmin ? prisma.company.count({ where: { deletedAt: null } }) : 0,
+    prisma.qrCode.count({ where: escopo }),
   ]);
 
   const stats = [

@@ -2,12 +2,27 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import QrScanPage, { qrScanInclude } from "@/components/qr/qr-scan-page";
 
 export const dynamic = "force-dynamic";
 
-// A página pública da empresa: /{empresa}. Lista os QR codes que qualquer
-// pessoa pode abrir, para que uma empresa tenha um endereço próprio para
-// partilhar sem depender do código de um QR específico.
+// A pagina principal da empresa e um QR como qualquer outro — o que o torna
+// especial e o slug ser igual ao da empresa. Assim /{empresa} mostra uma
+// pagina editavel no painel, em vez de um indice gerado, e o mesmo conteudo
+// continua a ter um codigo proprio para imprimir.
+async function findPaginaPrincipal(slugEmpresa: string) {
+  return prisma.qrCode.findFirst({
+    where: {
+      slug: slugEmpresa,
+      publicado: true,
+      company: { slug: slugEmpresa, deletedAt: null },
+    },
+    include: qrScanInclude,
+  });
+}
+
+// Quando a empresa ainda nao tem pagina principal, /{empresa} lista os QR
+// codes que qualquer pessoa pode abrir — assim o endereco nunca fica vazio.
 async function findCompany(slug: string) {
   return prisma.company.findFirst({
     where: { slug, deletedAt: null },
@@ -50,6 +65,13 @@ export async function generateMetadata({
   params: Promise<{ empresa: string }>;
 }): Promise<Metadata> {
   const { empresa } = await params;
+  const principal = await findPaginaPrincipal(empresa);
+  if (principal) {
+    return {
+      title: principal.nome,
+      description: principal.descricao ?? undefined,
+    };
+  }
   const company = await findCompany(empresa);
   if (!company) return { title: "Snaptie" };
   return {
@@ -64,6 +86,12 @@ export default async function CompanyPage({
   params: Promise<{ empresa: string }>;
 }) {
   const { empresa } = await params;
+
+  // Se a empresa tem página principal, é essa que se mostra — com barreira de
+  // acesso, registo de scan e edição pública, tal como em /{empresa}/{codigo}.
+  const principal = await findPaginaPrincipal(empresa);
+  if (principal) return <QrScanPage qr={principal} />;
+
   const company = await findCompany(empresa);
   if (!company) notFound();
 
