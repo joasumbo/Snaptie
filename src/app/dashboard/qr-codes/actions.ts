@@ -36,6 +36,7 @@ const BLOCK_TYPES: BlockType[] = [
   "VIDEO",
   "TITULO",
   "LOGO",
+  "BOTAO_IMAGEM",
   "FEED",
   "CHAT",
 ];

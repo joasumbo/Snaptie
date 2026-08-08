@@ -80,6 +80,11 @@ function summary(b: BuilderBlock): string {
     const n = b.mensagens.length;
     return n === 1 ? "1 mensagem" : `${n} mensagens`;
   }
+  if (b.tipo === "CHAT") {
+    const n = Array.isArray(c.acoes) ? (c.acoes as unknown[]).length : 0;
+    return n === 1 ? "1 ação" : `${n} ações`;
+  }
+  if (b.tipo === "BOTAO_IMAGEM") return s("url") || "sem link";
   return s("url");
 }
 

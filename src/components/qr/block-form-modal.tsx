@@ -23,6 +23,9 @@ import {
   BLOCK_TYPE_LABELS,
   TYPE_FIELD,
   isContentBlock,
+  BUTTON_SHAPES,
+  BUTTON_WIDTH,
+  buttonShape,
 } from "@/lib/qr";
 import { addBlock, updateBlock } from "@/app/dashboard/qr-codes/actions";
 
@@ -100,6 +103,13 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   const [acoes, setAcoes] = useState<string>(
     Array.isArray(c.acoes) ? (c.acoes as string[]).join("\n") : "",
   );
+  // O botão com imagem guarda a imagem à parte do link: `url` é para onde leva,
+  // `imagem` é o que se vê.
+  const [imagem, setImagem] = useState(str(c, "imagem"));
+  const [forma, setForma] = useState<string>(buttonShape(c.forma));
+  const [tamanho, setTamanho] = useState<string>(
+    BUTTON_WIDTH[String(c.tamanho)] ? String(c.tamanho) : "5",
+  );
 
   // Files picked but not yet uploaded. Only sent to R2 on submit.
   const [single, setSingle] = useState<Pending | null>(null);
@@ -110,7 +120,16 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
 
   const field = tipo ? TYPE_FIELD[tipo] : null;
   const singleKind: UploadKind | null =
-    field === "imagem" ? "image" : field === "video" ? "video" : field === "pdf" ? "pdf" : null;
+    field === "imagem" || field === "botaoImagem"
+      ? "image"
+      : field === "video"
+        ? "video"
+        : field === "pdf"
+          ? "pdf"
+          : null;
+  // No botão com imagem o ficheiro carregado é a imagem de fundo, não o `url` —
+  // esse fica reservado para o destino do link.
+  const ficheiroEmImagem = field === "botaoImagem";
 
   function pickSingle(file: File) {
     setSingle({ file, preview: URL.createObjectURL(file) });
@@ -118,7 +137,9 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   function clearSingle() {
     if (single) URL.revokeObjectURL(single.preview);
     setSingle(null);
-    setUrl(""); // also drops a previously saved file (on edit)
+    // also drops a previously saved file (on edit)
+    if (ficheiroEmImagem) setImagem("");
+    else setUrl("");
   }
   function addCarouselFiles(files: FileList) {
     const next = Array.from(files).map((file) => ({
@@ -175,6 +196,11 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
           conteudo = { imagens: [...imagens, ...uploaded], orientacao };
           break;
         }
+        case "botaoImagem": {
+          const finalImagem = single ? await uploadFile(single.file, "image") : imagem;
+          conteudo = { imagem: finalImagem, url, forma, tamanho };
+          break;
+        }
         case "registo":
           conteudo = {
             acoes: acoes
@@ -222,7 +248,8 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
     }
   }
 
-  const singlePreview = single?.preview ?? (url || null);
+  const singlePreview =
+    single?.preview ?? ((ficheiroEmImagem ? imagem : url) || null);
 
   return (
     <Dialog
@@ -407,16 +434,18 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                 label={
                   tipo === "LOGO"
                     ? "Logótipo"
-                    : field === "imagem"
-                      ? "Imagem"
-                      : field === "video"
-                        ? "Vídeo"
-                        : "Ficheiro PDF"
+                    : field === "botaoImagem"
+                      ? "Imagem de fundo"
+                      : field === "imagem"
+                        ? "Imagem"
+                        : field === "video"
+                          ? "Vídeo"
+                          : "Ficheiro PDF"
                 }
               >
                 {singlePreview ? (
                   <div className="flex items-center gap-3 rounded-lg border p-2">
-                    {field === "imagem" ? (
+                    {singleKind === "image" ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={singlePreview}
@@ -461,6 +490,73 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                   }}
                 />
               </Field>
+            ) : null}
+
+            {field === "botaoImagem" ? (
+              <>
+                <Field label="Link de destino">
+                  <Input
+                    placeholder="https://"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Deixe vazio para a imagem aparecer sem levar a lado nenhum.
+                  </p>
+                </Field>
+
+                <Field label="Texto por cima (opcional)">
+                  <Input
+                    value={titulo}
+                    onChange={(e) => setTitulo(e.target.value)}
+                    placeholder="Sem texto, mostra só a imagem"
+                  />
+                </Field>
+
+                <Field label="Forma">
+                  <div className="grid grid-cols-2 gap-2">
+                    {BUTTON_SHAPES.map((f) => (
+                      <button
+                        key={f.valor}
+                        type="button"
+                        onClick={() => setForma(f.valor)}
+                        className={cn(
+                          "rounded-lg border px-3 py-2 text-sm transition-colors",
+                          forma === f.valor
+                            ? "border-foreground bg-foreground text-background"
+                            : "hover:bg-muted",
+                        )}
+                      >
+                        {f.nome}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label="Tamanho">
+                  <div className="inline-flex rounded-lg border p-0.5">
+                    {Object.keys(BUTTON_WIDTH).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setTamanho(n)}
+                        className={cn(
+                          "w-10 rounded-md py-1 text-sm transition-colors",
+                          tamanho === n
+                            ? "bg-foreground text-background"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    1 é o mais pequeno, 5 ocupa a largura toda. Abaixo de 5 o
+                    botão fica centrado na página.
+                  </p>
+                </Field>
+              </>
             ) : null}
 
             {field === "carrossel" ? (

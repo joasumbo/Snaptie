@@ -67,6 +67,7 @@ enum BlockType {
   VIDEO
   TITULO
   LOGO
+  BOTAO_IMAGEM // imagem de fundo que leva a um link, com forma e tamanho próprios
   // Tipos futuros
   CHAT
   FEED

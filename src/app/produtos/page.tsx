@@ -3,12 +3,22 @@ import type { Metadata } from "next";
 import * as Icons from "lucide-react";
 import { ArrowLeft, ArrowRight, QrCode } from "lucide-react";
 import { CATEGORIAS, TOTAL_PRODUTOS, type Categoria } from "@/lib/produtos";
+import QrScanPage from "@/components/qr/qr-scan-page";
+import { findSitePage } from "@/lib/site-page";
 
-export const metadata: Metadata = {
+export const dynamic = "force-dynamic";
+
+const METADATA_CATALOGO: Metadata = {
   title: "Produtos — Snaptie",
   description:
     "O que podes fazer com um QR code Snaptie: souvenirs, eventos, hotelaria, restauração, empresas, emergência e mais.",
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const pagina = await findSitePage("produtos");
+  if (!pagina) return METADATA_CATALOGO;
+  return { title: pagina.nome, description: pagina.descricao ?? undefined };
+}
 
 // O catálogo usa nomes de ícones em texto para que a lista de produtos continue
 // a ser dados simples. Se um nome não existir, cai no ícone genérico em vez de
@@ -85,7 +95,14 @@ function CategoriaSection({ categoria }: { categoria: Categoria }) {
   );
 }
 
-export default function ProdutosPage() {
+export default async function ProdutosPage() {
+  // Gerida no painel pela snaptie-admin; sem ela, mostra o catálogo de origem.
+  const pagina = await findSitePage("produtos");
+  if (pagina) return <QrScanPage qr={pagina} />;
+  return <Catalogo />;
+}
+
+function Catalogo() {
   return (
     <main className="min-h-screen px-6 py-14">
       <div className="mx-auto max-w-5xl">

@@ -549,6 +549,31 @@ function BlockFields({
       </div>
     );
   }
+  // O visitante troca a imagem e o destino; a forma e o tamanho ficam com quem
+  // desenhou a página, para a edição pública não lhe desfazer o alinhamento.
+  if (field === "botaoImagem") {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label>{t("fieldFile")}</Label>
+          <FileUpload
+            kind="image"
+            value={str(c, "imagem") || null}
+            onChange={(v) => setField(id, "imagem", v ?? "")}
+            uploader={uploaderFor("image")}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>{t("fieldUrl")}</Label>
+          <Input
+            placeholder="https://"
+            value={str(c, "url")}
+            onChange={(e) => setField(id, "url", e.target.value)}
+          />
+        </div>
+      </>
+    );
+  }
   if (field === "carrossel") {
     const imgs = Array.isArray(c.imagens) ? (c.imagens as string[]) : [];
     return (

@@ -31,6 +31,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   VIDEO: "Vídeo",
   TITULO: "Título",
   LOGO: "Logótipo",
+  BOTAO_IMAGEM: "Botão com imagem",
   CHAT: "Registo / Histórico",
   FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
@@ -56,9 +57,49 @@ export const CONTENT_TYPES: BlockType[] = [
   "IMAGEM",
   "CARROSSEL",
   "VIDEO",
+  "BOTAO_IMAGEM",
   "FEED",
   "CHAT",
 ];
+
+// O botão com imagem tem forma e tamanho próprios, ao contrário dos restantes
+// elementos, que ocupam sempre a largura da coluna.
+export const BUTTON_SHAPES = [
+  { valor: "horizontal", nome: "Retangular horizontal" },
+  { valor: "vertical", nome: "Retangular vertical" },
+  { valor: "quadrado", nome: "Quadrado" },
+  { valor: "redondo", nome: "Redondo" },
+] as const;
+
+export type ButtonShape = (typeof BUTTON_SHAPES)[number]["valor"];
+
+// A proporção é a da forma; o tamanho decide a largura. Só o 5 enche a coluna —
+// nos restantes o botão fica centrado, senão um "redondo pequeno" esticava e
+// deixava de ser redondo.
+export const BUTTON_ASPECT: Record<ButtonShape, string> = {
+  horizontal: "aspect-[16/9]",
+  vertical: "aspect-[3/4]",
+  quadrado: "aspect-square",
+  redondo: "aspect-square",
+};
+
+export const BUTTON_WIDTH: Record<string, string> = {
+  "1": "35%",
+  "2": "50%",
+  "3": "65%",
+  "4": "80%",
+  "5": "100%",
+};
+
+export function buttonShape(valor: unknown): ButtonShape {
+  return BUTTON_SHAPES.some((f) => f.valor === valor)
+    ? (valor as ButtonShape)
+    : "horizontal";
+}
+
+export function buttonWidth(valor: unknown): string {
+  return BUTTON_WIDTH[String(valor)] ?? BUTTON_WIDTH["5"];
+}
 
 export function isContentBlock(tipo: BlockType): boolean {
   return CONTENT_TYPES.includes(tipo);
@@ -90,7 +131,8 @@ export type FieldKind =
   | "pdf"
   | "carrossel"
   | "mural"
-  | "registo";
+  | "registo"
+  | "botaoImagem";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -106,6 +148,7 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   CARROSSEL: "carrossel",
   TITULO: "titulo",
   LOGO: "imagem",
+  BOTAO_IMAGEM: "botaoImagem",
   // The wall has no content to fill in: the visitors write it.
   FEED: "mural",
   // Botões que marcam acontecimentos com a hora, mais o histórico do que já

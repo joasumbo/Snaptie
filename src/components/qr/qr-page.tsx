@@ -16,7 +16,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { BlockType } from "@prisma/client";
-import { DEFAULT_ICON, isContentBlock, actionHref } from "@/lib/qr";
+import {
+  DEFAULT_ICON,
+  isContentBlock,
+  actionHref,
+  BUTTON_ASPECT,
+  buttonShape,
+  buttonWidth,
+} from "@/lib/qr";
 import { WifiCard } from "./wifi-card";
 import { MessageWall, type WallMessage } from "./message-wall";
 import { EventLog } from "./event-log";
@@ -187,6 +194,47 @@ function ContentElement({
       <div className="flex justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="" className="size-24 rounded-full object-cover shadow-sm" />
+      </div>
+    );
+  }
+  if (block.tipo === "BOTAO_IMAGEM") {
+    const url = str(block.conteudo, "url");
+    const imagem = str(block.conteudo, "imagem");
+    if (!imagem) return null;
+    const forma = buttonShape(block.conteudo.forma);
+    const largura = buttonWidth(block.conteudo.tamanho);
+    const redondo = forma === "redondo";
+    const classe = `relative block w-full overflow-hidden shadow-sm ${BUTTON_ASPECT[forma]} ${redondo ? "rounded-full" : "rounded-2xl"}`;
+    const dentro = (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imagem} alt={block.titulo} className="size-full object-cover" />
+        {/* O título só se sobrepõe se existir — uma imagem sozinha fica limpa. */}
+        {block.titulo ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/35 p-3 text-center font-semibold text-white">
+            {block.titulo}
+          </span>
+        ) : null}
+      </>
+    );
+    return (
+      // Centrado à sua largura: nos tamanhos abaixo de 5 o botão não enche a
+      // coluna, senão um redondo pequeno esticava e deixava de ser redondo.
+      <div className="flex justify-center" style={{ width: "100%" }}>
+        <div style={{ width: largura }}>
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className={`${classe} transition-transform hover:scale-[1.02]`}
+            >
+              {dentro}
+            </a>
+          ) : (
+            <div className={classe}>{dentro}</div>
+          )}
+        </div>
       </div>
     );
   }
