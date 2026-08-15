@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Segmented } from "@/components/ui/segmented";
-import { TYPE_FIELD, BLOCK_TYPE_LABELS, isContentBlock } from "@/lib/qr";
+import { TYPE_FIELD, BLOCK_TYPE_LABELS, isContentBlock, parBotoes } from "@/lib/qr";
 import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
@@ -571,6 +571,40 @@ function BlockFields({
             onChange={(e) => setField(id, "url", e.target.value)}
           />
         </div>
+      </>
+    );
+  }
+  // O visitante troca a imagem, o nome e o destino de cada um dos dois.
+  if (field === "parBotoes") {
+    const botoes = parBotoes(c);
+    const guardar = (i: number, key: string, valor: string) =>
+      setField(
+        id,
+        "botoes",
+        botoes.map((b, j) => (j === i ? { ...b, [key]: valor } : b)),
+      );
+    return (
+      <>
+        {botoes.map((botao, i) => (
+          <div key={i} className="space-y-1.5 rounded-lg border p-3">
+            <Label>{`${t("fieldFile")} ${i + 1}`}</Label>
+            <FileUpload
+              kind="image"
+              value={botao.imagem || null}
+              onChange={(v) => guardar(i, "imagem", v ?? "")}
+              uploader={uploaderFor("image")}
+            />
+            <Input
+              value={botao.texto}
+              onChange={(e) => guardar(i, "texto", e.target.value)}
+            />
+            <Input
+              placeholder="https://"
+              value={botao.url}
+              onChange={(e) => guardar(i, "url", e.target.value)}
+            />
+          </div>
+        ))}
       </>
     );
   }

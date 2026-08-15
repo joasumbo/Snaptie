@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { BlockType } from "@prisma/client";
-import { BLOCK_TYPE_LABELS } from "@/lib/qr";
+import { BLOCK_TYPE_LABELS, parBotoes } from "@/lib/qr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,11 @@ function summary(b: BuilderBlock): string {
     return n === 1 ? "1 ação" : `${n} ações`;
   }
   if (b.tipo === "BOTAO_IMAGEM") return s("url") || "sem link";
+  if (b.tipo === "PAR_BOTOES") {
+    return parBotoes(c)
+      .map((x, i) => x.texto || `Botão ${i + 1}`)
+      .join(" · ");
+  }
   return s("url");
 }
 

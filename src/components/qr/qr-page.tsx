@@ -23,6 +23,7 @@ import {
   BUTTON_ASPECT,
   buttonShape,
   buttonWidth,
+  parBotoes,
 } from "@/lib/qr";
 import { WifiCard } from "./wifi-card";
 import { MessageWall, type WallMessage } from "./message-wall";
@@ -194,6 +195,56 @@ function ContentElement({
       <div className="flex justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="" className="size-24 rounded-full object-cover shadow-sm" />
+      </div>
+    );
+  }
+  if (block.tipo === "PAR_BOTOES") {
+    const botoes = parBotoes(block.conteudo);
+    // Um botão sem imagem nem texto não tem nada para mostrar; o par continua a
+    // ocupar as duas colunas para o que sobra não saltar para o meio.
+    if (botoes.every((b) => !b.imagem && !b.texto)) return null;
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {botoes.map((botao, i) => {
+          const dentro = (
+            <>
+              <span className="flex flex-1 items-center justify-center p-4">
+                {botao.imagem ? (
+                  // object-contain porque isto costuma levar ícones e
+                  // logótipos: cortá-los para encher o quadrado estragava-os.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={botao.imagem}
+                    alt={botao.texto}
+                    className="size-full object-contain"
+                  />
+                ) : null}
+              </span>
+              {botao.texto ? (
+                <span className="px-3 pb-4 text-center font-semibold text-zinc-900">
+                  {botao.texto}
+                </span>
+              ) : null}
+            </>
+          );
+          const classe =
+            "flex aspect-square flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm";
+          return botao.url ? (
+            <a
+              key={i}
+              href={botao.url}
+              target="_blank"
+              rel="noreferrer"
+              className={`${classe} transition-transform hover:scale-[1.02]`}
+            >
+              {dentro}
+            </a>
+          ) : (
+            <div key={i} className={classe}>
+              {dentro}
+            </div>
+          );
+        })}
       </div>
     );
   }

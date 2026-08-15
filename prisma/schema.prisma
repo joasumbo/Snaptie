@@ -68,6 +68,7 @@ enum BlockType {
   TITULO
   LOGO
   BOTAO_IMAGEM // imagem de fundo que leva a um link, com forma e tamanho próprios
+  PAR_BOTOES // dois botões lado a lado, cada um com a sua imagem e o seu link
   // Tipos futuros
   CHAT
   FEED

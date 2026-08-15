@@ -32,6 +32,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   TITULO: "Título",
   LOGO: "Logótipo",
   BOTAO_IMAGEM: "Botão com imagem",
+  PAR_BOTOES: "Dois botões lado a lado",
   CHAT: "Registo / Histórico",
   FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
@@ -58,9 +59,26 @@ export const CONTENT_TYPES: BlockType[] = [
   "CARROSSEL",
   "VIDEO",
   "BOTAO_IMAGEM",
+  "PAR_BOTOES",
   "FEED",
   "CHAT",
 ];
+
+// Os dois botões lado a lado são sempre dois e ocupam metade da largura cada —
+// não há forma nem tamanho a escolher, é essa a razão de ser do elemento.
+export const PAR_BOTOES_N = 2;
+
+export type ParBotao = { imagem: string; url: string; texto: string };
+
+export function parBotoes(conteudo: Record<string, unknown>): ParBotao[] {
+  const lista = Array.isArray(conteudo.botoes) ? conteudo.botoes : [];
+  return Array.from({ length: PAR_BOTOES_N }, (_, i) => {
+    const b = lista[i];
+    const r = b && typeof b === "object" ? (b as Record<string, unknown>) : {};
+    const s = (k: string) => (typeof r[k] === "string" ? (r[k] as string) : "");
+    return { imagem: s("imagem"), url: s("url"), texto: s("texto") };
+  });
+}
 
 // O botão com imagem tem forma e tamanho próprios, ao contrário dos restantes
 // elementos, que ocupam sempre a largura da coluna.
@@ -132,7 +150,8 @@ export type FieldKind =
   | "carrossel"
   | "mural"
   | "registo"
-  | "botaoImagem";
+  | "botaoImagem"
+  | "parBotoes";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -149,6 +168,7 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   TITULO: "titulo",
   LOGO: "imagem",
   BOTAO_IMAGEM: "botaoImagem",
+  PAR_BOTOES: "parBotoes",
   // The wall has no content to fill in: the visitors write it.
   FEED: "mural",
   // Botões que marcam acontecimentos com a hora, mais o histórico do que já

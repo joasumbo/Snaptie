@@ -26,6 +26,8 @@ import {
   BUTTON_SHAPES,
   BUTTON_WIDTH,
   buttonShape,
+  parBotoes,
+  type ParBotao,
 } from "@/lib/qr";
 import { addBlock, updateBlock } from "@/app/dashboard/qr-codes/actions";
 
@@ -106,6 +108,14 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   // O botão com imagem guarda a imagem à parte do link: `url` é para onde leva,
   // `imagem` é o que se vê.
   const [imagem, setImagem] = useState(str(c, "imagem"));
+  // Os dois botões lado a lado. São sempre dois, por isso o estado tem sempre
+  // dois lugares — nunca se acrescenta nem se tira nenhum.
+  const [par, setPar] = useState<ParBotao[]>(() => parBotoes(c));
+  const [parFiles, setParFiles] = useState<(Pending | null)[]>([null, null]);
+  const parInputs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
   const [forma, setForma] = useState<string>(buttonShape(c.forma));
   const [tamanho, setTamanho] = useState<string>(
     BUTTON_WIDTH[String(c.tamanho)] ? String(c.tamanho) : "5",
@@ -140,6 +150,22 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
     // also drops a previously saved file (on edit)
     if (ficheiroEmImagem) setImagem("");
     else setUrl("");
+  }
+  function setParCampo(i: number, key: keyof ParBotao, value: string) {
+    setPar((arr) => arr.map((b, j) => (j === i ? { ...b, [key]: value } : b)));
+  }
+  function pickPar(i: number, file: File) {
+    setParFiles((arr) =>
+      arr.map((p, j) => (j === i ? { file, preview: URL.createObjectURL(file) } : p)),
+    );
+  }
+  function clearPar(i: number) {
+    setParFiles((arr) => {
+      const alvo = arr[i];
+      if (alvo) URL.revokeObjectURL(alvo.preview);
+      return arr.map((p, j) => (j === i ? null : p));
+    });
+    setParCampo(i, "imagem", "");
   }
   function addCarouselFiles(files: FileList) {
     const next = Array.from(files).map((file) => ({
@@ -199,6 +225,20 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         case "botaoImagem": {
           const finalImagem = single ? await uploadFile(single.file, "image") : imagem;
           conteudo = { imagem: finalImagem, url, forma, tamanho };
+          break;
+        }
+        case "parBotoes": {
+          const botoes: ParBotao[] = [];
+          for (let i = 0; i < par.length; i++) {
+            const escolhido = parFiles[i];
+            botoes.push({
+              ...par[i]!,
+              imagem: escolhido
+                ? await uploadFile(escolhido.file, "image")
+                : par[i]!.imagem,
+            });
+          }
+          conteudo = { botoes };
           break;
         }
         case "registo":
@@ -557,6 +597,76 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                   </p>
                 </Field>
               </>
+            ) : null}
+
+            {field === "parBotoes" ? (
+              <div className="space-y-3">
+                <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                  São sempre dois, lado a lado, com metade da largura cada. Não
+                  há tamanho a escolher.
+                </p>
+                {par.map((botao, i) => {
+                  const previa = parFiles[i]?.preview ?? (botao.imagem || null);
+                  return (
+                    <div key={i} className="space-y-2 rounded-lg border p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Botão {i + 1}
+                      </p>
+                      {previa ? (
+                        <div className="flex items-center gap-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previa}
+                            alt=""
+                            className="size-14 rounded-md border bg-white object-contain p-1"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                            {parFiles[i]?.file.name ?? "Imagem carregada"}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => clearPar(i)}
+                          >
+                            <X />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => parInputs[i]!.current?.click()}
+                        >
+                          <Upload />
+                          Carregar imagem
+                        </Button>
+                      )}
+                      <input
+                        ref={parInputs[i]}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) pickPar(i, f);
+                          e.target.value = "";
+                        }}
+                      />
+                      <Input
+                        placeholder="Nome por baixo da imagem"
+                        value={botao.texto}
+                        onChange={(e) => setParCampo(i, "texto", e.target.value)}
+                      />
+                      <Input
+                        placeholder="https://"
+                        value={botao.url}
+                        onChange={(e) => setParCampo(i, "url", e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             ) : null}
 
             {field === "carrossel" ? (
