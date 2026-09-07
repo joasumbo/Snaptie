@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { visitorIp } from "@/lib/rate-limit";
+import {
+  prepareUpload,
+  createUploadUrl,
+  publicUrlFor,
+  type UploadTicket,
+} from "@/lib/storage";
 
 // The message wall: any visitor may leave a message on a FEED block, with no
 // code and no account. That is the point of it — and also why it needs limits.
@@ -14,27 +20,43 @@ const JANELA_MINUTOS = 5; // ...in this many minutes
 
 export type WallResult = { ok: true } | { ok: false; motivo: "invalido" | "vazio" | "muitas" };
 
+// Só se guarda o endereço de uma imagem que saiu do nosso próprio
+// armazenamento. Sem esta verificação, o campo aceitava qualquer endereço e o
+// mural passava a servir para pendurar imagens de terceiros.
+function imagemNossa(url: string): boolean {
+  const base = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
+  return Boolean(base) && url.startsWith(`${base}/`);
+}
+
+// O mesmo bloco visto duas vezes: tem de ser um mural vivo numa página
+// publicada, e não um bloco qualquer cujo id alguém conheça.
+async function muralVivo(codigo: string, blockId: string) {
+  return prisma.qrBlock.findFirst({
+    where: {
+      id: blockId,
+      tipo: "FEED",
+      ativo: true,
+      qr: { codigo, publicado: true },
+    },
+    select: { id: true, qr: { select: { company: { select: { slug: true } } } } },
+  });
+}
+
 export async function postWallMessage(input: {
   codigo: string;
   blockId: string;
   nome: string;
   mensagem: string;
+  imagem?: string;
 }): Promise<WallResult> {
   const nome = input.nome?.trim().slice(0, MAX_NOME) ?? "";
   const mensagem = input.mensagem?.trim().slice(0, MAX_MENSAGEM) ?? "";
-  if (!nome || !mensagem) return { ok: false, motivo: "vazio" };
+  const imagem = input.imagem?.trim() ?? "";
+  if (imagem && !imagemNossa(imagem)) return { ok: false, motivo: "invalido" };
+  // Uma imagem sozinha já é uma mensagem; o texto passa a ser dispensável.
+  if (!nome || (!mensagem && !imagem)) return { ok: false, motivo: "vazio" };
 
-  // The block must be a live wall on this published page — not any block whose
-  // id someone happens to know.
-  const block = await prisma.qrBlock.findFirst({
-    where: {
-      id: input.blockId,
-      tipo: "FEED",
-      ativo: true,
-      qr: { codigo: input.codigo, publicado: true },
-    },
-    select: { id: true, qr: { select: { company: { select: { slug: true } } } } },
-  });
+  const block = await muralVivo(input.codigo, input.blockId);
   if (!block) return { ok: false, motivo: "invalido" };
 
   // An open form on a public page is a spam magnet, so one visitor only gets a
@@ -47,11 +69,50 @@ export async function postWallMessage(input: {
   if (recentes >= MAX_POR_JANELA) return { ok: false, motivo: "muitas" };
 
   await prisma.qrMessage.create({
-    data: { blockId: block.id, nome, mensagem, ip },
+    data: { blockId: block.id, nome, mensagem, imagem: imagem || null, ip },
   });
 
   revalidatePath(`/${block.qr.company.slug}/${input.codigo}`);
   return { ok: true };
+}
+
+// Só imagens de verdade, e sem SVG: um SVG é um documento que pode trazer
+// script lá dentro, e aqui quem carrega o ficheiro é um visitante anónimo.
+const TIPOS_IMAGEM = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+// Dá ao visitante uma autorização de curta duração para enviar uma imagem
+// diretamente para o armazenamento. Passa pelas mesmas barreiras da mensagem:
+// mural vivo, página publicada e o mesmo limite por visitante.
+export async function requestWallUpload(input: {
+  codigo: string;
+  blockId: string;
+  contentType: string;
+  size: number;
+}): Promise<UploadTicket> {
+  if (!TIPOS_IMAGEM.includes(input.contentType)) {
+    return { ok: false, message: "Formato de imagem não suportado." };
+  }
+
+  const block = await muralVivo(input.codigo, input.blockId);
+  if (!block) return { ok: false, message: "Mural indisponível." };
+
+  const ip = await visitorIp();
+  const desde = new Date(Date.now() - JANELA_MINUTOS * 60_000);
+  const recentes = await prisma.qrMessage.count({
+    where: { blockId: block.id, ip, createdAt: { gte: desde } },
+  });
+  if (recentes >= MAX_POR_JANELA) {
+    return { ok: false, message: "Demasiadas mensagens. Tente daqui a pouco." };
+  }
+
+  const prepared = prepareUpload("image", input.contentType, input.size);
+  if (!prepared.ok) return prepared;
+
+  const uploadUrl = await createUploadUrl({
+    key: prepared.key,
+    contentType: input.contentType,
+  });
+  return { ok: true, uploadUrl, publicUrl: publicUrlFor(prepared.key) };
 }
 
 // Marca um acontecimento num bloco de registo. Ao contrário do mural, o

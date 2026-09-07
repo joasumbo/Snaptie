@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { postWallMessage } from "@/app/[empresa]/[codigo]/wall-actions";
+import { uploadFile } from "@/lib/upload-client";
+import { tempoRelativo } from "@/lib/tempo";
+import { postWallMessage, requestWallUpload } from "@/app/[empresa]/[codigo]/wall-actions";
 
 export type WallMessage = {
   id: string;
   nome: string;
   mensagem: string;
+  imagem?: string | null;
   createdAt: string; // ISO — formatted in the visitor's locale
 };
 
@@ -35,15 +38,42 @@ export function MessageWall({
 }) {
   const router = useRouter();
   const t = useTranslations("Wall");
+  const locale = useLocale();
+  const fileInput = useRef<HTMLInputElement>(null);
   const [nome, setNome] = useState("");
   const [mensagem, setMensagem] = useState("");
+  const [imagem, setImagem] = useState<{ file: File; preview: string } | null>(null);
   const [sending, setSending] = useState(false);
 
+  // O relógio só arranca depois de montar. Se a hora relativa fosse calculada
+  // no servidor, o texto vinha de um instante e o cliente reescrevia-o noutro —
+  // até lá mostra-se a data, que é igual dos dois lados.
+  const [agora, setAgora] = useState<number | null>(null);
+  useEffect(() => {
+    setAgora(Date.now());
+    const timer = setInterval(() => setAgora(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  function escolherImagem(file: File) {
+    if (imagem) URL.revokeObjectURL(imagem.preview);
+    setImagem({ file, preview: URL.createObjectURL(file) });
+  }
+  function limparImagem() {
+    if (imagem) URL.revokeObjectURL(imagem.preview);
+    setImagem(null);
+  }
+
   async function send() {
-    if (!codigo || !nome.trim() || !mensagem.trim()) return;
+    if (!codigo || !nome.trim() || (!mensagem.trim() && !imagem)) return;
     setSending(true);
     try {
-      const r = await postWallMessage({ codigo, blockId, nome, mensagem });
+      const url = imagem
+        ? await uploadFile(imagem.file, "image", (input) =>
+            requestWallUpload({ ...input, codigo, blockId }),
+          )
+        : "";
+      const r = await postWallMessage({ codigo, blockId, nome, mensagem, imagem: url });
       if (!r.ok) {
         toast.error(
           r.motivo === "muitas"
@@ -55,10 +85,11 @@ export function MessageWall({
         return;
       }
       setMensagem("");
+      limparImagem();
       toast.success(t("posted"));
       router.refresh();
-    } catch {
-      toast.error(t("failed"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("failed"));
     } finally {
       setSending(false);
     }
@@ -87,11 +118,51 @@ export function MessageWall({
             onChange={(e) => setMensagem(e.target.value)}
             className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
+
+          {imagem ? (
+            <div className="relative w-fit">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imagem.preview}
+                alt=""
+                className="size-20 rounded-lg object-cover"
+              />
+              <button
+                type="button"
+                onClick={limparImagem}
+                className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-zinc-900 text-white"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => fileInput.current?.click()}
+              disabled={sending}
+            >
+              <ImagePlus />
+              {t("addImage")}
+            </Button>
+          )}
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) escolherImagem(f);
+              e.target.value = "";
+            }}
+          />
+
           <Button
             className="w-full text-white"
             style={{ backgroundColor: color }}
             onClick={send}
-            disabled={sending || !nome.trim() || !mensagem.trim()}
+            disabled={sending || !nome.trim() || (!mensagem.trim() && !imagem)}
           >
             {sending ? <Loader2 className="animate-spin" /> : <Send />}
             {t("send")}
@@ -110,12 +181,24 @@ export function MessageWall({
                   {m.nome}
                 </span>
                 <span className="shrink-0 text-xs text-zinc-400">
-                  {new Date(m.createdAt).toLocaleDateString()}
+                  {agora === null
+                    ? new Date(m.createdAt).toLocaleDateString(locale)
+                    : tempoRelativo(m.createdAt, agora, locale)}
                 </span>
               </div>
-              <p className="mt-0.5 whitespace-pre-line break-words text-sm text-zinc-600">
-                {m.mensagem}
-              </p>
+              {m.mensagem ? (
+                <p className="mt-0.5 whitespace-pre-line break-words text-sm text-zinc-600">
+                  {m.mensagem}
+                </p>
+              ) : null}
+              {m.imagem ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={m.imagem}
+                  alt=""
+                  className="mt-2 max-h-72 w-full rounded-lg object-cover"
+                />
+              ) : null}
             </div>
           ))
         )}

@@ -124,6 +124,7 @@
     "tooMany": "Too many attempts. Try again in {minutos} min."
   },
   "Wall": {
+    "addImage": "Add image",
     "title": "Message wall",
     "yourName": "Your name",
     "yourMessage": "Your message",

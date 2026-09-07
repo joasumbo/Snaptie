@@ -73,9 +73,21 @@ export function WallMessagesModal({
                       {new Date(m.createdAt).toLocaleString()}
                     </span>
                   </div>
-                  <p className="mt-0.5 whitespace-pre-line break-words text-sm text-muted-foreground">
-                    {m.mensagem}
-                  </p>
+                  {m.mensagem ? (
+                    <p className="mt-0.5 whitespace-pre-line break-words text-sm text-muted-foreground">
+                      {m.mensagem}
+                    </p>
+                  ) : null}
+                  {/* Quem modera tem de ver o que está a apagar; sem a imagem
+                      aqui, decidia às cegas sobre metade da mensagem. */}
+                  {m.imagem ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.imagem}
+                      alt=""
+                      className="mt-2 size-20 rounded-lg object-cover"
+                    />
+                  ) : null}
                 </div>
                 <Button
                   variant="ghost"

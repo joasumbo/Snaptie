@@ -129,8 +129,6 @@ function ActionButton({
   return (
     <a
       href={href ?? "#"}
-      target="_blank"
-      rel="noreferrer"
       className="block rounded-xl px-4 py-3 text-white shadow-sm transition-transform hover:scale-[1.02]"
       style={{ backgroundColor: color }}
     >
@@ -233,8 +231,6 @@ function ContentElement({
             <a
               key={i}
               href={botao.url}
-              target="_blank"
-              rel="noreferrer"
               className={`${classe} transition-transform hover:scale-[1.02]`}
             >
               {dentro}
@@ -276,8 +272,6 @@ function ContentElement({
           {url ? (
             <a
               href={url}
-              target="_blank"
-              rel="noreferrer"
               className={`${classe} transition-transform hover:scale-[1.02]`}
             >
               {dentro}

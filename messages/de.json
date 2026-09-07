@@ -126,6 +126,7 @@
     "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut."
   },
   "Wall": {
+    "addImage": "Bild hinzufügen",
     "title": "Nachrichtenwand",
     "yourName": "Ihr Name",
     "yourMessage": "Ihre Nachricht",

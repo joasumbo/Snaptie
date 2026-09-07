@@ -128,8 +128,6 @@ export default async function CompanyPage({
         {company.website ? (
           <a
             href={company.website}
-            target="_blank"
-            rel="noopener noreferrer"
             className="mt-1 text-sm text-zinc-500 underline-offset-4 hover:underline"
           >
             {company.website.replace(/^https?:\/\//, "")}

@@ -78,6 +78,7 @@ export default async function QrBuilderPage({
           id: m.id,
           nome: m.nome,
           mensagem: m.mensagem,
+          imagem: m.imagem,
           createdAt: m.createdAt.toISOString(),
         })),
       }))}

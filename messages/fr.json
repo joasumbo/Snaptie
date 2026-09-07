@@ -126,6 +126,7 @@
     "tooMany": "Trop de tentatives. Réessayez dans {minutos} min."
   },
   "Wall": {
+    "addImage": "Ajouter une image",
     "title": "Mur de messages",
     "yourName": "Votre nom",
     "yourMessage": "Votre message",
