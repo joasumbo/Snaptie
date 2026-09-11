@@ -59,6 +59,7 @@ type Qr = {
   edicaoPersonalizacao: boolean;
   temPin: boolean;
   acessoModo: string;
+  idioma: string | null;
   temAcessoPin: boolean;
   ativado: boolean;
   publicado: boolean;

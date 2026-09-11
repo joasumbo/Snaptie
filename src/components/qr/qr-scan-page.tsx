@@ -1,4 +1,6 @@
 import { cookies, headers } from "next/headers";
+import { NextIntlClientProvider } from "next-intl";
+import { SUPPORTED_LOCALES } from "@/i18n/request";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { accessCookieName, hasAccess } from "@/lib/auth/qr-access";
@@ -91,7 +93,10 @@ export default async function QrScanPage({ qr }: { qr: QrComRelacoes }) {
     })),
   }));
 
-  return (
+  // Quando o dono fixou um idioma, é esse que manda. Sem isto, a página seguia
+  // o telemóvel de quem a abre, e um mural interno de uma loja em Portugal
+  // aparecia em alemão a quem tivesse o navegador assim configurado.
+  const conteudo = (
     <main className="min-h-screen">
       <PublicQrView
         codigo={qr.codigo ?? ""}
@@ -113,5 +118,17 @@ export default async function QrScanPage({ qr }: { qr: QrComRelacoes }) {
         }}
       />
     </main>
+  );
+
+  const fixo = (SUPPORTED_LOCALES as readonly string[]).includes(qr.idioma ?? "")
+    ? (qr.idioma as string)
+    : null;
+  if (!fixo) return conteudo;
+
+  const mensagensFixas = (await import(`../../../messages/${fixo}.json`)).default;
+  return (
+    <NextIntlClientProvider locale={fixo} messages={mensagensFixas}>
+      {conteudo}
+    </NextIntlClientProvider>
   );
 }

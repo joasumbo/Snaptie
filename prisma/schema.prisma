@@ -151,6 +151,9 @@ model QrCode {
   acessoModo    String   @default("aberto") @map("acesso_modo")
   acessoPin     String?  @map("acesso_pin") // hash do PIN de acesso/ativação
   ativadoEm     DateTime? @map("ativado_em") // quando o QR foi ativado (modo "ativacao")
+  // Idioma fixo da página pública. A null, segue o idioma do visitante — que
+  // serve um souvenir para turistas, mas não um mural interno de uma loja.
+  idioma        String?
   corPrimaria   String?  @map("cor_primaria")
   corSecundaria String?  @map("cor_secundaria")
   estado        String   @default("rascunho") // ex.: rascunho, ativo, arquivado

@@ -54,6 +54,7 @@ export default async function QrBuilderPage({
         edicaoPersonalizacao: qr.edicaoPersonalizacao,
         temPin: Boolean(qr.edicaoPin),
         acessoModo: qr.acessoModo,
+        idioma: qr.idioma,
         temAcessoPin: Boolean(qr.acessoPin),
         ativado: Boolean(qr.ativadoEm),
         publicado: qr.publicado,

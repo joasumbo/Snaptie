@@ -12,6 +12,7 @@ import {
   accessNeedsPin,
   ESTADOS_MANUTENCAO,
 } from "@/lib/qr";
+import { SUPPORTED_LOCALES } from "@/i18n/request";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -147,6 +148,7 @@ export async function updateQrCode(input: {
   edicaoPersonalizacao?: boolean;
   novoPin?: string;
   acessoModo?: string;
+  idioma?: string;
   novoAcessoPin?: string;
   reiniciarAtivacao?: boolean;
 } & PageFields): Promise<ActionResult> {
@@ -203,6 +205,16 @@ export async function updateQrCode(input: {
   }
   if (input.reiniciarAtivacao) acessoData.ativadoEm = null;
 
+  // Vazio quer dizer automático: a página segue o idioma de quem a abre.
+  const idiomaData: { idioma?: string | null } = {};
+  if (input.idioma !== undefined) {
+    const escolhido = input.idioma.trim();
+    if (escolhido && !(SUPPORTED_LOCALES as readonly string[]).includes(escolhido)) {
+      return { ok: false, message: "Idioma inválido." };
+    }
+    idiomaData.idioma = escolhido || null;
+  }
+
   await prisma.qrCode.update({
     where: { id: qr.id },
     data: {
@@ -213,6 +225,7 @@ export async function updateQrCode(input: {
       ...pageData(input),
       ...editData,
       ...acessoData,
+      ...idiomaData,
     },
   });
 

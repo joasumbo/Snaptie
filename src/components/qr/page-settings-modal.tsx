@@ -35,6 +35,7 @@ export type PageSettings = {
   edicaoPersonalizacao: boolean;
   temPin: boolean;
   acessoModo: string;
+  idioma: string | null;
   temAcessoPin: boolean;
   ativado: boolean;
 };
@@ -62,6 +63,7 @@ export function PageSettingsModal({
   );
   const [novoPin, setNovoPin] = useState("");
   const [acessoModo, setAcessoModo] = useState(qr.acessoModo);
+  const [idioma, setIdioma] = useState(qr.idioma ?? "");
   const [novoAcessoPin, setNovoAcessoPin] = useState("");
   const [reiniciarAtivacao, setReiniciarAtivacao] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -105,6 +107,7 @@ export function PageSettingsModal({
         edicaoPersonalizacao,
         novoPin: novoPin || undefined,
         acessoModo,
+        idioma,
         novoAcessoPin: novoAcessoPin || undefined,
         reiniciarAtivacao: reiniciarAtivacao || undefined,
       });
@@ -206,6 +209,27 @@ export function PageSettingsModal({
             <div>
               <Segmented value={nomeTamanho} onChange={setNomeTamanho} options={sizes} />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Idioma da página</Label>
+            <select
+              value={idioma}
+              onChange={(e) => setIdioma(e.target.value)}
+              className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <option value="">Automático (segue o visitante)</option>
+              <option value="pt">Português</option>
+              <option value="en">Inglês</option>
+              <option value="es">Espanhol</option>
+              <option value="fr">Francês</option>
+              <option value="de">Alemão</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              No automático, a página aparece no idioma do telemóvel de quem a
+              abre. Fixe um idioma quando a página é para uma equipa e não para
+              visitantes de fora.
+            </p>
           </div>
 
           <div className="space-y-3 rounded-lg border p-3">
