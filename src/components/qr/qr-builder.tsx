@@ -325,7 +325,22 @@ export default function QrBuilder({
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      {isMural(block.tipo) ? (
+                      {block.tipo === "MANUTENCAO" ? (
+                        // Gerir ocorrências é a tarefa do dia a dia num mural de
+                        // manutenção, não uma opção secundária: leva texto, ao
+                        // contrário do mural de recados, onde é só consultar.
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setWallTarget(block)}
+                        >
+                          <MessagesSquare />
+                          Ocorrências
+                          {block.mensagens.length > 0
+                            ? ` (${block.mensagens.length})`
+                            : ""}
+                        </Button>
+                      ) : isMural(block.tipo) ? (
                         <Button
                           variant="ghost"
                           size="icon-sm"
