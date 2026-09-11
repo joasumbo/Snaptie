@@ -69,6 +69,7 @@ enum BlockType {
   LOGO
   BOTAO_IMAGEM // imagem de fundo que leva a um link, com forma e tamanho próprios
   PAR_BOTOES // dois botões lado a lado, cada um com a sua imagem e o seu link
+  MANUTENCAO // mural que avisa por email e cujas mensagens têm estado
   // Tipos futuros
   CHAT
   FEED
@@ -199,6 +200,7 @@ model QrMessage {
   nome      String
   mensagem  String
   imagem    String?
+  estado    String? // só nos murais de manutenção: para_fazer, em_resolucao, resolvido
   ip        String?
   createdAt DateTime @default(now()) @map("created_at")
 

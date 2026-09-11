@@ -126,6 +126,9 @@
     "tooMany": "Trop de tentatives. Réessayez dans {minutos} min."
   },
   "Wall": {
+    "status_para_fazer": "À faire",
+    "status_em_resolucao": "En cours",
+    "status_resolvido": "Résolu",
     "addImage": "Ajouter une image",
     "title": "Mur de messages",
     "yourName": "Votre nom",

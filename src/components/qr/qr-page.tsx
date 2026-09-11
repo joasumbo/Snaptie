@@ -48,7 +48,7 @@ export type QrPageBlock = {
   descricao: string | null;
   conteudo: Record<string, unknown>;
   editavelPublico?: boolean;
-  mensagens?: WallMessage[]; // only on a FEED block
+  mensagens?: WallMessage[]; // só nos murais (FEED e MANUTENCAO)
 };
 
 export type QrPageData = {
@@ -167,9 +167,12 @@ function ContentElement({
       />
     );
   }
-  if (block.tipo === "FEED") {
+  if (block.tipo === "FEED" || block.tipo === "MANUTENCAO") {
     return (
       <MessageWall
+        // O mural de manutenção é o mesmo mural, com estado em cada
+        // participação e um aviso por email do lado do servidor.
+        manutencao={block.tipo === "MANUTENCAO"}
         blockId={block.id}
         titulo={block.titulo}
         descricao={block.descricao}

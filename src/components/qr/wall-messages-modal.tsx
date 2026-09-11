@@ -12,7 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { deleteWallMessage } from "@/app/dashboard/qr-codes/actions";
+import {
+  deleteWallMessage,
+  setWallMessageState,
+} from "@/app/dashboard/qr-codes/actions";
+import { ESTADOS_MANUTENCAO, estadoManutencao } from "@/lib/qr";
 import type { WallMessage } from "./message-wall";
 
 // The owner's view of what visitors wrote, with a way to take a message down.
@@ -20,14 +24,32 @@ export function WallMessagesModal({
   titulo,
   mensagens,
   onClose,
+  manutencao = false,
 }: {
   titulo: string;
   mensagens: WallMessage[];
   onClose: () => void;
+  // Só o mural de manutenção tem estados para gerir.
+  manutencao?: boolean;
 }) {
   const router = useRouter();
   const [removidas, setRemovidas] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  // O estado muda já no ecrã e só depois é confirmado pelo servidor: esperar
+  // pela resposta para pintar deixava o toque a parecer perdido.
+  const [estados, setEstados] = useState<Record<string, string>>({});
+
+  async function mudarEstado(id: string, estado: string) {
+    const anterior = estados[id];
+    setEstados((e) => ({ ...e, [id]: estado }));
+    const r = await setWallMessageState(id, estado);
+    if (!r.ok) {
+      setEstados((e) => ({ ...e, [id]: anterior ?? "" }));
+      toast.error(r.message);
+      return;
+    }
+    router.refresh();
+  }
 
   const visiveis = mensagens.filter((m) => !removidas.includes(m.id));
 
@@ -52,7 +74,9 @@ export function WallMessagesModal({
     <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{titulo || "Mural de mensagens"}</DialogTitle>
+          <DialogTitle>
+            {titulo || (manutencao ? "Manutenção" : "Mural de mensagens")}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
@@ -87,6 +111,34 @@ export function WallMessagesModal({
                       alt=""
                       className="mt-2 size-20 rounded-lg object-cover"
                     />
+                  ) : null}
+                  {manutencao ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {ESTADOS_MANUTENCAO.map((e) => {
+                        const atual =
+                          estadoManutencao(estados[m.id] ?? m.estado).valor;
+                        const ativo = atual === e.valor;
+                        return (
+                          <button
+                            key={e.valor}
+                            type="button"
+                            onClick={() => mudarEstado(m.id, e.valor)}
+                            className="rounded-full border px-2.5 py-1 text-xs font-medium transition"
+                            style={
+                              ativo
+                                ? {
+                                    backgroundColor: e.cor,
+                                    color: e.texto,
+                                    borderColor: e.texto,
+                                  }
+                                : { color: "#71717a" }
+                            }
+                          >
+                            {e.rotulo}
+                          </button>
+                        );
+                      })}
+                    </div>
                   ) : null}
                 </div>
                 <Button

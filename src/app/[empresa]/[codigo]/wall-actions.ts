@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { visitorIp } from "@/lib/rate-limit";
 import {
@@ -9,6 +10,8 @@ import {
   publicUrlFor,
   type UploadTicket,
 } from "@/lib/storage";
+import { sendMaintenanceEmail } from "@/lib/email";
+import { ESTADO_INICIAL, emailsManutencao } from "@/lib/qr";
 
 // The message wall: any visitor may leave a message on a FEED block, with no
 // code and no account. That is the point of it — and also why it needs limits.
@@ -34,12 +37,31 @@ async function muralVivo(codigo: string, blockId: string) {
   return prisma.qrBlock.findFirst({
     where: {
       id: blockId,
-      tipo: "FEED",
+      tipo: { in: ["FEED", "MANUTENCAO"] },
       ativo: true,
       qr: { codigo, publicado: true },
     },
-    select: { id: true, qr: { select: { company: { select: { slug: true } } } } },
+    select: {
+      id: true,
+      tipo: true,
+      titulo: true,
+      conteudo: true,
+      qr: { select: { nome: true, company: { select: { slug: true } } } },
+    },
   });
+}
+
+// O endereço vem do próprio pedido, não de uma variável de ambiente. Uma
+// variável mal configurada mandaria toda a gente para localhost, e é um erro
+// que só se descobre quando alguém carrega no link do email.
+async function enderecoBase(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (host) {
+    const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+    return `${proto}://${host}`;
+  }
+  return (process.env.APP_URL ?? "").replace(/\/$/, "");
 }
 
 export async function postWallMessage(input: {
@@ -68,9 +90,44 @@ export async function postWallMessage(input: {
   });
   if (recentes >= MAX_POR_JANELA) return { ok: false, motivo: "muitas" };
 
+  const manutencao = block.tipo === "MANUTENCAO";
   await prisma.qrMessage.create({
-    data: { blockId: block.id, nome, mensagem, imagem: imagem || null, ip },
+    data: {
+      blockId: block.id,
+      nome,
+      mensagem,
+      imagem: imagem || null,
+      // Uma avaria acabada de comunicar está, por definição, por resolver.
+      estado: manutencao ? ESTADO_INICIAL : null,
+      ip,
+    },
   });
+
+  // O aviso vai depois de a mensagem estar guardada, e uma falha no envio não
+  // a desfaz. Perder a participação por causa do email seria o pior dos dois
+  // mundos: quem escreveu ficava convencido de que comunicou, e não comunicou.
+  if (manutencao) {
+    const conteudo =
+      block.conteudo && typeof block.conteudo === "object"
+        ? (block.conteudo as Record<string, unknown>)
+        : {};
+    const destinatarios = emailsManutencao(conteudo);
+    if (destinatarios.length > 0) {
+      try {
+        await sendMaintenanceEmail({
+          to: destinatarios,
+          pagina: block.qr.nome,
+          mural: block.titulo,
+          nome,
+          mensagem,
+          imagem: imagem || null,
+          link: `${await enderecoBase()}/${block.qr.company.slug}/${input.codigo}`,
+        });
+      } catch (e) {
+        console.error("[manutencao:email]", e);
+      }
+    }
+  }
 
   revalidatePath(`/${block.qr.company.slug}/${input.codigo}`);
   return { ok: true };

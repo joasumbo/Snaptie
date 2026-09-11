@@ -126,6 +126,9 @@
     "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut."
   },
   "Wall": {
+    "status_para_fazer": "Zu erledigen",
+    "status_em_resolucao": "In Bearbeitung",
+    "status_resolvido": "Erledigt",
     "addImage": "Bild hinzufügen",
     "title": "Nachrichtenwand",
     "yourName": "Ihr Name",

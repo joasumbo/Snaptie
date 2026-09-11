@@ -124,6 +124,9 @@
     "tooMany": "Too many attempts. Try again in {minutos} min."
   },
   "Wall": {
+    "status_para_fazer": "To do",
+    "status_em_resolucao": "In progress",
+    "status_resolvido": "Resolved",
     "addImage": "Add image",
     "title": "Message wall",
     "yourName": "Your name",

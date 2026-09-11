@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { BlockType } from "@prisma/client";
-import { BLOCK_TYPE_LABELS, parBotoes } from "@/lib/qr";
+import { BLOCK_TYPE_LABELS, parBotoes, isMural, emailsManutencao } from "@/lib/qr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -76,9 +76,12 @@ function summary(b: BuilderBlock): string {
   if (b.tipo === "WIFI") return s("ssid");
   if (b.tipo === "CARROSSEL")
     return `${Array.isArray(c.imagens) ? (c.imagens as unknown[]).length : 0} imagens`;
-  if (b.tipo === "FEED") {
+  if (isMural(b.tipo)) {
     const n = b.mensagens.length;
-    return n === 1 ? "1 mensagem" : `${n} mensagens`;
+    const contagem = n === 1 ? "1 mensagem" : `${n} mensagens`;
+    if (b.tipo !== "MANUTENCAO") return contagem;
+    const avisados = emailsManutencao(c);
+    return avisados.length ? `${contagem} · avisa ${avisados.join(", ")}` : contagem;
   }
   if (b.tipo === "CHAT") {
     const n = Array.isArray(c.acoes) ? (c.acoes as unknown[]).length : 0;
@@ -322,7 +325,7 @@ export default function QrBuilder({
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      {block.tipo === "FEED" ? (
+                      {isMural(block.tipo) ? (
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -442,6 +445,7 @@ export default function QrBuilder({
       {wallTarget ? (
         <WallMessagesModal
           titulo={wallTarget.titulo}
+          manutencao={wallTarget.tipo === "MANUTENCAO"}
           mensagens={wallTarget.mensagens}
           onClose={() => setWallTarget(null)}
         />

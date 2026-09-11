@@ -86,6 +86,7 @@ export default async function QrScanPage({ qr }: { qr: QrComRelacoes }) {
       nome: m.nome,
       mensagem: m.mensagem,
       imagem: m.imagem,
+      estado: m.estado,
       createdAt: m.createdAt.toISOString(),
     })),
   }));

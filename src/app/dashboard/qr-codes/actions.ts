@@ -6,7 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
 import { uniqueQrCode, uniqueQrSlug } from "@/lib/qr-identity";
-import { isContentBlock, isAccessMode, accessNeedsPin } from "@/lib/qr";
+import {
+  isContentBlock,
+  isAccessMode,
+  accessNeedsPin,
+  ESTADOS_MANUTENCAO,
+} from "@/lib/qr";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -38,6 +43,7 @@ const BLOCK_TYPES: BlockType[] = [
   "LOGO",
   "BOTAO_IMAGEM",
   "PAR_BOTOES",
+  "MANUTENCAO",
   "FEED",
   "CHAT",
 ];
@@ -385,6 +391,43 @@ export async function deleteWallMessage(id: string): Promise<ActionResult> {
     return { ok: true };
   } catch (e) {
     return fail("deleteWallMessage", e);
+  }
+}
+
+// Muda o estado de uma participação num mural de manutenção. Passa pelas mesmas
+// verificações de dono que apagar, porque é a mesma mensagem e a mesma empresa.
+export async function setWallMessageState(
+  id: string,
+  estado: string,
+): Promise<ActionResult> {
+  try {
+    const actor = await requireQrManager();
+    if (!actor) return { ok: false, message: "Sem permissão." };
+    if (!ESTADOS_MANUTENCAO.some((e) => e.valor === estado)) {
+      return { ok: false, message: "Estado inválido." };
+    }
+
+    const message = await prisma.qrMessage.findUnique({
+      where: { id },
+      include: { block: { include: { qr: { include: { company: true } } } } },
+    });
+    if (!message) return { ok: false, message: "Mensagem não encontrada." };
+    if (actor.role !== "ADMIN" && message.block.qr.companyId !== actor.companyId) {
+      return { ok: false, message: "Sem permissão." };
+    }
+    // Só as participações de manutenção têm estado; num mural normal a coluna
+    // não quer dizer nada e não se mexe nela.
+    if (message.block.tipo !== "MANUTENCAO") {
+      return { ok: false, message: "Este elemento não tem estados." };
+    }
+
+    await prisma.qrMessage.update({ where: { id }, data: { estado } });
+    revalidatePath(`/dashboard/qr-codes/${message.block.qrId}`);
+    const { company, codigo } = message.block.qr;
+    if (codigo) revalidatePath(`/${company.slug}/${codigo}`);
+    return { ok: true };
+  } catch (e) {
+    return fail("setWallMessageState", e);
   }
 }
 

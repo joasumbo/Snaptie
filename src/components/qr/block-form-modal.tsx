@@ -23,10 +23,12 @@ import {
   BLOCK_TYPE_LABELS,
   TYPE_FIELD,
   isContentBlock,
+  isMural,
   BUTTON_SHAPES,
   BUTTON_WIDTH,
   buttonShape,
   parBotoes,
+  emailsManutencao,
   type ParBotao,
 } from "@/lib/qr";
 import { addBlock, updateBlock } from "@/app/dashboard/qr-codes/actions";
@@ -108,6 +110,12 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   // O botão com imagem guarda a imagem à parte do link: `url` é para onde leva,
   // `imagem` é o que se vê.
   const [imagem, setImagem] = useState(str(c, "imagem"));
+  // Os dois endereços avisados a cada participação. O primeiro é obrigatório,
+  // o segundo é uma cortesia para quem quer um substituto em cópia.
+  const [emails, setEmails] = useState<string[]>(() => {
+    const lista = emailsManutencao(c);
+    return [lista[0] ?? "", lista[1] ?? ""];
+  });
   // Os dois botões lado a lado. São sempre dois, por isso o estado tem sempre
   // dois lugares — nunca se acrescenta nem se tira nenhum.
   const [par, setPar] = useState<ParBotao[]>(() => parBotoes(c));
@@ -241,6 +249,9 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
           conteudo = { botoes };
           break;
         }
+        case "manutencao":
+          conteudo = { emails: emails.map((e) => e.trim()).filter(Boolean) };
+          break;
         case "registo":
           conteudo = {
             acoes: acoes
@@ -251,6 +262,11 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
           break;
         default:
           conteudo = {};
+      }
+
+      if (field === "manutencao" && !emails[0]?.trim()) {
+        setError("Indique o email que recebe os avisos.");
+        return;
       }
 
       const payload = {
@@ -355,7 +371,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         {tipo ? (
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
             {/* The wall is a content element, but it is the one the owner names. */}
-            {!isContentBlock(tipo) || tipo === "FEED" ? (
+            {!isContentBlock(tipo) || isMural(tipo) ? (
               <Field label="Título">
                 <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
               </Field>
@@ -595,6 +611,35 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                     1 é o mais pequeno, 5 ocupa a largura toda. Abaixo de 5 o
                     botão fica centrado na página.
                   </p>
+                </Field>
+              </>
+            ) : null}
+
+            {field === "manutencao" ? (
+              <>
+                <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                  Funciona como o mural: os visitantes escrevem e podem juntar
+                  uma imagem. A diferença é que cada participação avisa por email
+                  e fica com um estado, que gere a partir daqui.
+                </p>
+                <Field label="Email avisado (obrigatório)">
+                  <Input
+                    type="email"
+                    placeholder="manutencao@empresa.com"
+                    value={emails[0]}
+                    onChange={(e) =>
+                      setEmails((arr) => [e.target.value, arr[1] ?? ""])
+                    }
+                  />
+                </Field>
+                <Field label="Segundo email (opcional)">
+                  <Input
+                    type="email"
+                    value={emails[1]}
+                    onChange={(e) =>
+                      setEmails((arr) => [arr[0] ?? "", e.target.value])
+                    }
+                  />
                 </Field>
               </>
             ) : null}

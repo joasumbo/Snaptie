@@ -33,6 +33,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   LOGO: "Logótipo",
   BOTAO_IMAGEM: "Botão com imagem",
   PAR_BOTOES: "Dois botões lado a lado",
+  MANUTENCAO: "Manutenção",
   CHAT: "Registo / Histórico",
   FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
@@ -61,6 +62,7 @@ export const CONTENT_TYPES: BlockType[] = [
   "BOTAO_IMAGEM",
   "PAR_BOTOES",
   "FEED",
+  "MANUTENCAO",
   "CHAT",
 ];
 
@@ -151,7 +153,8 @@ export type FieldKind =
   | "mural"
   | "registo"
   | "botaoImagem"
-  | "parBotoes";
+  | "parBotoes"
+  | "manutencao";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -169,6 +172,7 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LOGO: "imagem",
   BOTAO_IMAGEM: "botaoImagem",
   PAR_BOTOES: "parBotoes",
+  MANUTENCAO: "manutencao",
   // The wall has no content to fill in: the visitors write it.
   FEED: "mural",
   // Botões que marcam acontecimentos com a hora, mais o histórico do que já
@@ -201,4 +205,42 @@ export function actionHref(tipo: BlockType, conteudo: Record<string, unknown>): 
     default:
       return null;
   }
+}
+
+// O mural de manutenção e o mural de mensagens são a mesma coisa por baixo:
+// mesma tabela, mesmo componente, mesmas barreiras. O que os separa é o aviso
+// por email e o estado de cada participação.
+export function isMural(tipo: BlockType): boolean {
+  return tipo === "FEED" || tipo === "MANUTENCAO";
+}
+
+// Guarda-se o estado, não a cor. Assim a paleta pode mudar, e mais tarde dá
+// para filtrar ou contar o que está por resolver — coisas que guardar "verde"
+// tornava impossíveis.
+export const ESTADOS_MANUTENCAO = [
+  { valor: "para_fazer", rotulo: "Para fazer", cor: "#fed7aa", texto: "#7c2d12" },
+  { valor: "em_resolucao", rotulo: "Em resolução", cor: "#fef08a", texto: "#713f12" },
+  { valor: "resolvido", rotulo: "Resolvido", cor: "#bbf7d0", texto: "#14532d" },
+] as const;
+
+export type EstadoManutencao = (typeof ESTADOS_MANUTENCAO)[number]["valor"];
+
+// Toda a participação nova entra como "para fazer": uma avaria acabada de
+// comunicar está, por definição, por resolver.
+export const ESTADO_INICIAL: EstadoManutencao = "para_fazer";
+
+export function estadoManutencao(valor: unknown) {
+  return (
+    ESTADOS_MANUTENCAO.find((e) => e.valor === valor) ??
+    ESTADOS_MANUTENCAO.find((e) => e.valor === ESTADO_INICIAL)!
+  );
+}
+
+// Os dois endereços que recebem aviso. O primeiro é obrigatório, o segundo não.
+export function emailsManutencao(conteudo: Record<string, unknown>): string[] {
+  const lista = Array.isArray(conteudo.emails) ? conteudo.emails : [];
+  return lista
+    .filter((e): e is string => typeof e === "string")
+    .map((e) => e.trim())
+    .filter(Boolean);
 }

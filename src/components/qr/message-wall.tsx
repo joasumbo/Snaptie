@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { uploadFile } from "@/lib/upload-client";
 import { tempoRelativo } from "@/lib/tempo";
+import { estadoManutencao } from "@/lib/qr";
 import { postWallMessage, requestWallUpload } from "@/app/[empresa]/[codigo]/wall-actions";
 
 export type WallMessage = {
@@ -16,6 +17,7 @@ export type WallMessage = {
   nome: string;
   mensagem: string;
   imagem?: string | null;
+  estado?: string | null;
   createdAt: string; // ISO — formatted in the visitor's locale
 };
 
@@ -28,6 +30,7 @@ export function MessageWall({
   mensagens,
   codigo,
   color,
+  manutencao = false,
 }: {
   blockId: string;
   titulo: string;
@@ -35,6 +38,9 @@ export function MessageWall({
   mensagens: WallMessage[];
   codigo?: string;
   color: string;
+  // No mural de manutenção cada participação tem estado, e é ele que lhe dá
+  // a cor de fundo.
+  manutencao?: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("Wall");
@@ -175,19 +181,38 @@ export function MessageWall({
           <p className="text-sm text-zinc-400">{t("empty")}</p>
         ) : (
           mensagens.map((m) => (
-            <div key={m.id} className="rounded-lg bg-zinc-50 px-3 py-2">
+            <div
+              key={m.id}
+              className="rounded-lg px-3 py-2"
+              style={
+                manutencao
+                  ? { backgroundColor: estadoManutencao(m.estado).cor }
+                  : { backgroundColor: "#fafafa" }
+              }
+            >
               <div className="flex items-baseline justify-between gap-2">
                 <span className="truncate text-sm font-medium text-zinc-900">
                   {m.nome}
                 </span>
-                <span className="shrink-0 text-xs text-zinc-400">
+                {manutencao ? (
+                  <span
+                    className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    style={{
+                      backgroundColor: "#ffffffcc",
+                      color: estadoManutencao(m.estado).texto,
+                    }}
+                  >
+                    {t(`status_${estadoManutencao(m.estado).valor}`)}
+                  </span>
+                ) : null}
+                <span className="shrink-0 text-xs text-zinc-500">
                   {agora === null
                     ? new Date(m.createdAt).toLocaleDateString(locale)
                     : tempoRelativo(m.createdAt, agora, locale)}
                 </span>
               </div>
               {m.mensagem ? (
-                <p className="mt-0.5 whitespace-pre-line break-words text-sm text-zinc-600">
+                <p className="mt-0.5 whitespace-pre-line break-words text-sm text-zinc-800">
                   {m.mensagem}
                 </p>
               ) : null}
