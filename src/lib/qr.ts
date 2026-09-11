@@ -220,7 +220,7 @@ export function isMural(tipo: BlockType): boolean {
 export const ESTADOS_MANUTENCAO = [
   { valor: "para_fazer", rotulo: "Para fazer", cor: "#fed7aa", texto: "#7c2d12" },
   { valor: "em_resolucao", rotulo: "Em resolução", cor: "#fef08a", texto: "#713f12" },
-  { valor: "resolvido", rotulo: "Resolvido", cor: "#bbf7d0", texto: "#14532d" },
+  { valor: "resolvido", rotulo: "Feito", cor: "#bbf7d0", texto: "#14532d" },
 ] as const;
 
 export type EstadoManutencao = (typeof ESTADOS_MANUTENCAO)[number]["valor"];
