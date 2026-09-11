@@ -46,7 +46,7 @@ async function muralVivo(codigo: string, blockId: string) {
       tipo: true,
       titulo: true,
       conteudo: true,
-      qr: { select: { nome: true, company: { select: { slug: true } } } },
+      qr: { select: { nome: true, company: { select: { slug: true, email: true } } } },
     },
   });
 }
@@ -121,6 +121,7 @@ export async function postWallMessage(input: {
           nome,
           mensagem,
           imagem: imagem || null,
+          replyTo: block.qr.company.email,
           link: `${await enderecoBase()}/${block.qr.company.slug}/${input.codigo}`,
         });
       } catch (e) {
