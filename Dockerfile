@@ -7,7 +7,7 @@ RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 # Ignora o postinstall (prisma generate) aqui; corre-o já a seguir, controlado.
-RUN npm ci --ignore-scripts && npx prisma generate
+RUN npm install --ignore-scripts --no-audit --no-fund && npx prisma generate
 
 FROM node:22-alpine AS build
 WORKDIR /app
