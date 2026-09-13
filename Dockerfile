@@ -14,6 +14,7 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN mkdir -p public
 ENV NEXT_TELEMETRY_DISABLED=1
 # DATABASE_URL é injectado no build (algumas páginas podem pré-renderizar).
 ARG DATABASE_URL
