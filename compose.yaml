@@ -1,0 +1,25 @@
+# Snaptie no servidor AZAFT — isolado, nada do existente e tocado.
+# Porta 3311 (a 3310 e a inpulse2-console). Base de dados fica no Neon.
+
+services:
+  snaptie:
+    build:
+      context: .
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+        DIRECT_URL: ${DIRECT_URL}
+    image: snaptie:latest
+    container_name: snaptie
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3311:3311"
+    env_file: .env.producao
+    environment:
+      PORT: "3311"
+      HOSTNAME: "0.0.0.0"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3311/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s

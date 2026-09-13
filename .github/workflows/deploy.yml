@@ -1,0 +1,27 @@
+name: Deploy Snaptie (AZAFT)
+
+# Deploy automatico: cada push ao main reconstroi e reinicia o contentor
+# no servidor AZAFT, ao lado dos outros servicos, sem os tocar.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-snaptie
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar deploy por SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script_stop: true
+          command_timeout: "20m"
+          script: bash /opt/snaptie/deploy.sh
