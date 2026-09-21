@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
+import { QrSeriesModal } from "./qr-series-modal";
 import {
   ArrowLeft,
   ArrowUp,
@@ -114,6 +115,7 @@ export default function QrBuilder({
   // server round-trip and refresh complete.
   const [blocks, setBlocks] = useState(initialBlocks);
   useEffect(() => setBlocks(initialBlocks), [initialBlocks]);
+  const [seriesOpen, setSeriesOpen] = useState(false);
   const [editingQr, setEditingQr] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [blockModal, setBlockModal] = useState<
@@ -221,13 +223,15 @@ export default function QrBuilder({
     );
   }
 
-  function downloadQr() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  function downloadQr(format: "png" | "svg" = "png") {
+    // Descarrega pela rota do servidor: gera em alta resolucao e e fiavel em
+    // todos os browsers (o canvas de 150px falhava e ficava pequeno para imprimir).
     const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = `${qr.slug}.png`;
+    link.href = `/api/qr/${qr.id}?format=${format}&size=1024`;
+    link.download = `${qr.slug}.${format}`;
+    document.body.appendChild(link);
     link.click();
+    link.remove();
   }
 
   const editableQr: EditableQr = {
@@ -406,10 +410,14 @@ export default function QrBuilder({
                   <Copy />
                 </Button>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={downloadQr}>
+              <div className="grid grid-cols-3 gap-2">
+                <Button variant="outline" size="sm" onClick={() => downloadQr("png")}>
                   <Download />
-                  Descarregar
+                  PNG
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => downloadQr("svg")}>
+                  <Download />
+                  SVG
                 </Button>
                 <Button
                   variant="outline"
@@ -421,10 +429,18 @@ export default function QrBuilder({
                   Abrir
                 </Button>
               </div>
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setSeriesOpen(true)}>
+                <Copy />
+                Duplicar em série
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {seriesOpen ? (
+        <QrSeriesModal source={{ id: qr.id, nome: qr.nome }} onClose={() => setSeriesOpen(false)} />
+      ) : null}
 
       {editingQr ? (
         <QrFormModal

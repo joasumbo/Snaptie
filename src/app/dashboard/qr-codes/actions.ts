@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { hashPassword } from "@/lib/auth/password";
 import { uniqueQrCode, uniqueQrSlug } from "@/lib/qr-identity";
+import { randomCode } from "@/lib/slug";
 import {
   isContentBlock,
   isAccessMode,
@@ -482,4 +483,101 @@ export async function moveBlock(
 
   revalidatePath(`/dashboard/qr-codes/${block.qrId}`);
   return { ok: true };
+}
+
+/**
+ * Cria N cópias de um QR existente. Cada cópia é um QR único (slug e código
+ * próprios), com os mesmos conteúdos e aparência do original. Todas partilham
+ * um `lote`, o que permite depois exportá-las e imprimi-las como um conjunto.
+ */
+export async function duplicateQrCodeSeries(input: {
+  sourceId: string;
+  count: number;
+}): Promise<ActionResult & { lote?: string; created?: number }> {
+  const actor = await requireQrManager();
+  if (!actor) return { ok: false, message: "Sem permissão." };
+
+  const count = Math.floor(Number(input.count));
+  if (!Number.isFinite(count) || count < 1 || count > 500) {
+    return { ok: false, message: "A quantidade tem de ser entre 1 e 500." };
+  }
+
+  const source = await prisma.qrCode.findUnique({
+    where: { id: input.sourceId },
+    include: { blocks: true },
+  });
+  if (!source) return { ok: false, message: "QR de origem não encontrado." };
+  if (actor.role !== "ADMIN" && source.companyId !== actor.companyId) {
+    return { ok: false, message: "Sem permissão." };
+  }
+
+  try {
+    const lote = randomCode(12);
+
+    // Códigos únicos — 10 caracteres aleatórios; deduplicados no próprio lote.
+    const codigos = new Set<string>();
+    while (codigos.size < count) codigos.add(randomCode(10));
+    const codigoArr = [...codigos];
+    const largura = String(count).length;
+
+    const qrRows = codigoArr.map((codigo, i) => ({
+      nome: `${source.nome} #${String(i + 1).padStart(largura, "0")}`,
+      descricao: source.descricao,
+      slug: `${source.slug}-${lote}-${i + 1}`,
+      codigo,
+      companyId: source.companyId,
+      templateId: source.templateId,
+      logo: source.logo,
+      imagemCapa: source.imagemCapa,
+      logoTamanho: source.logoTamanho,
+      logoForma: source.logoForma,
+      nomeTamanho: source.nomeTamanho,
+      mostrarLogo: source.mostrarLogo,
+      mostrarNome: source.mostrarNome,
+      edicaoPublica: source.edicaoPublica,
+      edicaoPersonalizacao: source.edicaoPersonalizacao,
+      edicaoPin: source.edicaoPin,
+      acessoModo: source.acessoModo,
+      acessoPin: source.acessoPin,
+      idioma: source.idioma,
+      corPrimaria: source.corPrimaria,
+      corSecundaria: source.corSecundaria,
+      estado: source.estado,
+      publicado: source.publicado,
+      lote,
+    }));
+
+    await prisma.qrCode.createMany({ data: qrRows });
+    const criados = await prisma.qrCode.findMany({
+      where: { lote },
+      select: { id: true },
+    });
+
+    // Copiar os blocos (conteúdos/botões) para cada cópia.
+    if (source.blocks.length > 0) {
+      const blockRows = criados.flatMap((qr) =>
+        source.blocks.map((b) => ({
+          qrId: qr.id,
+          tipo: b.tipo,
+          titulo: b.titulo,
+          icone: b.icone,
+          cor: b.cor,
+          descricao: b.descricao,
+          conteudo: b.conteudo === null ? Prisma.JsonNull : (b.conteudo as Prisma.InputJsonValue),
+          ordem: b.ordem,
+          ativo: b.ativo,
+          editavelPublico: b.editavelPublico,
+        })),
+      );
+      const chunk = 1000;
+      for (let i = 0; i < blockRows.length; i += chunk) {
+        await prisma.qrBlock.createMany({ data: blockRows.slice(i, i + chunk) });
+      }
+    }
+
+    revalidatePath("/dashboard/qr-codes");
+    return { ok: true, lote, created: criados.length };
+  } catch (error) {
+    return fail("duplicateSeries", error);
+  }
 }

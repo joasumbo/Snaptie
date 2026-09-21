@@ -158,6 +158,9 @@ model QrCode {
   corSecundaria String?  @map("cor_secundaria")
   estado        String   @default("rascunho") // ex.: rascunho, ativo, arquivado
   publicado     Boolean  @default(false)
+  // Lote de criação em série: QRs duplicados a partir de um existente partilham
+  // este identificador, o que permite exportá-los/imprimi-los como um conjunto.
+  lote          String?  // id do lote (null = criado individualmente)
   scansTotal    Int      @default(0) @map("scans_total")
   ultimoScan    DateTime? @map("ultimo_scan")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -170,6 +173,7 @@ model QrCode {
 
   @@index([companyId])
   @@index([templateId])
+  @@index([lote])
   @@map("qr_codes")
 }
 

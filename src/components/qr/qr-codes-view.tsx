@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { QrFormModal, type EditableQr } from "./qr-form-modal";
+import { QrSeriesModal } from "./qr-series-modal";
 import { deleteQrCode, setQrPublished } from "@/app/dashboard/qr-codes/actions";
 
 export type QrRow = EditableQr & {
@@ -38,6 +39,7 @@ export default function QrCodesView({
     { mode: "create" } | { mode: "edit"; qr: EditableQr } | null
   >(null);
   const [deleteTarget, setDeleteTarget] = useState<QrRow | null>(null);
+  const [seriesTarget, setSeriesTarget] = useState<QrRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -153,6 +155,9 @@ export default function QrCodesView({
           >
             {r.publicado ? "Despublicar" : "Publicar"}
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSeriesTarget(r)}>
+            Duplicar
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -213,6 +218,13 @@ export default function QrCodesView({
         onConfirm={handleDelete}
         onClose={() => setDeleteTarget(null)}
       />
+
+      {seriesTarget && (
+        <QrSeriesModal
+          source={{ id: seriesTarget.id, nome: seriesTarget.nome }}
+          onClose={() => setSeriesTarget(null)}
+        />
+      )}
     </div>
   );
 }
