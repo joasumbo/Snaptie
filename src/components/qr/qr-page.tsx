@@ -222,14 +222,23 @@ function ContentElement({
                 ) : null}
               </span>
               {botao.texto ? (
-                <span className="px-3 pb-4 text-center font-semibold text-zinc-900">
-                  {botao.texto}
-                </span>
+                botao.imagem ? (
+                  // Com imagem, a legenda vai numa faixa sobre o rodapé da
+                  // imagem — assim nunca desaparece por a imagem encher o botão.
+                  <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1.5 text-center text-sm font-semibold text-white">
+                    {botao.texto}
+                  </span>
+                ) : (
+                  // Sem imagem, o texto ocupa o botão, centrado.
+                  <span className="absolute inset-0 flex items-center justify-center px-3 text-center font-semibold text-zinc-900">
+                    {botao.texto}
+                  </span>
+                )
               ) : null}
             </>
           );
           const classe =
-            "flex aspect-square flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm";
+            "relative flex aspect-square flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm";
           return botao.url ? (
             <a
               key={i}

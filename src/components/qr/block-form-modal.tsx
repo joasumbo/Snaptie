@@ -699,7 +699,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                         }}
                       />
                       <Input
-                        placeholder="Nome por baixo da imagem"
+                        placeholder="Legenda (aparece sobre a imagem)"
                         value={botao.texto}
                         onChange={(e) => setParCampo(i, "texto", e.target.value)}
                       />
