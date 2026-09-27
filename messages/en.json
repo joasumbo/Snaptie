@@ -124,9 +124,11 @@
     "tooMany": "Too many attempts. Try again in {minutos} min."
   },
   "Wall": {
+    "status_urgente": "Urgent",
     "status_para_fazer": "To do",
     "status_em_resolucao": "In progress",
     "status_resolvido": "Done",
+    "urgent": "This is urgent",
     "addImage": "Add image",
     "title": "Message wall",
     "yourName": "Your name",

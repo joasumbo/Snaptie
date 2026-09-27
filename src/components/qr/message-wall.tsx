@@ -49,6 +49,7 @@ export function MessageWall({
   const [nome, setNome] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [imagem, setImagem] = useState<{ file: File; preview: string } | null>(null);
+  const [urgente, setUrgente] = useState(false);
   const [sending, setSending] = useState(false);
 
   // O relógio só arranca depois de montar. Se a hora relativa fosse calculada
@@ -79,7 +80,14 @@ export function MessageWall({
             requestWallUpload({ ...input, codigo, blockId }),
           )
         : "";
-      const r = await postWallMessage({ codigo, blockId, nome, mensagem, imagem: url });
+      const r = await postWallMessage({
+        codigo,
+        blockId,
+        nome,
+        mensagem,
+        imagem: url,
+        urgente: manutencao && urgente,
+      });
       if (!r.ok) {
         toast.error(
           r.motivo === "muitas"
@@ -91,6 +99,7 @@ export function MessageWall({
         return;
       }
       setMensagem("");
+      setUrgente(false);
       limparImagem();
       toast.success(t("posted"));
       router.refresh();
@@ -163,6 +172,18 @@ export function MessageWall({
               e.target.value = "";
             }}
           />
+
+          {manutencao ? (
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm text-zinc-800 has-[:checked]:border-red-300 has-[:checked]:bg-red-50 has-[:checked]:text-red-800">
+              <input
+                type="checkbox"
+                checked={urgente}
+                onChange={(e) => setUrgente(e.target.checked)}
+                className="size-4 accent-red-600"
+              />
+              {t("urgent")}
+            </label>
+          ) : null}
 
           <Button
             className="w-full text-white"

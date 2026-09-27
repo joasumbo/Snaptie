@@ -70,6 +70,7 @@ export async function postWallMessage(input: {
   nome: string;
   mensagem: string;
   imagem?: string;
+  urgente?: boolean;
 }): Promise<WallResult> {
   const nome = input.nome?.trim().slice(0, MAX_NOME) ?? "";
   const mensagem = input.mensagem?.trim().slice(0, MAX_MENSAGEM) ?? "";
@@ -91,14 +92,17 @@ export async function postWallMessage(input: {
   if (recentes >= MAX_POR_JANELA) return { ok: false, motivo: "muitas" };
 
   const manutencao = block.tipo === "MANUTENCAO";
+  // Só o mural de manutenção tem estados; num mural normal a marca não conta.
+  const urgente = manutencao && input.urgente === true;
   await prisma.qrMessage.create({
     data: {
       blockId: block.id,
       nome,
       mensagem,
       imagem: imagem || null,
-      // Uma avaria acabada de comunicar está, por definição, por resolver.
-      estado: manutencao ? ESTADO_INICIAL : null,
+      // Uma avaria acabada de comunicar está, por definição, por resolver —
+      // a não ser que quem a comunica a marque como urgente.
+      estado: manutencao ? (urgente ? "urgente" : ESTADO_INICIAL) : null,
       ip,
     },
   });
@@ -121,6 +125,7 @@ export async function postWallMessage(input: {
           nome,
           mensagem,
           imagem: imagem || null,
+          urgente,
           replyTo: block.qr.company.email,
           link: `${await enderecoBase()}/${block.qr.company.slug}/${input.codigo}`,
         });

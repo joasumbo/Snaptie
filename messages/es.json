@@ -124,9 +124,11 @@
     "tooMany": "Demasiados intentos. Inténtelo de nuevo en {minutos} min."
   },
   "Wall": {
+    "status_urgente": "Urgente",
     "status_para_fazer": "Por hacer",
     "status_em_resolucao": "En curso",
     "status_resolvido": "Hecho",
+    "urgent": "Es urgente",
     "addImage": "Añadir imagen",
     "title": "Muro de mensajes",
     "yourName": "Su nombre",

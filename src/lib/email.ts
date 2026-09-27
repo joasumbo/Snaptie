@@ -44,8 +44,10 @@ function assuntoManutencao(opts: {
   mural: string;
   nome: string;
   mensagem: string;
+  urgente?: boolean;
 }): string {
-  const local = [opts.pagina, opts.mural || "Manutenção"].filter(Boolean).join(" · ");
+  const base = [opts.pagina, opts.mural || "Manutenção"].filter(Boolean).join(" · ");
+  const local = opts.urgente ? `URGENTE · ${base}` : base;
   const texto = opts.mensagem.trim().replace(/\s+/g, " ");
   if (!texto) return `${local}: nova ocorrência de ${opts.nome}`;
   const resumo = texto.length > 70 ? `${texto.slice(0, 69)}…` : texto;
@@ -59,6 +61,7 @@ export async function sendMaintenanceEmail(opts: {
   nome: string;
   mensagem: string;
   imagem?: string | null;
+  urgente?: boolean;
   link: string;
   // Endereço da empresa, para quem recebe poder responder a alguém em vez de
   // a um vazio. Um reply-to válido também pesa nos filtros de spam.
@@ -78,6 +81,7 @@ export async function sendMaintenanceEmail(opts: {
     ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
     // Um email só com HTML pontua pior nos filtros, e há quem leia em texto.
     text: [
+      ...(opts.urgente ? ["URGENTE", ""] : []),
       `${opts.pagina} — ${opts.mural || "Manutenção"}`,
       "",
       `${opts.nome} escreveu:`,
@@ -89,6 +93,11 @@ export async function sendMaintenanceEmail(opts: {
     html: `
       <div style="font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; color: #18181b;">
         <p style="margin: 0 0 4px; font-size: 13px; color: #a1a1aa;">${escapar(opts.pagina)}</p>
+        ${
+          opts.urgente
+            ? `<p style="display: inline-block; margin: 0 0 8px; padding: 2px 10px; border-radius: 999px; background: #fecaca; color: #7f1d1d; font-size: 12px; font-weight: 600;">Urgente</p>`
+            : ""
+        }
         <h1 style="font-size: 20px; margin: 0 0 16px;">${escapar(opts.mural || "Manutenção")}</h1>
         <p style="margin: 0 0 4px; color: #52525b;"><strong>${escapar(opts.nome)}</strong> escreveu:</p>
         <div style="white-space: pre-line; background: #fafafa; border-radius: 8px; padding: 12px 14px; margin: 0 0 16px;">${escapar(opts.mensagem) || "<em style=\"color:#a1a1aa\">Sem texto, só imagem.</em>"}</div>

@@ -217,7 +217,10 @@ export function isMural(tipo: BlockType): boolean {
 // Guarda-se o estado, não a cor. Assim a paleta pode mudar, e mais tarde dá
 // para filtrar ou contar o que está por resolver — coisas que guardar "verde"
 // tornava impossíveis.
+// "Urgente" vem primeiro porque é o que salta à vista: quem comunica marca-o
+// logo no mural, e quem resolve passa-o para "em resolução" como os outros.
 export const ESTADOS_MANUTENCAO = [
+  { valor: "urgente", rotulo: "Urgente", cor: "#fecaca", texto: "#7f1d1d" },
   { valor: "para_fazer", rotulo: "Para fazer", cor: "#fed7aa", texto: "#7c2d12" },
   { valor: "em_resolucao", rotulo: "Em resolução", cor: "#fef08a", texto: "#713f12" },
   { valor: "resolvido", rotulo: "Feito", cor: "#bbf7d0", texto: "#14532d" },
