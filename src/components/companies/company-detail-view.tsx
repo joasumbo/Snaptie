@@ -11,6 +11,7 @@ import {
   PLANO_LABELS,
 } from "@/lib/companies";
 import { ROLE_LABELS, STATUS_LABELS, STATUS_TONE } from "@/lib/roles";
+import { PLANOS } from "@/lib/planos";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -172,6 +173,16 @@ export default function CompanyDetailView({
             />
             <Detail label="Identificador" value={company.slug} />
             <Detail label="Plano" value={PLANO_LABELS[company.plano]} />
+            {PLANOS[company.plano].precoPersonalizado ? (
+              <Detail
+                label="Preço acordado"
+                value={
+                  company.precoMensal != null
+                    ? `${company.precoMensal.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })} / mês`
+                    : null
+                }
+              />
+            ) : null}
             <Detail label="Criada em" value={formatDate(company.createdAt)} />
           </CardContent>
         </Card>
@@ -246,6 +257,8 @@ export default function CompanyDetailView({
             corPrimaria: company.corPrimaria,
             corSecundaria: company.corSecundaria,
             plano: company.plano,
+            precoMensal: company.precoMensal,
+            limiteQrs: company.limiteQrs,
           }}
           onClose={() => setEditing(false)}
           onSaved={() => setEditing(false)}

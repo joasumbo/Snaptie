@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { isReservedSlug, slugify } from "@/lib/slug";
 import { uniqueQrCode, uniqueQrSlug } from "@/lib/qr-identity";
+import { PLANOS } from "@/lib/planos";
+import { guardarSubscricao } from "@/lib/planos-server";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -13,7 +15,7 @@ export type ActionResult =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STATUSES: CompanyStatus[] = ["ATIVA", "SUSPENSA", "INATIVA"];
-const PLANOS: Plano[] = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
+const PLANOS_VALIDOS: Plano[] = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
 
 // Companies are clients of the platform, managed by Snaptie administrators.
 async function requireAdmin() {
@@ -48,14 +50,34 @@ type CompanyInput = {
   corPrimaria?: string;
   corSecundaria?: string;
   plano: Plano;
+  // Só contam no plano Business, que não tem tabela de preços.
+  precoMensal?: number | null;
+  limiteQrs?: number | null;
 };
 
 function validate(input: CompanyInput): string | null {
   if (!input.nome?.trim()) return "O nome é obrigatório.";
   if (!input.email?.trim()) return "O email é obrigatório.";
   if (!EMAIL_RE.test(input.email.trim())) return "O email não é válido.";
-  if (!PLANOS.includes(input.plano)) return "Plano inválido.";
+  if (!PLANOS_VALIDOS.includes(input.plano)) return "Plano inválido.";
+  if (PLANOS[input.plano].precoPersonalizado) {
+    const preco = input.precoMensal;
+    if (preco == null || !Number.isFinite(preco) || preco < 0) {
+      return "Indique o preço mensal acordado para o plano Business.";
+    }
+    const limite = input.limiteQrs;
+    if (limite != null && (!Number.isInteger(limite) || limite < 1)) {
+      return "O limite de QR codes tem de ser um número inteiro positivo.";
+    }
+  }
   return null;
+}
+
+function custom(input: CompanyInput) {
+  return {
+    precoMensal: input.precoMensal ?? null,
+    limiteQrs: input.limiteQrs ?? null,
+  };
 }
 
 function clean(value: string | undefined): string | null {
@@ -141,6 +163,7 @@ export async function createCompany(input: CompanyInput): Promise<ActionResult> 
         plano: input.plano,
       },
     });
+    await guardarSubscricao(company.id, input.plano, custom(input));
     await createDefaultQr(company);
     revalidatePath("/dashboard/companies");
     return { ok: true, id: company.id };
@@ -179,6 +202,7 @@ export async function updateCompany(
       plano: input.plano,
     },
   });
+  await guardarSubscricao(input.id, input.plano, custom(input));
 
   revalidatePath("/dashboard/companies");
   revalidatePath(`/dashboard/companies/${input.id}`);

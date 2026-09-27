@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import type { Plano } from "@prisma/client";
 import { PLANO_OPTIONS, PLANO_LABELS } from "@/lib/companies";
+import { PLANOS } from "@/lib/planos";
 import { createCompany, updateCompany } from "@/app/dashboard/companies/actions";
 
 export type EditableCompany = {
@@ -34,6 +35,9 @@ export type EditableCompany = {
   corPrimaria: string | null;
   corSecundaria: string | null;
   plano: Plano;
+  // Preço e limite acordados — só existem no plano Business.
+  precoMensal: number | null;
+  limiteQrs: number | null;
 };
 
 type Props = {
@@ -89,6 +93,13 @@ export function CompanyFormModal({ company, onClose, onSaved }: Props) {
     company?.corSecundaria ?? "#8b5cf6",
   );
   const [plano, setPlano] = useState<Plano>(company?.plano ?? "FREE");
+  const [precoMensal, setPrecoMensal] = useState(
+    company?.precoMensal != null ? String(company.precoMensal) : "",
+  );
+  const [limiteQrs, setLimiteQrs] = useState(
+    company?.limiteQrs != null ? String(company.limiteQrs) : "",
+  );
+  const personalizado = PLANOS[plano].precoPersonalizado;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,6 +115,8 @@ export function CompanyFormModal({ company, onClose, onSaved }: Props) {
       corPrimaria,
       corSecundaria,
       plano,
+      precoMensal: personalizado && precoMensal.trim() ? Number(precoMensal.replace(",", ".")) : null,
+      limiteQrs: personalizado && limiteQrs.trim() ? Number(limiteQrs) : null,
     };
     const result = isEdit
       ? await updateCompany({ ...payload, id: company!.id })
@@ -198,6 +211,32 @@ export function CompanyFormModal({ company, onClose, onSaved }: Props) {
               </SelectContent>
             </Select>
           </Field>
+          {personalizado ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Preço mensal (€)">
+                <Input
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={precoMensal}
+                  onChange={(e) => setPrecoMensal(e.target.value)}
+                />
+              </Field>
+              <Field label="Limite de QR codes">
+                <Input
+                  inputMode="numeric"
+                  placeholder="Sem limite"
+                  value={limiteQrs}
+                  onChange={(e) => setLimiteQrs(e.target.value)}
+                />
+              </Field>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {PLANOS[plano].limiteQrs === null
+                ? "QR codes sem limite."
+                : `Até ${PLANOS[plano].limiteQrs} QR codes.`}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
