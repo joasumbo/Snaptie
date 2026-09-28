@@ -16,10 +16,14 @@ export type WallMessage = {
   id: string;
   nome: string;
   mensagem: string;
-  imagem?: string | null;
+  imagens: string[];
   estado?: string | null;
   createdAt: string; // ISO — formatted in the visitor's locale
 };
+
+// Várias imagens ajudam a mostrar uma avaria de mais de um ângulo; mais do que
+// isto já é um álbum, e cada uma é um envio à parte.
+const MAX_IMAGENS = 5;
 
 // A wall of messages left by visitors. Read-only when there is no codigo, which
 // is how it appears in the dashboard preview.
@@ -48,7 +52,7 @@ export function MessageWall({
   const fileInput = useRef<HTMLInputElement>(null);
   const [nome, setNome] = useState("");
   const [mensagem, setMensagem] = useState("");
-  const [imagem, setImagem] = useState<{ file: File; preview: string } | null>(null);
+  const [imagens, setImagens] = useState<{ file: File; preview: string }[]>([]);
   const [urgente, setUrgente] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -62,30 +66,43 @@ export function MessageWall({
     return () => clearInterval(timer);
   }, []);
 
-  function escolherImagem(file: File) {
-    if (imagem) URL.revokeObjectURL(imagem.preview);
-    setImagem({ file, preview: URL.createObjectURL(file) });
+  function escolherImagens(files: File[]) {
+    const cabem = files.slice(0, MAX_IMAGENS - imagens.length);
+    if (cabem.length < files.length) toast.error(t("maxImages", { max: MAX_IMAGENS }));
+    setImagens((atuais) => [
+      ...atuais,
+      ...cabem.map((file) => ({ file, preview: URL.createObjectURL(file) })),
+    ]);
   }
-  function limparImagem() {
-    if (imagem) URL.revokeObjectURL(imagem.preview);
-    setImagem(null);
+  function removerImagem(preview: string) {
+    URL.revokeObjectURL(preview);
+    setImagens((atuais) => atuais.filter((i) => i.preview !== preview));
+  }
+  function limparImagens() {
+    imagens.forEach((i) => URL.revokeObjectURL(i.preview));
+    setImagens([]);
   }
 
   async function send() {
-    if (!codigo || !nome.trim() || (!mensagem.trim() && !imagem)) return;
+    if (!codigo || !nome.trim() || (!mensagem.trim() && imagens.length === 0)) return;
     setSending(true);
     try {
-      const url = imagem
-        ? await uploadFile(imagem.file, "image", (input) =>
+      // Uma de cada vez: em rede móvel, cinco envios em paralelo competem pela
+      // mesma ligação e falham mais do que terminam.
+      const urls: string[] = [];
+      for (const i of imagens) {
+        urls.push(
+          await uploadFile(i.file, "image", (input) =>
             requestWallUpload({ ...input, codigo, blockId }),
-          )
-        : "";
+          ),
+        );
+      }
       const r = await postWallMessage({
         codigo,
         blockId,
         nome,
         mensagem,
-        imagem: url,
+        imagens: urls,
         urgente: manutencao && urgente,
       });
       if (!r.ok) {
@@ -100,7 +117,7 @@ export function MessageWall({
       }
       setMensagem("");
       setUrgente(false);
-      limparImagem();
+      limparImagens();
       toast.success(t("posted"));
       router.refresh();
     } catch (e) {
@@ -134,23 +151,25 @@ export function MessageWall({
             className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
 
-          {imagem ? (
-            <div className="relative w-fit">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imagem.preview}
-                alt=""
-                className="size-20 rounded-lg object-cover"
-              />
-              <button
-                type="button"
-                onClick={limparImagem}
-                className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-zinc-900 text-white"
-              >
-                <X className="size-3" />
-              </button>
+          {imagens.length > 0 ? (
+            <div className="flex flex-wrap gap-2 pt-1.5">
+              {imagens.map((i) => (
+                <div key={i.preview} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={i.preview} alt="" className="size-20 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removerImagem(i.preview)}
+                    disabled={sending}
+                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-zinc-900 text-white"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
             </div>
-          ) : (
+          ) : null}
+          {imagens.length < MAX_IMAGENS ? (
             <Button
               variant="outline"
               className="w-full"
@@ -158,17 +177,18 @@ export function MessageWall({
               disabled={sending}
             >
               <ImagePlus />
-              {t("addImage")}
+              {imagens.length > 0 ? t("addMoreImages", { max: MAX_IMAGENS }) : t("addImage")}
             </Button>
-          )}
+          ) : null}
           <input
             ref={fileInput}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) escolherImagem(f);
+              const files = Array.from(e.target.files ?? []);
+              if (files.length > 0) escolherImagens(files);
               e.target.value = "";
             }}
           />
@@ -189,7 +209,7 @@ export function MessageWall({
             className="w-full text-white"
             style={{ backgroundColor: color }}
             onClick={send}
-            disabled={sending || !nome.trim() || (!mensagem.trim() && !imagem)}
+            disabled={sending || !nome.trim() || (!mensagem.trim() && imagens.length === 0)}
           >
             {sending ? <Loader2 className="animate-spin" /> : <Send />}
             {t("send")}
@@ -237,13 +257,22 @@ export function MessageWall({
                   {m.mensagem}
                 </p>
               ) : null}
-              {m.imagem ? (
+              {m.imagens.length === 1 ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={m.imagem}
+                  src={m.imagens[0]}
                   alt=""
                   className="mt-2 max-h-72 w-full rounded-lg object-cover"
                 />
+              ) : m.imagens.length > 1 ? (
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  {m.imagens.map((src) => (
+                    <a key={src} href={src} target="_blank" rel="noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" className="aspect-square w-full rounded-lg object-cover" />
+                    </a>
+                  ))}
+                </div>
               ) : null}
             </div>
           ))

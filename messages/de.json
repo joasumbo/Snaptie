@@ -132,6 +132,8 @@
     "status_resolvido": "Erledigt",
     "urgent": "Das ist dringend",
     "addImage": "Bild hinzufügen",
+    "addMoreImages": "Weiteres Bild hinzufügen (max. {max})",
+    "maxImages": "Sie können bis zu {max} Bilder anhängen.",
     "title": "Nachrichtenwand",
     "yourName": "Ihr Name",
     "yourMessage": "Ihre Nachricht",

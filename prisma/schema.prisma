@@ -206,7 +206,8 @@ model QrMessage {
   blockId   String   @map("block_id")
   nome      String
   mensagem  String
-  imagem    String?
+  imagem    String? // a primeira imagem; fica para quem ainda só lê esta coluna
+  imagens   String[] @default([])
   estado    String? // só nos murais de manutenção: para_fazer, em_resolucao, resolvido
   ip        String?
   createdAt DateTime @default(now()) @map("created_at")

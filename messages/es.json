@@ -130,6 +130,8 @@
     "status_resolvido": "Hecho",
     "urgent": "Es urgente",
     "addImage": "Añadir imagen",
+    "addMoreImages": "Añadir otra imagen (máx. {max})",
+    "maxImages": "Solo puede adjuntar hasta {max} imágenes.",
     "title": "Muro de mensajes",
     "yourName": "Su nombre",
     "yourMessage": "Su mensaje",

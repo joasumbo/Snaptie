@@ -132,6 +132,8 @@
     "status_resolvido": "Terminé",
     "urgent": "C’est urgent",
     "addImage": "Ajouter une image",
+    "addMoreImages": "Ajouter une autre image (max. {max})",
+    "maxImages": "Vous pouvez joindre jusqu'à {max} images.",
     "title": "Mur de messages",
     "yourName": "Votre nom",
     "yourMessage": "Votre message",

@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
+import { imagensDaMensagem } from "@/lib/qr";
 import QrBuilder from "@/components/qr/qr-builder";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -79,7 +80,7 @@ export default async function QrBuilderPage({
           id: m.id,
           nome: m.nome,
           mensagem: m.mensagem,
-          imagem: m.imagem,
+          imagens: imagensDaMensagem(m),
           estado: m.estado,
           createdAt: m.createdAt.toISOString(),
         })),

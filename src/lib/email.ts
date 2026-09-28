@@ -60,7 +60,7 @@ export async function sendMaintenanceEmail(opts: {
   mural: string;
   nome: string;
   mensagem: string;
-  imagem?: string | null;
+  imagens?: string[];
   urgente?: boolean;
   link: string;
   // Endereço da empresa, para quem recebe poder responder a alguém em vez de
@@ -86,7 +86,7 @@ export async function sendMaintenanceEmail(opts: {
       "",
       `${opts.nome} escreveu:`,
       opts.mensagem || "(sem texto, só imagem)",
-      ...(opts.imagem ? ["", `Imagem: ${opts.imagem}`] : []),
+      ...(opts.imagens?.length ? ["", ...opts.imagens.map((i) => `Imagem: ${i}`)] : []),
       "",
       `Abrir a página: ${opts.link}`,
     ].join("\n"),
@@ -102,9 +102,12 @@ export async function sendMaintenanceEmail(opts: {
         <p style="margin: 0 0 4px; color: #52525b;"><strong>${escapar(opts.nome)}</strong> escreveu:</p>
         <div style="white-space: pre-line; background: #fafafa; border-radius: 8px; padding: 12px 14px; margin: 0 0 16px;">${escapar(opts.mensagem) || "<em style=\"color:#a1a1aa\">Sem texto, só imagem.</em>"}</div>
         ${
-          opts.imagem
-            ? `<p style="margin: 0 0 16px;"><a href="${opts.imagem}"><img src="${opts.imagem}" alt="" style="max-width: 100%; border-radius: 8px;" /></a></p>`
-            : ""
+          (opts.imagens ?? [])
+            .map(
+              (i) =>
+                `<p style="margin: 0 0 16px;"><a href="${i}"><img src="${i}" alt="" style="max-width: 100%; border-radius: 8px;" /></a></p>`,
+            )
+            .join("")
         }
         <p style="margin: 0 0 24px;">
           <a href="${opts.link}" style="display: inline-block; background: #6366f1; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 8px; font-weight: 500;">

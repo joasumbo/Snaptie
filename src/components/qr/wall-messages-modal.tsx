@@ -104,13 +104,15 @@ export function WallMessagesModal({
                   ) : null}
                   {/* Quem modera tem de ver o que está a apagar; sem a imagem
                       aqui, decidia às cegas sobre metade da mensagem. */}
-                  {m.imagem ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={m.imagem}
-                      alt=""
-                      className="mt-2 size-20 rounded-lg object-cover"
-                    />
+                  {m.imagens.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {m.imagens.map((src) => (
+                        <a key={src} href={src} target="_blank" rel="noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt="" className="size-20 rounded-lg object-cover" />
+                        </a>
+                      ))}
+                    </div>
                   ) : null}
                   {manutencao ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">

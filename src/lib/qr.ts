@@ -210,6 +210,13 @@ export function actionHref(tipo: BlockType, conteudo: Record<string, unknown>): 
 // O mural de manutenção e o mural de mensagens são a mesma coisa por baixo:
 // mesma tabela, mesmo componente, mesmas barreiras. O que os separa é o aviso
 // por email e o estado de cada participação.
+// As mensagens antigas só têm a coluna "imagem"; as novas guardam todas em
+// "imagens". Quem mostra não precisa de saber de onde vieram.
+export function imagensDaMensagem(m: { imagem: string | null; imagens: string[] }): string[] {
+  if (m.imagens.length > 0) return m.imagens;
+  return m.imagem ? [m.imagem] : [];
+}
+
 export function isMural(tipo: BlockType): boolean {
   return tipo === "FEED" || tipo === "MANUTENCAO";
 }

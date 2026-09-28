@@ -20,6 +20,7 @@ const MAX_NOME = 40;
 const MAX_MENSAGEM = 500;
 const MAX_POR_JANELA = 3; // messages one visitor may leave...
 const JANELA_MINUTOS = 5; // ...in this many minutes
+const MAX_IMAGENS = 5; // imagens por mensagem
 
 export type WallResult = { ok: true } | { ok: false; motivo: "invalido" | "vazio" | "muitas" };
 
@@ -69,15 +70,21 @@ export async function postWallMessage(input: {
   blockId: string;
   nome: string;
   mensagem: string;
+  imagens?: string[];
+  // Quem ainda tenha a página antiga aberta envia uma só imagem neste campo.
   imagem?: string;
   urgente?: boolean;
 }): Promise<WallResult> {
   const nome = input.nome?.trim().slice(0, MAX_NOME) ?? "";
   const mensagem = input.mensagem?.trim().slice(0, MAX_MENSAGEM) ?? "";
-  const imagem = input.imagem?.trim() ?? "";
-  if (imagem && !imagemNossa(imagem)) return { ok: false, motivo: "invalido" };
+  const imagens = [...(input.imagens ?? []), ...(input.imagem ? [input.imagem] : [])]
+    .map((i) => i.trim())
+    .filter(Boolean);
+  if (imagens.length > MAX_IMAGENS || imagens.some((i) => !imagemNossa(i))) {
+    return { ok: false, motivo: "invalido" };
+  }
   // Uma imagem sozinha já é uma mensagem; o texto passa a ser dispensável.
-  if (!nome || (!mensagem && !imagem)) return { ok: false, motivo: "vazio" };
+  if (!nome || (!mensagem && imagens.length === 0)) return { ok: false, motivo: "vazio" };
 
   const block = await muralVivo(input.codigo, input.blockId);
   if (!block) return { ok: false, motivo: "invalido" };
@@ -99,7 +106,8 @@ export async function postWallMessage(input: {
       blockId: block.id,
       nome,
       mensagem,
-      imagem: imagem || null,
+      imagem: imagens[0] ?? null,
+      imagens,
       // Uma avaria acabada de comunicar está, por definição, por resolver —
       // a não ser que quem a comunica a marque como urgente.
       estado: manutencao ? (urgente ? "urgente" : ESTADO_INICIAL) : null,
@@ -124,7 +132,7 @@ export async function postWallMessage(input: {
           mural: block.titulo,
           nome,
           mensagem,
-          imagem: imagem || null,
+          imagens,
           urgente,
           replyTo: block.qr.company.email,
           link: `${await enderecoBase()}/${block.qr.company.slug}/${input.codigo}`,

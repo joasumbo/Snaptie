@@ -130,6 +130,8 @@
     "status_resolvido": "Done",
     "urgent": "This is urgent",
     "addImage": "Add image",
+    "addMoreImages": "Add another image (max {max})",
+    "maxImages": "You can attach up to {max} images.",
     "title": "Message wall",
     "yourName": "Your name",
     "yourMessage": "Your message",
