@@ -1,5 +1,6 @@
-# Snaptie no servidor AZAFT — isolado, nada do existente e tocado.
-# Porta 3311 (a 3310 e a inpulse2-console). Base de dados fica no Neon.
+# Snaptie no Jserver — isolado, nada do existente e tocado.
+# Porta 3311 (a 3310 e a inpulse2-console). A base vive no stack snaptie-db
+# (/opt/snaptie-db), que se alcança pela rede snaptie-db.
 
 services:
   snaptie:
@@ -23,3 +24,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 25s
+    networks: [default, snaptie-db]
+
+networks:
+  snaptie-db:
+    external: true
