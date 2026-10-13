@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Send, ImagePlus, X } from "lucide-react";
+import { Loader2, Send, ImagePlus, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { uploadFile } from "@/lib/upload-client";
@@ -54,6 +54,9 @@ export function MessageWall({
   const [mensagem, setMensagem] = useState("");
   const [imagens, setImagens] = useState<{ file: File; preview: string }[]>([]);
   const [urgente, setUrgente] = useState(false);
+  // O formulário só abre quando se pede: aberto, empurrava as mensagens para
+  // baixo e a página parecia um formulário em vez de um mural.
+  const [aberto, setAberto] = useState(false);
   const [sending, setSending] = useState(false);
 
   // O relógio só arranca depois de montar. Se a hora relativa fosse calculada
@@ -118,6 +121,7 @@ export function MessageWall({
       setMensagem("");
       setUrgente(false);
       limparImagens();
+      setAberto(false);
       toast.success(t("posted"));
       router.refresh();
     } catch (e) {
@@ -134,7 +138,18 @@ export function MessageWall({
         <p className="mt-0.5 text-xs text-zinc-500">{descricao}</p>
       ) : null}
 
-      {codigo ? (
+      {codigo && !aberto ? (
+        <Button
+          className="mt-3 w-full text-white"
+          style={{ backgroundColor: color }}
+          onClick={() => setAberto(true)}
+        >
+          <Plus />
+          {t("add")}
+        </Button>
+      ) : null}
+
+      {codigo && aberto ? (
         <div className="mt-3 space-y-2">
           <Input
             placeholder={t("yourName")}
@@ -213,6 +228,14 @@ export function MessageWall({
           >
             {sending ? <Loader2 className="animate-spin" /> : <Send />}
             {t("send")}
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => setAberto(false)}
+            disabled={sending}
+          >
+            {t("cancel")}
           </Button>
         </div>
       ) : null}

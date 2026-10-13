@@ -131,6 +131,8 @@
     "status_em_resolucao": "In Bearbeitung",
     "status_resolvido": "Erledigt",
     "urgent": "Das ist dringend",
+    "add": "Hinzufügen",
+    "cancel": "Abbrechen",
     "addImage": "Bild hinzufügen",
     "addMoreImages": "Weiteres Bild hinzufügen (max. {max})",
     "maxImages": "Sie können bis zu {max} Bilder anhängen.",

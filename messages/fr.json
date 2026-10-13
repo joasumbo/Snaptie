@@ -131,6 +131,8 @@
     "status_em_resolucao": "En cours",
     "status_resolvido": "Terminé",
     "urgent": "C’est urgent",
+    "add": "Ajouter",
+    "cancel": "Annuler",
     "addImage": "Ajouter une image",
     "addMoreImages": "Ajouter une autre image (max. {max})",
     "maxImages": "Vous pouvez joindre jusqu'à {max} images.",

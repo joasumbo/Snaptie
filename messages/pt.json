@@ -129,6 +129,8 @@
     "status_em_resolucao": "Em resolução",
     "status_resolvido": "Feito",
     "urgent": "É urgente",
+    "add": "Adicionar",
+    "cancel": "Cancelar",
     "addImage": "Adicionar imagem",
     "addMoreImages": "Adicionar outra imagem (máx. {max})",
     "maxImages": "Só pode juntar até {max} imagens.",
