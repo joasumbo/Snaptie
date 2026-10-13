@@ -260,6 +260,8 @@ export function CartazView({
   qrSrc,
   variaveis,
   fonte,
+  selecionado,
+  onSelecionar,
 }: {
   cartaz: Cartaz;
   // Largura final em pixéis; a altura sai do formato do papel.
@@ -267,12 +269,27 @@ export function CartazView({
   qrSrc: string;
   variaveis: VariaveisCartaz;
   fonte: string;
+  // Só no editor: tocar num elemento abre-o para editar. O PNG não passa
+  // nada disto, e o desenho fica igual.
+  selecionado?: string | null;
+  onSelecionar?: (id: string) => void;
 }): ReactElement {
   const { larguraMm, alturaMm } = medidasMm(cartaz);
   const altura = Math.round(largura * (alturaMm / larguraMm));
   const s = largura / LARGURA_BASE;
   const px = (n: number) => Math.max(0, Math.round(n * s * 100) / 100);
   const larguraUtil = LARGURA_BASE - cartaz.margem * 2;
+  const tocavel = (id: string): { onClick?: () => void; style: CSSProperties } =>
+    onSelecionar
+      ? {
+          onClick: () => onSelecionar(id),
+          style: {
+            cursor: "pointer",
+            outline: selecionado === id ? "2px dashed #6366f1" : undefined,
+            outlineOffset: 2,
+          },
+        }
+      : { style: {} };
 
   const conteudo = cartaz.elementos.map((e) => {
     switch (e.tipo) {
@@ -281,7 +298,9 @@ export function CartazView({
         return (
           <div
             key={e.id}
+            onClick={tocavel(e.id).onClick}
             style={{
+              ...tocavel(e.id).style,
               display: "flex",
               width: "100%",
               justifyContent: ALINHAR_FLEX[e.alinhar] as CSSProperties["justifyContent"],
@@ -311,7 +330,14 @@ export function CartazView({
             alt=""
             width={px(w)}
             height={px(h)}
-            style={{ alignSelf: ALINHAR_FLEX[e.alinhar], width: px(w), height: px(h), objectFit: "contain" }}
+            onClick={tocavel(e.id).onClick}
+            style={{
+              ...tocavel(e.id).style,
+              alignSelf: ALINHAR_FLEX[e.alinhar],
+              width: px(w),
+              height: px(h),
+              objectFit: "contain",
+            }}
           />
         );
       }
@@ -319,7 +345,9 @@ export function CartazView({
         return (
           <div
             key={e.id}
+            onClick={tocavel(e.id).onClick}
             style={{
+              ...tocavel(e.id).style,
               display: "flex",
               alignSelf: "center",
               width: `${e.largura}%`,
@@ -339,7 +367,8 @@ export function CartazView({
             alt=""
             width={t}
             height={t}
-            style={{ alignSelf: "center", width: t, height: t, flexShrink: 0 }}
+            onClick={tocavel(e.id).onClick}
+            style={{ ...tocavel(e.id).style, alignSelf: "center", width: t, height: t, flexShrink: 0 }}
           />
         );
       }
@@ -347,7 +376,9 @@ export function CartazView({
         return (
           <div
             key={e.id}
+            onClick={tocavel(e.id).onClick}
             style={{
+              ...tocavel(e.id).style,
               display: "flex",
               height: px(e.altura),
               flexGrow: e.flexivel ? 1 : 0,

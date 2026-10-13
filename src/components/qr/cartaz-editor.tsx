@@ -12,6 +12,7 @@ import {
   FileArchive,
   ImagePlus,
   Loader2,
+  Plus,
   RotateCcw,
   Save,
   Trash2,
@@ -22,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Segmented } from "@/components/ui/segmented";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { uploadFile } from "@/lib/upload-client";
 import { saveCartaz } from "@/app/dashboard/qr-codes/actions";
 import {
@@ -40,10 +42,20 @@ import {
 const NOMES: Record<TipoElemento, string> = {
   texto: "Texto",
   imagem: "Imagem",
-  linha: "Linha",
+  linha: "Linha separadora",
   qr: "QR code",
   espaco: "Espaço",
 };
+
+// O que se pode pôr no cartaz, escolhido numa grelha como nas páginas.
+const NOVOS: { tipo: TipoElemento | "titulo"; label: string }[] = [
+  { tipo: "titulo", label: "Título" },
+  { tipo: "texto", label: "Frase" },
+  { tipo: "imagem", label: "Imagem" },
+  { tipo: "linha", label: "Linha separadora" },
+  { tipo: "qr", label: "QR code" },
+  { tipo: "espaco", label: "Espaço" },
+];
 
 const ALINHAR: { label: string; value: Alinhamento }[] = [
   { label: "Esq.", value: "left" },
@@ -107,6 +119,7 @@ export default function CartazEditor({
   const [alterado, setAlterado] = useState(false);
   const [aplicarA, setAplicarA] = useState<null | "lote" | "empresa">(null);
   const [repor, setRepor] = useState(false);
+  const [escolher, setEscolher] = useState(false);
   const caixa = useRef<HTMLDivElement>(null);
   const [largura, setLargura] = useState(360);
 
@@ -175,6 +188,15 @@ export default function CartazEditor({
     setCartaz((c) => ({ ...c, elementos: [...c.elementos, e] }));
     setAbertoId(e.id);
     setAlterado(true);
+    setEscolher(false);
+  }
+
+  // Tocar num elemento na pré-visualização abre-o na lista para editar.
+  function selecionar(id: string) {
+    setAbertoId(id);
+    requestAnimationFrame(() =>
+      document.getElementById(`elemento-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    );
   }
 
   async function guardar(aplicar?: "lote" | "empresa"): Promise<boolean> {
@@ -339,7 +361,11 @@ export default function CartazEditor({
 
               <div className="space-y-2">
                 {cartaz.elementos.map((e, i) => (
-                  <div key={e.id} className="rounded-lg border">
+                  <div
+                    key={e.id}
+                    id={`elemento-${e.id}`}
+                    className={`rounded-lg border ${abertoId === e.id ? "border-primary" : ""}`}
+                  >
                     <div className="flex items-center gap-1 px-2 py-1.5">
                       <button
                         type="button"
@@ -378,22 +404,10 @@ export default function CartazEditor({
                 ))}
               </div>
 
-              <div className="flex flex-wrap gap-2 border-t pt-3">
-                {(
-                  [
-                    ["titulo", "Título"],
-                    ["texto", "Frase"],
-                    ["imagem", "Imagem"],
-                    ["linha", "Linha"],
-                    ["qr", "QR code"],
-                    ["espaco", "Espaço"],
-                  ] as const
-                ).map(([tipo, label]) => (
-                  <Button key={tipo} variant="outline" size="sm" onClick={() => adicionar(tipo)}>
-                    + {label}
-                  </Button>
-                ))}
-              </div>
+              <Button className="w-full" onClick={() => setEscolher(true)}>
+                <Plus />
+                Adicionar elemento
+              </Button>
             </CardContent>
           </Card>
 
@@ -445,6 +459,8 @@ export default function CartazEditor({
                     qrSrc={qrSrc}
                     variaveis={variaveis}
                     fonte="var(--font-sans), sans-serif"
+                    selecionado={abertoId}
+                    onSelecionar={selecionar}
                   />
                 ) : (
                   <div style={{ width: largura, height: largura * 1.4 }} className="bg-white" />
@@ -452,11 +468,31 @@ export default function CartazEditor({
               </div>
             </div>
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              O PNG sai a 300 dpi, pronto para gráfica.
+              Toque num elemento para o editar. O PNG sai a 300 dpi, pronto para gráfica.
             </p>
           </div>
         </div>
       </div>
+
+      <Dialog open={escolher} onOpenChange={setEscolher}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Novo elemento</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2">
+            {NOVOS.map((n) => (
+              <button
+                key={n.tipo}
+                type="button"
+                onClick={() => adicionar(n.tipo)}
+                className="rounded-lg border px-3 py-3 text-sm transition-colors hover:bg-muted"
+              >
+                {n.label}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={aplicarA !== null}
