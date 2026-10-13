@@ -19,6 +19,7 @@ import {
   Palette,
   Eye,
   MessagesSquare,
+  Printer,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { BlockType } from "@prisma/client";
@@ -432,6 +433,15 @@ export default function QrBuilder({
               <Button variant="outline" size="sm" className="w-full" onClick={() => setSeriesOpen(true)}>
                 <Copy />
                 Duplicar em série
+              </Button>
+              <Button
+                size="sm"
+                className="w-full"
+                nativeButton={false}
+                render={<Link href={`/dashboard/qr-codes/${qr.id}/cartaz`} />}
+              >
+                <Printer />
+                Cartaz para imprimir
               </Button>
             </CardContent>
           </Card>

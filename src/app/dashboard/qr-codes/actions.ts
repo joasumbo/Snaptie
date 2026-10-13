@@ -14,6 +14,8 @@ import {
   ESTADOS_MANUTENCAO,
 } from "@/lib/qr";
 import { SUPPORTED_LOCALES } from "@/i18n/request";
+import { validarCartaz } from "@/lib/cartaz";
+import { imagemPermitida } from "@/lib/cartaz-render";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -544,6 +546,7 @@ export async function duplicateQrCodeSeries(input: {
       corSecundaria: source.corSecundaria,
       estado: source.estado,
       publicado: source.publicado,
+      cartaz: source.cartaz === null ? Prisma.JsonNull : (source.cartaz as Prisma.InputJsonValue),
       lote,
     }));
 
@@ -579,5 +582,46 @@ export async function duplicateQrCodeSeries(input: {
     return { ok: true, lote, created: criados.length };
   } catch (error) {
     return fail("duplicateSeries", error);
+  }
+}
+
+// Guarda o desenho do cartaz de um QR. Com "aplicarA", o mesmo desenho vai
+// também para os outros QRs do lote ou da empresa — é assim que um cartaz
+// desenhado uma vez serve as 40 lojas, cada uma com o seu QR e o seu nome.
+export async function saveCartaz(input: {
+  qrId: string;
+  cartaz: unknown;
+  aplicarA?: "lote" | "empresa";
+}): Promise<ActionResult & { aplicados?: number }> {
+  const actor = await requireQrManager();
+  if (!actor) return { ok: false, message: "Sem permissão." };
+  const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, input.qrId);
+  if (!qr) return { ok: false, message: "QR não encontrado." };
+
+  const cartaz = validarCartaz(input.cartaz, imagemPermitida);
+  if (!cartaz) return { ok: false, message: "O cartaz não é válido." };
+
+  try {
+    await prisma.qrCode.update({ where: { id: qr.id }, data: { cartaz } });
+
+    let aplicados = 0;
+    if (input.aplicarA === "lote" && qr.lote) {
+      const r = await prisma.qrCode.updateMany({
+        where: { lote: qr.lote, companyId: qr.companyId, NOT: { id: qr.id } },
+        data: { cartaz },
+      });
+      aplicados = r.count;
+    } else if (input.aplicarA === "empresa") {
+      const r = await prisma.qrCode.updateMany({
+        where: { companyId: qr.companyId, NOT: { id: qr.id } },
+        data: { cartaz },
+      });
+      aplicados = r.count;
+    }
+
+    revalidatePath(`/dashboard/qr-codes/${qr.id}/cartaz`);
+    return { ok: true, aplicados };
+  } catch (e) {
+    return fail("saveCartaz", e);
   }
 }
