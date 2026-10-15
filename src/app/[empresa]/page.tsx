@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { metadadosPagina } from "@/lib/qr-metadata";
 import QrScanPage, { qrScanInclude } from "@/components/qr/qr-scan-page";
 
 export const dynamic = "force-dynamic";
@@ -66,18 +67,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { empresa } = await params;
   const principal = await findPaginaPrincipal(empresa);
-  if (principal) {
-    return {
-      title: principal.nome,
-      description: principal.descricao ?? undefined,
-    };
-  }
+  if (principal) return metadadosPagina(principal);
   const company = await findCompany(empresa);
   if (!company) return { title: "Snaptie" };
-  return {
-    title: company.nome,
-    description: `Páginas de ${company.nome} no Snaptie.`,
-  };
+  return metadadosPagina({
+    nome: company.nome,
+    descricao: `Páginas de ${company.nome} no Snaptie.`,
+    logo: company.logo,
+  });
 }
 
 export default async function CompanyPage({

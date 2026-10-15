@@ -9,6 +9,8 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
+  // Base para os endereços absolutos das imagens de pré-visualização.
+  metadataBase: new URL(process.env.APP_URL || "https://mysnaptie.com"),
   title: "Snaptie",
   description:
     "Interactive QR codes that turn a single scan into menus, guides, links and more.",

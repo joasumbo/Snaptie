@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { metadadosPagina } from "@/lib/qr-metadata";
 import QrScanPage, { qrScanInclude } from "@/components/qr/qr-scan-page";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +14,16 @@ export async function generateMetadata({
   const { codigo } = await params;
   const qr = await prisma.qrCode.findFirst({
     where: { codigo, publicado: true },
-    select: { nome: true, descricao: true },
+    select: {
+      nome: true,
+      descricao: true,
+      imagemCapa: true,
+      logo: true,
+      company: { select: { nome: true, logo: true } },
+    },
   });
   if (!qr) return { title: "Snaptie" };
-  return { title: qr.nome, description: qr.descricao ?? undefined };
+  return metadadosPagina(qr);
 }
 
 export default async function ScanPage({
