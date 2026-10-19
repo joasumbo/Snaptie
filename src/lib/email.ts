@@ -2,7 +2,17 @@ import "server-only";
 
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Criado só no primeiro envio: no build não há chave, e um cliente criado ao
+// carregar o ficheiro fazia falhar o build de qualquer rota que o importe.
+let cliente: Resend | null = null;
+const resend = {
+  emails: {
+    send: (...args: Parameters<Resend["emails"]["send"]>) => {
+      cliente ??= new Resend(process.env.RESEND_API_KEY);
+      return cliente.emails.send(...args);
+    },
+  },
+};
 // O nome visível conta para os filtros e para quem lê: "Snaptie" numa caixa de
 // entrada diz mais do que um endereço solto.
 const endereco = process.env.EMAIL_FROM ?? "noreply@example.com";
