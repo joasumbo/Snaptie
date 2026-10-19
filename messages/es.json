@@ -142,5 +142,18 @@
     "empty": "Aún no hay mensajes. Sea el primero.",
     "tooMany": "Acaba de publicar. Inténtelo de nuevo en unos minutos.",
     "failed": "No se pudo publicar el mensaje."
+  },
+  "Elementos": {
+    "googleTitle": "¿Le ha gustado? Deje su reseña en Google",
+    "googleButton": "Valorar en Google",
+    "opiniaoTitle": "Deje su opinión",
+    "opiniaoHint": "Su opinión se envía en privado y no aparece en la página.",
+    "opiniaoRating": "Valoración",
+    "opiniaoName": "Su nombre (opcional)",
+    "opiniaoMessage": "Su opinión",
+    "opiniaoSend": "Enviar opinión",
+    "opiniaoSent": "¡Gracias! Su opinión ha sido enviada.",
+    "lembreteTitle": "Recordatorio",
+    "lembreteNext": "Próximo: {data}"
   }
 }

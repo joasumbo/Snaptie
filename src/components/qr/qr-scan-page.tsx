@@ -3,7 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { SUPPORTED_LOCALES } from "@/i18n/request";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { imagensDaMensagem } from "@/lib/qr";
+import { imagensDaMensagem, MENSAGENS_PRIVADAS } from "@/lib/qr";
 import { accessCookieName, hasAccess } from "@/lib/auth/qr-access";
 import { type QrPageBlock } from "@/components/qr/qr-page";
 import PublicQrView from "@/components/qr/public-qr-view";
@@ -84,7 +84,8 @@ export default async function QrScanPage({ qr }: { qr: QrComRelacoes }) {
     descricao: b.descricao,
     conteudo: asRecord(b.conteudo),
     editavelPublico: b.editavelPublico,
-    mensagens: b.mensagens.map((m) => ({
+    // Opiniões privadas e envios de lembretes ficam fora da página pública.
+    mensagens: (MENSAGENS_PRIVADAS.includes(b.tipo) ? [] : b.mensagens).map((m) => ({
       id: m.id,
       nome: m.nome,
       mensagem: m.mensagem,

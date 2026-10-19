@@ -144,5 +144,18 @@
     "empty": "Noch keine Nachrichten. Seien Sie der Erste.",
     "tooMany": "Sie haben gerade veröffentlicht. Versuchen Sie es in einigen Minuten erneut.",
     "failed": "Die Nachricht konnte nicht veröffentlicht werden."
+  },
+  "Elementos": {
+    "googleTitle": "Hat es Ihnen gefallen? Bewerten Sie uns bei Google",
+    "googleButton": "Bei Google bewerten",
+    "opiniaoTitle": "Ihre Meinung",
+    "opiniaoHint": "Ihre Meinung wird privat gesendet und erscheint nicht auf der Seite.",
+    "opiniaoRating": "Bewertung",
+    "opiniaoName": "Ihr Name (optional)",
+    "opiniaoMessage": "Ihre Meinung",
+    "opiniaoSend": "Meinung senden",
+    "opiniaoSent": "Danke! Ihre Meinung wurde gesendet.",
+    "lembreteTitle": "Erinnerung",
+    "lembreteNext": "Nächste: {data}"
   }
 }

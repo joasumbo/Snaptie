@@ -34,6 +34,9 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   BOTAO_IMAGEM: "Botão com imagem",
   PAR_BOTOES: "Dois botões lado a lado",
   MANUTENCAO: "Manutenção",
+  AVALIACAO_GOOGLE: "Avaliar no Google",
+  OPINIAO: "Opinião privada",
+  LEMBRETE: "Lembrete",
   CHAT: "Registo / Histórico",
   FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
@@ -64,6 +67,9 @@ export const CONTENT_TYPES: BlockType[] = [
   "FEED",
   "MANUTENCAO",
   "CHAT",
+  "AVALIACAO_GOOGLE",
+  "OPINIAO",
+  "LEMBRETE",
 ];
 
 // Os dois botões lado a lado são sempre dois e ocupam metade da largura cada —
@@ -154,7 +160,10 @@ export type FieldKind =
   | "registo"
   | "botaoImagem"
   | "parBotoes"
-  | "manutencao";
+  | "manutencao"
+  | "googleReview"
+  | "opiniao"
+  | "lembrete";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -173,6 +182,9 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   BOTAO_IMAGEM: "botaoImagem",
   PAR_BOTOES: "parBotoes",
   MANUTENCAO: "manutencao",
+  AVALIACAO_GOOGLE: "googleReview",
+  OPINIAO: "opiniao",
+  LEMBRETE: "lembrete",
   // The wall has no content to fill in: the visitors write it.
   FEED: "mural",
   // Botões que marcam acontecimentos com a hora, mais o histórico do que já
@@ -220,6 +232,17 @@ export function imagensDaMensagem(m: { imagem: string | null; imagens: string[] 
 export function isMural(tipo: BlockType): boolean {
   return tipo === "FEED" || tipo === "MANUTENCAO";
 }
+
+// Elementos de conteúdo a que o dono dá um título (os restantes mostram o que
+// têm dentro e dispensam-no).
+export function temTitulo(tipo: BlockType): boolean {
+  return isMural(tipo) || tipo === "AVALIACAO_GOOGLE" || tipo === "OPINIAO" || tipo === "LEMBRETE";
+}
+
+// O que fica guardado nestes blocos é só para o dono: as opiniões privadas e o
+// registo dos lembretes enviados. Nunca podem seguir para a página pública,
+// nem escondidos — o que vai para o browser, qualquer visitante consegue ler.
+export const MENSAGENS_PRIVADAS: BlockType[] = ["OPINIAO", "LEMBRETE"];
 
 // Guarda-se o estado, não a cor. Assim a paleta pode mudar, e mais tarde dá
 // para filtrar ou contar o que está por resolver — coisas que guardar "verde"

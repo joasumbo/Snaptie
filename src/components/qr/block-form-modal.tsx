@@ -23,7 +23,7 @@ import {
   BLOCK_TYPE_LABELS,
   TYPE_FIELD,
   isContentBlock,
-  isMural,
+  temTitulo,
   BUTTON_SHAPES,
   BUTTON_WIDTH,
   buttonShape,
@@ -32,6 +32,8 @@ import {
   type ParBotao,
 } from "@/lib/qr";
 import { addBlock, updateBlock } from "@/app/dashboard/qr-codes/actions";
+import { DIAS_SEMANA, lerLembrete, type RegraLembrete } from "@/lib/lembrete";
+import { Segmented } from "@/components/ui/segmented";
 
 export type EditableBlock = {
   id: string;
@@ -116,6 +118,14 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
     const lista = emailsManutencao(c);
     return [lista[0] ?? "", lista[1] ?? ""];
   });
+  // O lembrete do dono: quando é enviado e se aparece na página.
+  const lembreteInicial = lerLembrete(c);
+  const [regra, setRegra] = useState<RegraLembrete>(lembreteInicial.regra);
+  const [dataLembrete, setDataLembrete] = useState(lembreteInicial.data);
+  const [diaMes, setDiaMes] = useState(String(lembreteInicial.diaMes));
+  const [diaSemana, setDiaSemana] = useState(String(lembreteInicial.diaSemana));
+  const [hora, setHora] = useState(lembreteInicial.hora);
+  const [mostrarLembrete, setMostrarLembrete] = useState(lembreteInicial.mostrar);
   // Os dois botões lado a lado. São sempre dois, por isso o estado tem sempre
   // dois lugares — nunca se acrescenta nem se tira nenhum.
   const [par, setPar] = useState<ParBotao[]>(() => parBotoes(c));
@@ -250,7 +260,23 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
           break;
         }
         case "manutencao":
+        case "opiniao":
           conteudo = { emails: emails.map((e) => e.trim()).filter(Boolean) };
+          break;
+        case "googleReview":
+          conteudo = { url: url.trim() };
+          break;
+        case "lembrete":
+          conteudo = {
+            regra,
+            data: dataLembrete,
+            diaMes: Number(diaMes),
+            diaSemana: Number(diaSemana),
+            hora,
+            mensagem,
+            emails: emails.map((e) => e.trim()).filter(Boolean),
+            mostrar: mostrarLembrete,
+          };
           break;
         case "registo":
           conteudo = {
@@ -264,8 +290,16 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
           conteudo = {};
       }
 
-      if (field === "manutencao" && !emails[0]?.trim()) {
+      if ((field === "manutencao" || field === "opiniao" || field === "lembrete") && !emails[0]?.trim()) {
         setError("Indique o email que recebe os avisos.");
+        return;
+      }
+      if (field === "googleReview" && !/^https:\/\//.test(url.trim())) {
+        setError("Cole o link de avaliação da ficha Google (começa por https://).");
+        return;
+      }
+      if (field === "lembrete" && regra === "data" && !dataLembrete) {
+        setError("Escolha a data do lembrete.");
         return;
       }
 
@@ -371,7 +405,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         {tipo ? (
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
             {/* The wall is a content element, but it is the one the owner names. */}
-            {!isContentBlock(tipo) || isMural(tipo) ? (
+            {!isContentBlock(tipo) || temTitulo(tipo) ? (
               <Field label="Título">
                 <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
               </Field>
@@ -641,6 +675,134 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                     }
                   />
                 </Field>
+              </>
+            ) : null}
+
+            {field === "googleReview" ? (
+              <>
+                <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                  Mostra cinco estrelas e um botão que abre o ecrã do Google para
+                  deixar a avaliação. O link encontra-se no Perfil da Empresa no
+                  Google, em &quot;Pedir avaliações&quot; (é do género
+                  https://g.page/r/…/review).
+                </p>
+                <Field label="Link de avaliação do Google">
+                  <Input
+                    placeholder="https://g.page/r/.../review"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                  />
+                </Field>
+              </>
+            ) : null}
+
+            {field === "opiniao" || field === "lembrete" ? (
+              <>
+                {field === "opiniao" ? (
+                  <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                    O visitante dá estrelas e escreve a opinião. Não aparece na
+                    página: segue por email e fica guardada aqui, no botão de
+                    mensagens deste elemento.
+                  </p>
+                ) : (
+                  <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                    Na altura marcada, o Snaptie envia este lembrete por email.
+                    É para si: o visitante só o vê se escolher mostrá-lo na
+                    página.
+                  </p>
+                )}
+                <Field label="Email avisado (obrigatório)">
+                  <Input
+                    type="email"
+                    placeholder="geral@empresa.com"
+                    value={emails[0]}
+                    onChange={(e) => setEmails((arr) => [e.target.value, arr[1] ?? ""])}
+                  />
+                </Field>
+                <Field label="Segundo email (opcional)">
+                  <Input
+                    type="email"
+                    value={emails[1]}
+                    onChange={(e) => setEmails((arr) => [arr[0] ?? "", e.target.value])}
+                  />
+                </Field>
+              </>
+            ) : null}
+
+            {field === "lembrete" ? (
+              <>
+                <Field label="Quando">
+                  <Segmented
+                    value={regra}
+                    onChange={setRegra}
+                    options={[
+                      { label: "Numa data", value: "data" },
+                      { label: "Todos os meses", value: "mes" },
+                      { label: "Todas as semanas", value: "semana" },
+                    ]}
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  {regra === "data" ? (
+                    <Field label="Data">
+                      <Input type="date" value={dataLembrete} onChange={(e) => setDataLembrete(e.target.value)} />
+                    </Field>
+                  ) : regra === "mes" ? (
+                    <Field label="Dia do mês">
+                      <select
+                        value={diaMes}
+                        onChange={(e) => setDiaMes(e.target.value)}
+                        className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+                      >
+                        {Array.from({ length: 31 }, (_, i) => (
+                          <option key={i + 1} value={i + 1}>
+                            Dia {i + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  ) : (
+                    <Field label="Dia da semana">
+                      <select
+                        value={diaSemana}
+                        onChange={(e) => setDiaSemana(e.target.value)}
+                        className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+                      >
+                        {DIAS_SEMANA.map((d, i) => (
+                          <option key={d} value={i}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
+                  <Field label="Hora">
+                    <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
+                  </Field>
+                </div>
+                {regra === "mes" && Number(diaMes) > 28 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Nos meses que não têm o dia {diaMes}, o lembrete vai no último dia do mês.
+                  </p>
+                ) : null}
+                <Field label="Texto do lembrete">
+                  <textarea
+                    value={mensagem}
+                    onChange={(e) => setMensagem(e.target.value)}
+                    rows={3}
+                    placeholder="Ex.: mudar o óleo do Jaguar"
+                    className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  />
+                </Field>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={mostrarLembrete}
+                    onChange={(e) => setMostrarLembrete(e.target.checked)}
+                    className="size-4"
+                  />
+                  Mostrar na página quando é o próximo lembrete
+                </label>
               </>
             ) : null}
 

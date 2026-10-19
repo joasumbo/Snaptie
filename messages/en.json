@@ -142,5 +142,18 @@
     "empty": "No messages yet. Be the first.",
     "tooMany": "You have just posted. Try again in a few minutes.",
     "failed": "The message could not be posted."
+  },
+  "Elementos": {
+    "googleTitle": "Enjoyed it? Leave us a Google review",
+    "googleButton": "Review on Google",
+    "opiniaoTitle": "Share your feedback",
+    "opiniaoHint": "Your feedback is sent privately and does not appear on this page.",
+    "opiniaoRating": "Rating",
+    "opiniaoName": "Your name (optional)",
+    "opiniaoMessage": "Your feedback",
+    "opiniaoSend": "Send feedback",
+    "opiniaoSent": "Thank you! Your feedback has been sent.",
+    "lembreteTitle": "Reminder",
+    "lembreteNext": "Next: {data}"
   }
 }

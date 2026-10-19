@@ -24,6 +24,7 @@ import {
 import { useTranslations } from "next-intl";
 import type { BlockType } from "@prisma/client";
 import { BLOCK_TYPE_LABELS, parBotoes, isMural, emailsManutencao } from "@/lib/qr";
+import { descreverRegra, lerLembrete } from "@/lib/lembrete";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,16 @@ function summary(b: BuilderBlock): string {
     if (b.tipo !== "MANUTENCAO") return contagem;
     const avisados = emailsManutencao(c);
     return avisados.length ? `${contagem} · avisa ${avisados.join(", ")}` : contagem;
+  }
+  if (b.tipo === "OPINIAO") {
+    const n = b.mensagens.length;
+    const contagem = n === 1 ? "1 opinião" : `${n} opiniões`;
+    const avisados = emailsManutencao(c);
+    return avisados.length ? `${contagem} · avisa ${avisados.join(", ")}` : contagem;
+  }
+  if (b.tipo === "LEMBRETE") {
+    const l = lerLembrete(c);
+    return `${descreverRegra(l)}${l.emails.length ? ` · para ${l.emails.join(", ")}` : ""}`;
   }
   if (b.tipo === "CHAT") {
     const n = Array.isArray(c.acoes) ? (c.acoes as unknown[]).length : 0;
@@ -346,11 +357,17 @@ export default function QrBuilder({
                             ? ` (${block.mensagens.length})`
                             : ""}
                         </Button>
-                      ) : isMural(block.tipo) ? (
+                      ) : isMural(block.tipo) || block.tipo === "OPINIAO" || block.tipo === "LEMBRETE" ? (
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          title="Ver mensagens"
+                          title={
+                            block.tipo === "OPINIAO"
+                              ? "Ver opiniões"
+                              : block.tipo === "LEMBRETE"
+                                ? "Ver lembretes enviados"
+                                : "Ver mensagens"
+                          }
                           onClick={() => setWallTarget(block)}
                         >
                           <MessagesSquare />
@@ -486,7 +503,7 @@ export default function QrBuilder({
 
       {wallTarget ? (
         <WallMessagesModal
-          titulo={wallTarget.titulo}
+          titulo={wallTarget.titulo || BLOCK_TYPE_LABELS[wallTarget.tipo]}
           manutencao={wallTarget.tipo === "MANUTENCAO"}
           mensagens={wallTarget.mensagens}
           onClose={() => setWallTarget(null)}

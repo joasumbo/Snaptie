@@ -28,6 +28,7 @@ import {
 import { WifiCard } from "./wifi-card";
 import { MessageWall, type WallMessage } from "./message-wall";
 import { EventLog } from "./event-log";
+import { GoogleReview, LembreteCard, OpiniaoForm } from "./extra-elements";
 
 const ICONS: Record<string, LucideIcon> = {
   Globe,
@@ -166,6 +167,23 @@ function ContentElement({
         color={block.cor || primary}
       />
     );
+  }
+  if (block.tipo === "AVALIACAO_GOOGLE") {
+    return (
+      <GoogleReview
+        titulo={block.titulo}
+        url={typeof block.conteudo.url === "string" ? block.conteudo.url : ""}
+        color={block.cor || primary}
+      />
+    );
+  }
+  if (block.tipo === "OPINIAO") {
+    return (
+      <OpiniaoForm blockId={block.id} titulo={block.titulo} codigo={codigo} color={block.cor || primary} />
+    );
+  }
+  if (block.tipo === "LEMBRETE") {
+    return <LembreteCard titulo={block.titulo} conteudo={block.conteudo} color={block.cor || primary} />;
   }
   if (block.tipo === "FEED" || block.tipo === "MANUTENCAO") {
     return (
@@ -369,10 +387,13 @@ export function QrPage({
     >
       {data.imagemCapa ? (
         // eslint-disable-next-line @next/next/no-img-element
+        // A capa guarda a proporção (5:2) em vez de uma altura fixa: com 160 px
+        // de altura e a largura do ecrã inteiro, no PC só se via uma tira do
+        // meio da imagem. Também deixa de passar dos 768 px de largura.
         <img
           src={data.imagemCapa}
           alt=""
-          className="h-40 w-full object-cover"
+          className="mx-auto block aspect-[5/2] w-full max-w-3xl object-cover md:rounded-b-2xl"
         />
       ) : null}
 

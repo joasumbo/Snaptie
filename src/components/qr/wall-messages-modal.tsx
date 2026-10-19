@@ -92,7 +92,14 @@ export function WallMessagesModal({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="truncate font-medium">{m.nome}</span>
+                    <span className="truncate font-medium">{m.nome || "Anónimo"}</span>
+                    {/* Nas opiniões, a coluna do estado guarda as estrelas. */}
+                    {/^[1-5]$/.test(m.estado ?? "") ? (
+                      <span className="shrink-0 text-sm text-amber-500">
+                        {"★".repeat(Number(m.estado))}
+                        {"☆".repeat(5 - Number(m.estado))}
+                      </span>
+                    ) : null}
                     <span className="shrink-0 text-xs text-muted-foreground">
                       {new Date(m.createdAt).toLocaleString()}
                     </span>

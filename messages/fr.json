@@ -144,5 +144,18 @@
     "empty": "Aucun message pour l'instant. Soyez le premier.",
     "tooMany": "Vous venez de publier. Réessayez dans quelques minutes.",
     "failed": "Le message n'a pas pu être publié."
+  },
+  "Elementos": {
+    "googleTitle": "Vous avez aimé ? Laissez un avis sur Google",
+    "googleButton": "Donner un avis sur Google",
+    "opiniaoTitle": "Donnez votre avis",
+    "opiniaoHint": "Votre avis est envoyé en privé et n'apparaît pas sur la page.",
+    "opiniaoRating": "Note",
+    "opiniaoName": "Votre nom (facultatif)",
+    "opiniaoMessage": "Votre avis",
+    "opiniaoSend": "Envoyer l'avis",
+    "opiniaoSent": "Merci ! Votre avis a été envoyé.",
+    "lembreteTitle": "Rappel",
+    "lembreteNext": "Prochain : {data}"
   }
 }

@@ -10,7 +10,7 @@ import {
   publicUrlFor,
   type UploadTicket,
 } from "@/lib/storage";
-import { sendMaintenanceEmail } from "@/lib/email";
+import { sendMaintenanceEmail, sendOpiniaoEmail } from "@/lib/email";
 import { ESTADO_INICIAL, emailsManutencao } from "@/lib/qr";
 
 // The message wall: any visitor may leave a message on a FEED block, with no
@@ -238,5 +238,68 @@ export async function registarEvento(input: {
 
   revalidatePath(`/${block.qr.company.slug}/${input.codigo}`);
   revalidatePath(`/${block.qr.company.slug}`);
+  return { ok: true };
+}
+
+// Uma opinião privada: fica guardada para o dono a ver no painel e segue por
+// email, mas nunca aparece na página. Por isso não há revalidação da página —
+// não há nada nela que mude.
+export async function postOpiniao(input: {
+  codigo: string;
+  blockId: string;
+  nome: string;
+  mensagem: string;
+  estrelas?: number | null;
+}): Promise<WallResult> {
+  const nome = input.nome?.trim().slice(0, MAX_NOME) ?? "";
+  const mensagem = input.mensagem?.trim().slice(0, 1000) ?? "";
+  const estrelasNum = Math.floor(Number(input.estrelas));
+  const estrelas = estrelasNum >= 1 && estrelasNum <= 5 ? estrelasNum : null;
+  if (!mensagem && !estrelas) return { ok: false, motivo: "vazio" };
+
+  const block = await prisma.qrBlock.findFirst({
+    where: { id: input.blockId, tipo: "OPINIAO", ativo: true, qr: { codigo: input.codigo, publicado: true } },
+    select: {
+      id: true,
+      titulo: true,
+      conteudo: true,
+      qr: { select: { nome: true, company: { select: { slug: true, email: true } } } },
+    },
+  });
+  if (!block) return { ok: false, motivo: "invalido" };
+
+  const ip = await visitorIp();
+  const desde = new Date(Date.now() - JANELA_MINUTOS * 60_000);
+  const recentes = await prisma.qrMessage.count({
+    where: { blockId: block.id, ip, createdAt: { gte: desde } },
+  });
+  if (recentes >= MAX_POR_JANELA) return { ok: false, motivo: "muitas" };
+
+  // A classificação vai na coluna "estado", que nos outros murais guarda o
+  // estado da ocorrência. Aqui não há estados, e assim não é preciso migrar.
+  await prisma.qrMessage.create({
+    data: { blockId: block.id, nome, mensagem, estado: estrelas ? String(estrelas) : null, ip },
+  });
+
+  const conteudo =
+    block.conteudo && typeof block.conteudo === "object" ? (block.conteudo as Record<string, unknown>) : {};
+  const destinatarios = emailsManutencao(conteudo);
+  if (destinatarios.length > 0) {
+    try {
+      await sendOpiniaoEmail({
+        to: destinatarios,
+        pagina: block.qr.nome,
+        titulo: block.titulo,
+        nome,
+        mensagem,
+        estrelas,
+        replyTo: block.qr.company.email,
+        link: `${await enderecoBase()}/${block.qr.company.slug}/${input.codigo}`,
+      });
+    } catch (e) {
+      console.error("[opiniao:email]", e);
+    }
+  }
+
   return { ok: true };
 }
