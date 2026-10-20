@@ -8,6 +8,8 @@ import { hashPassword } from "@/lib/auth/password";
 import { uniqueQrCode, uniqueQrSlug } from "@/lib/qr-identity";
 import { randomCode } from "@/lib/slug";
 import {
+  ACTION_TYPES,
+  CONTENT_TYPES,
   isContentBlock,
   isAccessMode,
   accessNeedsPin,
@@ -31,26 +33,10 @@ function fail(context: string, error: unknown): ActionResult {
 }
 
 const QR_ROLES = ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"] as const;
-const BLOCK_TYPES: BlockType[] = [
-  "TEXTO",
-  "LINK",
-  "WHATSAPP",
-  "TELEFONE",
-  "EMAIL",
-  "MAPA",
-  "WIFI",
-  "PDF",
-  "IMAGEM",
-  "CARROSSEL",
-  "VIDEO",
-  "TITULO",
-  "LOGO",
-  "BOTAO_IMAGEM",
-  "PAR_BOTOES",
-  "MANUTENCAO",
-  "FEED",
-  "CHAT",
-];
+// Os tipos que se podem criar são exatamente os que o painel oferece. Uma
+// lista à parte aqui ficava para trás sempre que se juntava um elemento novo
+// (foi o que deu "Tipo inválido" no lembrete).
+const BLOCK_TYPES: BlockType[] = [...ACTION_TYPES, ...CONTENT_TYPES];
 
 type PageFields = {
   logo?: string | null;
