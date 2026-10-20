@@ -14,8 +14,10 @@ export async function requestReset(email: string): Promise<{ ok: true }> {
       const link = `${base}/reset-password?token=${token}`;
       try {
         await sendPasswordResetEmail(user.email, link);
-      } catch {
-        // Never reveal delivery problems to the caller.
+      } catch (e) {
+        // Never reveal delivery problems to the caller — but keep them in the
+        // server log, or a broken email setup goes unnoticed.
+        console.error("[reset:email]", e);
       }
     }
   }

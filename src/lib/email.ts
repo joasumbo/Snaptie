@@ -5,11 +5,16 @@ import { Resend } from "resend";
 // Criado só no primeiro envio: no build não há chave, e um cliente criado ao
 // carregar o ficheiro fazia falhar o build de qualquer rota que o importe.
 let cliente: Resend | null = null;
+// O Resend não lança erro quando um envio falha: devolve-o na resposta. Sem
+// esta verificação, um email recusado passava por enviado (e o lembrete ficava
+// marcado como entregue sem ter saído).
 const resend = {
   emails: {
-    send: (...args: Parameters<Resend["emails"]["send"]>) => {
+    send: async (...args: Parameters<Resend["emails"]["send"]>) => {
       cliente ??= new Resend(process.env.RESEND_API_KEY);
-      return cliente.emails.send(...args);
+      const r = await cliente.emails.send(...args);
+      if (r.error) throw new Error(`Resend: ${r.error.message}`);
+      return r;
     },
   },
 };
