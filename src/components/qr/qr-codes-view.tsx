@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Eye, Plus } from "lucide-react";
+import { Eye, FileSpreadsheet, Plus } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -180,13 +180,28 @@ export default function QrCodesView({
           onChange={(e) => setQuery(e.target.value)}
           className="h-9 w-full sm:max-w-72"
         />
-        <Button
-          className="w-full sm:w-auto"
-          onClick={() => setModal({ mode: "create" })}
-        >
-          <Plus />
-          Novo QR
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {/* O gestor exporta as ocorrências de todas as lojas da sua empresa;
+              o administrador fá-lo na página de cada empresa. */}
+          {!isAdmin ? (
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              nativeButton={false}
+              render={<a href="/api/ocorrencias/export" />}
+            >
+              <FileSpreadsheet />
+              Ocorrências (Excel)
+            </Button>
+          ) : null}
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => setModal({ mode: "create" })}
+          >
+            <Plus />
+            Novo QR
+          </Button>
+        </div>
       </div>
 
       <DataTable

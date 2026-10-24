@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, QrCode, ScanLine } from "lucide-react";
+import { ArrowLeft, Users, QrCode, ScanLine, FileSpreadsheet } from "lucide-react";
 import type { CompanyStatus, UserRole, UserStatus } from "@prisma/client";
 import {
   COMPANY_STATUS_LABELS,
@@ -107,6 +107,15 @@ export default function CompanyDetailView({
           <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/dashboard/companies" />}>
             <ArrowLeft />
             Voltar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<a href={`/api/ocorrencias/export?company=${company.id}`} />}
+          >
+            <FileSpreadsheet />
+            Ocorrências (Excel)
           </Button>
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             Editar
