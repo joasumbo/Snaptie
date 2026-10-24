@@ -10,6 +10,7 @@ import {
   Users,
   UserRound,
   QrCode,
+  BarChart3,
   LogOut,
   CircleUserRound,
   ChevronDown,
@@ -47,6 +48,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/qr-codes",
     key: "qrCodes",
     icon: QrCode,
+    roles: ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"],
+  },
+  {
+    href: "/dashboard/estatisticas",
+    key: "stats",
+    icon: BarChart3,
     roles: ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"],
   },
   {

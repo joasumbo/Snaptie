@@ -20,6 +20,7 @@ import {
   Eye,
   MessagesSquare,
   Printer,
+  BarChart3,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { BlockType } from "@prisma/client";
@@ -459,6 +460,16 @@ export default function QrBuilder({
               >
                 <Printer />
                 Cartaz para imprimir
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                nativeButton={false}
+                render={<Link href={`/dashboard/estatisticas?qr=${qr.id}`} />}
+              >
+                <BarChart3 />
+                Estatísticas deste QR
               </Button>
             </CardContent>
           </Card>

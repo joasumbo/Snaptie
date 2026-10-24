@@ -174,6 +174,7 @@ model QrCode {
   template  Template?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
   blocks    QrBlock[]
   analytics Analytics[]
+  interacoes Interacao[]
 
   @@index([companyId])
   @@index([templateId])
@@ -199,6 +200,7 @@ model QrBlock {
 
   qr       QrCode      @relation(fields: [qrId], references: [id], onDelete: Cascade)
   mensagens QrMessage[]
+  interacoes Interacao[]
 
   @@index([qrId])
   @@map("qr_blocks")
@@ -284,6 +286,23 @@ model Analytics {
   @@index([qrId])
   @@index([dataHora])
   @@map("analytics")
+}
+
+// Um clique de um visitante num elemento da página (botão, link, WhatsApp...).
+// Junto com as mensagens deixadas, é o que diz quem leu e também interagiu.
+model Interacao {
+  id        String   @id @default(cuid())
+  qrId      String   @map("qr_id")
+  blockId   String?  @map("block_id")
+  dataHora  DateTime @default(now()) @map("data_hora")
+  ip        String?
+  navegador String?
+
+  qr    QrCode   @relation(fields: [qrId], references: [id], onDelete: Cascade)
+  block QrBlock? @relation(fields: [blockId], references: [id], onDelete: SetNull)
+
+  @@index([qrId, dataHora])
+  @@map("interacoes")
 }
 
 // Planos/subscrições das empresas (faturação futura)

@@ -126,3 +126,19 @@
     @apply font-sans;
     }
 }
+/* Gráficos das estatísticas: uma série (azul da paleta validada), grelha e
+   eixos discretos, texto nos tons de texto e nunca na cor da série. */
+.viz {
+  --viz-serie: #2a78d6;
+  --viz-trilho: #cde2fb;
+  --viz-grelha: #ebeae6;
+  --viz-eixo: #c3c2b7;
+  --viz-texto: #52514e;
+}
+.dark .viz {
+  --viz-serie: #3987e5;
+  --viz-trilho: #104281;
+  --viz-grelha: #2c2c2a;
+  --viz-eixo: #52514e;
+  --viz-texto: #c3c2b7;
+}

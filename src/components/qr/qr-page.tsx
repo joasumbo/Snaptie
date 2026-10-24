@@ -378,9 +378,25 @@ export function QrPage({
   const logoRounded = data.logoForma === "quadrado" ? "rounded-2xl" : "rounded-full";
   const nameClass = NAME_SIZE[data.nomeTamanho] ?? "text-xl";
 
+  // Um clique num link de um elemento conta como interação. sendBeacon segue
+  // mesmo que a página mude a seguir, e não atrasa o visitante. Na
+  // pré-visualização do painel (sem código) não se regista nada.
+  function registarClique(e: React.MouseEvent<HTMLDivElement>) {
+    if (!codigo) return;
+    const alvo = e.target as HTMLElement;
+    if (!alvo.closest("a[href]")) return;
+    const bloco = alvo.closest<HTMLElement>("[data-bloco]")?.dataset.bloco;
+    if (!bloco || typeof navigator === "undefined" || !navigator.sendBeacon) return;
+    navigator.sendBeacon(
+      "/api/interacao",
+      new Blob([JSON.stringify({ codigo, blockId: bloco })], { type: "text/plain" }),
+    );
+  }
+
   return (
     <div
       className="min-h-full bg-white"
+      onClickCapture={registarClique}
       style={{
         background: `radial-gradient(120% 55% at 50% 0%, ${primary}22, #ffffff 60%)`,
       }}
@@ -430,18 +446,17 @@ export function QrPage({
           {data.blocks.length === 0 ? (
             <p className="text-sm text-zinc-400">Sem conteúdos.</p>
           ) : (
-            data.blocks.map((block) =>
-              isContentBlock(block.tipo) ? (
-                <ContentElement
-                  key={block.id}
-                  block={block}
-                  codigo={codigo}
-                  primary={primary}
-                />
-              ) : (
-                <ActionButton key={block.id} block={block} primary={primary} />
-              ),
-            )
+            data.blocks.map((block) => (
+              // "contents" não mexe no layout; só marca de que elemento vem
+              // um clique, para as estatísticas.
+              <div key={block.id} data-bloco={block.id} className="contents">
+                {isContentBlock(block.tipo) ? (
+                  <ContentElement block={block} codigo={codigo} primary={primary} />
+                ) : (
+                  <ActionButton block={block} primary={primary} />
+                )}
+              </div>
+            ))
           )}
         </div>
 
