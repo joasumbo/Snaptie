@@ -181,19 +181,18 @@ export default function QrCodesView({
           className="h-9 w-full sm:max-w-72"
         />
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          {/* O gestor exporta as ocorrências de todas as lojas da sua empresa;
-              o administrador fá-lo na página de cada empresa. */}
-          {!isAdmin ? (
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto"
-              nativeButton={false}
-              render={<a href="/api/ocorrencias/export" />}
-            >
-              <FileSpreadsheet />
-              Ocorrências (Excel)
-            </Button>
-          ) : null}
+          {/* O gestor exporta as ocorrências da sua empresa; o administrador
+              exporta as de todas, com a empresa numa coluna. Por empresa, há
+              também o botão na página de cada uma. */}
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            nativeButton={false}
+            render={<a href="/api/ocorrencias/export" />}
+          >
+            <FileSpreadsheet />
+            Ocorrências (Excel)
+          </Button>
           <Button
             className="w-full sm:w-auto"
             onClick={() => setModal({ mode: "create" })}
