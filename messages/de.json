@@ -157,6 +157,12 @@
     "opiniaoSend": "Meinung senden",
     "opiniaoSent": "Danke! Ihre Meinung wurde gesendet.",
     "lembreteTitle": "Erinnerung",
-    "lembreteNext": "Nächste: {data}"
+    "lembreteNext": "Nächste: {data}",
+    "ocorrenciasTitle": "Meldungen aller Filialen",
+    "ocorrenciasExcel": "Excel",
+    "ocorrenciasTodas": "Alle",
+    "ocorrenciasVazio": "Noch keine Meldungen.",
+    "ocorrenciasPreview": "Die Liste der Meldungen aller Filialen erscheint auf der veröffentlichten Seite.",
+    "ocorrenciasMais": "Mehr anzeigen ({n})"
   }
 }

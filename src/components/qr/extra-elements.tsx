@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Bell, Loader2, Send, Star } from "lucide-react";
+import { Bell, FileSpreadsheet, Loader2, Send, Star } from "lucide-react";
+import { ESTADOS_MANUTENCAO, estadoManutencao } from "@/lib/qr";
+import type { OcorrenciaPublica } from "./qr-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { postOpiniao } from "@/app/[empresa]/[codigo]/wall-actions";
@@ -130,6 +132,116 @@ export function OpiniaoForm({
             {t("opiniaoSend")}
           </Button>
         </div>
+      )}
+    </div>
+  );
+}
+
+// As ocorrências de todas as lojas da empresa, filtráveis por estado, com o
+// Excel ao fundo. Na pré-visualização do painel não há dados nem descarga.
+export function OcorrenciasLista({
+  blockId,
+  titulo,
+  codigo,
+  ocorrencias,
+  color,
+}: {
+  blockId: string;
+  titulo: string;
+  codigo?: string;
+  ocorrencias?: OcorrenciaPublica[];
+  color: string;
+}) {
+  const t = useTranslations("Elementos");
+  const tw = useTranslations("Wall");
+  const locale = useLocale();
+  const [filtro, setFiltro] = useState<string | null>(null);
+  const [mostrar, setMostrar] = useState(30);
+  const lista = ocorrencias ?? [];
+  const visiveis = filtro ? lista.filter((o) => o.estado === filtro) : lista;
+
+  return (
+    <div className="rounded-xl border bg-white p-4 text-left">
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-medium text-zinc-900">{titulo || t("ocorrenciasTitle")}</div>
+        {codigo ? (
+          <a
+            href={`/api/ocorrencias/bloco/${blockId}?codigo=${encodeURIComponent(codigo)}`}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-white"
+            style={{ backgroundColor: color }}
+          >
+            <FileSpreadsheet className="size-4" />
+            {t("ocorrenciasExcel")}
+          </a>
+        ) : null}
+      </div>
+
+      {!ocorrencias ? (
+        <p className="mt-2 text-sm text-zinc-500">{t("ocorrenciasPreview")}</p>
+      ) : lista.length === 0 ? (
+        <p className="mt-2 text-sm text-zinc-500">{t("ocorrenciasVazio")}</p>
+      ) : (
+        <>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {[null, ...ESTADOS_MANUTENCAO.map((e) => e.valor)].map((v) => {
+              const n = v ? lista.filter((o) => o.estado === v).length : lista.length;
+              const e = v ? estadoManutencao(v) : null;
+              const ativo = filtro === v;
+              return (
+                <button
+                  key={v ?? "todas"}
+                  type="button"
+                  onClick={() => {
+                    setFiltro(v);
+                    setMostrar(30);
+                  }}
+                  className="rounded-full border px-2.5 py-1 text-xs font-medium"
+                  style={
+                    ativo
+                      ? { backgroundColor: e?.cor ?? "#18181b", color: e?.texto ?? "#ffffff", borderColor: e?.texto ?? "#18181b" }
+                      : { color: "#52525b" }
+                  }
+                >
+                  {v ? tw(`status_${v}`) : t("ocorrenciasTodas")} ({n})
+                </button>
+              );
+            })}
+          </div>
+
+          <ul className="mt-3 space-y-2">
+            {visiveis.slice(0, mostrar).map((o) => {
+              const e = estadoManutencao(o.estado);
+              return (
+                <li key={o.id} className="rounded-lg px-3 py-2" style={{ backgroundColor: e.cor }}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="truncate text-sm font-semibold text-zinc-900">{o.loja}</span>
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                      style={{ backgroundColor: "#ffffffcc", color: e.texto }}
+                    >
+                      {tw(`status_${e.valor}`)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-zinc-600">
+                    {o.nome} · {new Date(o.data).toLocaleDateString(locale)}
+                  </div>
+                  {o.mensagem ? (
+                    <p className="mt-0.5 whitespace-pre-line break-words text-sm text-zinc-800">{o.mensagem}</p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          {visiveis.length > mostrar ? (
+            <button
+              type="button"
+              onClick={() => setMostrar((m) => m + 30)}
+              className="mt-3 w-full rounded-lg border px-3 py-2 text-sm text-zinc-700"
+            >
+              {t("ocorrenciasMais", { n: visiveis.length - mostrar })}
+            </button>
+          ) : null}
+        </>
       )}
     </div>
   );

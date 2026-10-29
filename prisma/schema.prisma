@@ -73,6 +73,7 @@ enum BlockType {
   AVALIACAO_GOOGLE // botão que abre a avaliação da ficha Google do negócio
   OPINIAO // formulário privado: vai por email ao dono, não aparece na página
   LEMBRETE // email ao dono numa data, num dia do mês ou num dia da semana
+  OCORRENCIAS // lista das ocorrências de todas as lojas da empresa, com Excel
   // Tipos futuros
   CHAT
   FEED

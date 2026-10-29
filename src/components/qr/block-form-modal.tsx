@@ -678,6 +678,15 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
               </>
             ) : null}
 
+            {field === "ocorrencias" ? (
+              <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                Mostra nesta página as ocorrências de manutenção de todas as
+                lojas da empresa, com filtro por estado, e um botão para
+                descarregar a lista em Excel. Quem abrir a página vê a lista:
+                se for só para a equipa, proteja a página com PIN.
+              </p>
+            ) : null}
+
             {field === "googleReview" ? (
               <>
                 <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">

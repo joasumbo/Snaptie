@@ -28,7 +28,7 @@ import {
 import { WifiCard } from "./wifi-card";
 import { MessageWall, type WallMessage } from "./message-wall";
 import { EventLog } from "./event-log";
-import { GoogleReview, LembreteCard, OpiniaoForm } from "./extra-elements";
+import { GoogleReview, LembreteCard, OcorrenciasLista, OpiniaoForm } from "./extra-elements";
 
 const ICONS: Record<string, LucideIcon> = {
   Globe,
@@ -50,6 +50,17 @@ export type QrPageBlock = {
   conteudo: Record<string, unknown>;
   editavelPublico?: boolean;
   mensagens?: WallMessage[]; // só nos murais (FEED e MANUTENCAO)
+  // Só na "Lista de ocorrências" da página publicada: as de todas as lojas.
+  ocorrencias?: OcorrenciaPublica[];
+};
+
+export type OcorrenciaPublica = {
+  id: string;
+  data: string; // ISO
+  loja: string;
+  nome: string;
+  mensagem: string;
+  estado: string;
 };
 
 export type QrPageData = {
@@ -180,6 +191,17 @@ function ContentElement({
   if (block.tipo === "OPINIAO") {
     return (
       <OpiniaoForm blockId={block.id} titulo={block.titulo} codigo={codigo} color={block.cor || primary} />
+    );
+  }
+  if (block.tipo === "OCORRENCIAS") {
+    return (
+      <OcorrenciasLista
+        blockId={block.id}
+        titulo={block.titulo}
+        codigo={codigo}
+        ocorrencias={block.ocorrencias}
+        color={block.cor || primary}
+      />
     );
   }
   if (block.tipo === "LEMBRETE") {

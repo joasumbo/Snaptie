@@ -155,6 +155,12 @@
     "opiniaoSend": "Send feedback",
     "opiniaoSent": "Thank you! Your feedback has been sent.",
     "lembreteTitle": "Reminder",
-    "lembreteNext": "Next: {data}"
+    "lembreteNext": "Next: {data}",
+    "ocorrenciasTitle": "Issues from all locations",
+    "ocorrenciasExcel": "Excel",
+    "ocorrenciasTodas": "All",
+    "ocorrenciasVazio": "No issues yet.",
+    "ocorrenciasPreview": "The list of issues from all locations appears on the published page.",
+    "ocorrenciasMais": "Show more ({n})"
   }
 }

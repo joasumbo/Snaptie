@@ -155,6 +155,12 @@
     "opiniaoSend": "Enviar opinião",
     "opiniaoSent": "Obrigado! A sua opinião foi enviada.",
     "lembreteTitle": "Lembrete",
-    "lembreteNext": "Próximo: {data}"
+    "lembreteNext": "Próximo: {data}",
+    "ocorrenciasTitle": "Ocorrências de todas as lojas",
+    "ocorrenciasExcel": "Excel",
+    "ocorrenciasTodas": "Todas",
+    "ocorrenciasVazio": "Ainda não há ocorrências.",
+    "ocorrenciasPreview": "A lista das ocorrências de todas as lojas aparece na página publicada.",
+    "ocorrenciasMais": "Ver mais ({n})"
   }
 }

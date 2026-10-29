@@ -37,6 +37,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   AVALIACAO_GOOGLE: "Avaliar no Google",
   OPINIAO: "Opinião privada",
   LEMBRETE: "Lembrete",
+  OCORRENCIAS: "Lista de ocorrências",
   CHAT: "Registo / Histórico",
   FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
@@ -70,6 +71,7 @@ export const CONTENT_TYPES: BlockType[] = [
   "AVALIACAO_GOOGLE",
   "OPINIAO",
   "LEMBRETE",
+  "OCORRENCIAS",
 ];
 
 // Os dois botões lado a lado são sempre dois e ocupam metade da largura cada —
@@ -163,7 +165,8 @@ export type FieldKind =
   | "manutencao"
   | "googleReview"
   | "opiniao"
-  | "lembrete";
+  | "lembrete"
+  | "ocorrencias";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -185,6 +188,7 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   AVALIACAO_GOOGLE: "googleReview",
   OPINIAO: "opiniao",
   LEMBRETE: "lembrete",
+  OCORRENCIAS: "ocorrencias",
   // The wall has no content to fill in: the visitors write it.
   FEED: "mural",
   // Botões que marcam acontecimentos com a hora, mais o histórico do que já
@@ -236,7 +240,13 @@ export function isMural(tipo: BlockType): boolean {
 // Elementos de conteúdo a que o dono dá um título (os restantes mostram o que
 // têm dentro e dispensam-no).
 export function temTitulo(tipo: BlockType): boolean {
-  return isMural(tipo) || tipo === "AVALIACAO_GOOGLE" || tipo === "OPINIAO" || tipo === "LEMBRETE";
+  return (
+    isMural(tipo) ||
+    tipo === "AVALIACAO_GOOGLE" ||
+    tipo === "OPINIAO" ||
+    tipo === "LEMBRETE" ||
+    tipo === "OCORRENCIAS"
+  );
 }
 
 // O que fica guardado nestes blocos é só para o dono: as opiniões privadas e o

@@ -157,6 +157,12 @@
     "opiniaoSend": "Envoyer l'avis",
     "opiniaoSent": "Merci ! Votre avis a été envoyé.",
     "lembreteTitle": "Rappel",
-    "lembreteNext": "Prochain : {data}"
+    "lembreteNext": "Prochain : {data}",
+    "ocorrenciasTitle": "Incidents de tous les magasins",
+    "ocorrenciasExcel": "Excel",
+    "ocorrenciasTodas": "Tous",
+    "ocorrenciasVazio": "Aucun incident pour l'instant.",
+    "ocorrenciasPreview": "La liste des incidents de tous les magasins apparaît sur la page publiée.",
+    "ocorrenciasMais": "Voir plus ({n})"
   }
 }

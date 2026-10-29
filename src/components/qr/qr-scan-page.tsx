@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { imagensDaMensagem, MENSAGENS_PRIVADAS } from "@/lib/qr";
 import { accessCookieName, hasAccess } from "@/lib/auth/qr-access";
+import { lerOcorrencias } from "@/lib/ocorrencias";
 import { type QrPageBlock } from "@/components/qr/qr-page";
 import PublicQrView from "@/components/qr/public-qr-view";
 import QrGate from "@/components/qr/qr-gate";
@@ -76,7 +77,22 @@ export default async function QrScanPage({ qr }: { qr: QrComRelacoes }) {
     // analítica não é crítica
   }
 
+  // A "Lista de ocorrências" mostra as de todas as lojas da empresa. Só se
+  // lêem quando a página tem esse elemento; as 300 mais recentes chegam para
+  // a página, e o Excel do elemento traz todas.
+  const ocorrencias = qr.blocks.some((b) => b.tipo === "OCORRENCIAS")
+    ? (await lerOcorrencias(qr.companyId, 300)).map((o) => ({
+        id: o.id,
+        data: o.data.toISOString(),
+        loja: o.loja,
+        nome: o.nome,
+        mensagem: o.mensagem,
+        estado: o.estado,
+      }))
+    : undefined;
+
   const blocks: QrPageBlock[] = qr.blocks.map((b) => ({
+    ...(b.tipo === "OCORRENCIAS" ? { ocorrencias } : {}),
     id: b.id,
     tipo: b.tipo,
     titulo: b.titulo,
