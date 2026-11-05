@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Segmented } from "@/components/ui/segmented";
-import { TYPE_FIELD, BLOCK_TYPE_LABELS, isContentBlock, parBotoes } from "@/lib/qr";
+import { TYPE_FIELD, isContentBlock, parBotoes } from "@/lib/qr";
 import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
@@ -26,6 +26,7 @@ import {
   savePageSettings,
   changeEditCode,
   requestPublicUpload,
+  mudarEstadoOcorrencia,
 } from "@/app/[empresa]/[codigo]/edit-actions";
 import type { UploadKind } from "@/lib/storage";
 
@@ -76,6 +77,7 @@ export default function PublicQrView({
   const router = useRouter();
   const t = useTranslations("PublicPage");
   const tc = useTranslations("Common");
+  const tt = useTranslations("Tipos");
   const [pinOpen, setPinOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [pin, setPin] = useState("");
@@ -161,7 +163,7 @@ export default function PublicQrView({
             conteudo: b.conteudo,
           });
           if (!r.ok) {
-            toast.error(r.message);
+            toast.error(tc("error"));
             return;
           }
         }
@@ -169,14 +171,14 @@ export default function PublicQrView({
       if (podePersonalizar) {
         const r = await savePageSettings({ codigo, pin: authPin, ...look });
         if (!r.ok) {
-          toast.error(r.message);
+          toast.error(tc("error"));
           return;
         }
       }
       if (newCode.trim()) {
         const rc = await changeEditCode({ codigo, pin: authPin, newPin: newCode.trim() });
         if (!rc.ok) {
-          toast.error(rc.message);
+          toast.error(tc("error"));
           return;
         }
         setAuthPin(newCode.trim());
@@ -196,11 +198,42 @@ export default function PublicQrView({
     (input: { kind: UploadKind; contentType: string; size: number }) =>
       requestPublicUpload({ ...input, kind, codigo, pin: authPin });
 
+  // Com o código de edição, o estado de cada ocorrência muda-se na própria
+  // página, sem ir ao painel.
+  const temOcorrencias = data.blocks.some((b) => b.tipo === "MANUTENCAO" || b.tipo === "OCORRENCIAS");
+  const aGerir = podeConteudo && Boolean(authPin) && temOcorrencias;
+  async function mudarEstado(messageId: string, estado: string): Promise<boolean> {
+    const r = await mudarEstadoOcorrencia({ codigo, pin: authPin, messageId, estado });
+    if (!r.ok) {
+      toast.error(tc("error"));
+      return false;
+    }
+    return true;
+  }
+
   return (
     <div className="min-h-screen">
+      {aGerir ? (
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-zinc-900 px-4 py-2 text-sm text-white">
+          <span>{t("editMode")}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthPin("");
+              setPodeConteudo(false);
+              setPodePersonalizar(false);
+              router.refresh();
+            }}
+            className="shrink-0 rounded-md border border-white/30 px-2.5 py-1 text-xs font-medium"
+          >
+            {t("editExit")}
+          </button>
+        </div>
+      ) : null}
       <QrPage
         data={data}
         codigo={codigo}
+        onMudarEstado={aGerir ? mudarEstado : undefined}
         footer={
           edicaoPublica || edicaoPersonalizacao ? (
             <Button
@@ -258,6 +291,11 @@ export default function PublicQrView({
             <DialogTitle>{t("editPage")}</DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+            {podeConteudo && temOcorrencias ? (
+              <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                {t("editStatesHint")}
+              </p>
+            ) : null}
             {podeConteudo && edits.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noEditable")}</p>
             ) : null}
@@ -266,7 +304,7 @@ export default function PublicQrView({
               ? edits.map((b) => (
                   <div key={b.id} className="space-y-2 rounded-lg border p-3">
                     <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {BLOCK_TYPE_LABELS[b.tipo]}
+                      {tt(b.tipo)}
                     </div>
                     {!isContentBlock(b.tipo) ? (
                       <div className="space-y-1.5">

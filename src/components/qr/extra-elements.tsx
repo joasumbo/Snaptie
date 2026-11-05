@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Bell, FileSpreadsheet, Loader2, Send, Star } from "lucide-react";
 import { ESTADOS_MANUTENCAO, estadoManutencao } from "@/lib/qr";
 import type { OcorrenciaPublica } from "./qr-page";
+import { EstadoChips, type MudarEstado } from "./message-wall";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { postOpiniao } from "@/app/[empresa]/[codigo]/wall-actions";
@@ -145,19 +146,33 @@ export function OcorrenciasLista({
   codigo,
   ocorrencias,
   color,
+  onMudarEstado,
 }: {
   blockId: string;
   titulo: string;
   codigo?: string;
   ocorrencias?: OcorrenciaPublica[];
   color: string;
+  // Presente quando quem vê desbloqueou a edição da página com o código.
+  onMudarEstado?: MudarEstado;
 }) {
   const t = useTranslations("Elementos");
   const tw = useTranslations("Wall");
   const locale = useLocale();
   const [filtro, setFiltro] = useState<string | null>(null);
   const [mostrar, setMostrar] = useState(30);
-  const lista = ocorrencias ?? [];
+  // Estados mudados aqui: a cor e as contagens dos filtros acompanham logo.
+  const [estados, setEstados] = useState<Record<string, string>>({});
+  const lista = (ocorrencias ?? []).map((o) => (estados[o.id] ? { ...o, estado: estados[o.id] } : o));
+  const mudar: MudarEstado | undefined = onMudarEstado
+    ? async (id, estado) => {
+        const antes = estados[id];
+        setEstados((s) => ({ ...s, [id]: estado }));
+        const ok = await onMudarEstado(id, estado);
+        if (!ok) setEstados((s) => ({ ...s, [id]: antes }));
+        return ok;
+      }
+    : undefined;
   const visiveis = filtro ? lista.filter((o) => o.estado === filtro) : lista;
 
   return (
@@ -228,6 +243,7 @@ export function OcorrenciasLista({
                   {o.mensagem ? (
                     <p className="mt-0.5 whitespace-pre-line break-words text-sm text-zinc-800">{o.mensagem}</p>
                   ) : null}
+                  {mudar ? <EstadoChips messageId={o.id} atual={o.estado} onMudar={mudar} /> : null}
                 </li>
               );
             })}

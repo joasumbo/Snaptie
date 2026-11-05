@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { uploadFile } from "@/lib/upload-client";
 import { tempoRelativo } from "@/lib/tempo";
-import { estadoManutencao } from "@/lib/qr";
+import { ESTADOS_MANUTENCAO, estadoManutencao } from "@/lib/qr";
 import { postWallMessage, requestWallUpload } from "@/app/[empresa]/[codigo]/wall-actions";
 
 export type WallMessage = {
@@ -20,6 +20,49 @@ export type WallMessage = {
   estado?: string | null;
   createdAt: string; // ISO — formatted in the visitor's locale
 };
+
+// Muda o estado de uma ocorrência na própria página (modo de edição com o
+// código). Devolve se ficou gravado.
+export type MudarEstado = (messageId: string, estado: string) => Promise<boolean>;
+
+// Os quatro estados como botões, para quem desbloqueou a edição da página.
+// O ecrã muda logo; se o servidor recusar, volta ao que estava.
+export function EstadoChips({
+  messageId,
+  atual,
+  onMudar,
+}: {
+  messageId: string;
+  atual: string | null | undefined;
+  onMudar: MudarEstado;
+}) {
+  const t = useTranslations("Wall");
+  const [valor, setValor] = useState(estadoManutencao(atual).valor);
+  useEffect(() => setValor(estadoManutencao(atual).valor), [atual]);
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {ESTADOS_MANUTENCAO.map((e) => {
+        const ativo = e.valor === valor;
+        return (
+          <button
+            key={e.valor}
+            type="button"
+            onClick={async () => {
+              if (ativo) return;
+              const antes = valor;
+              setValor(e.valor);
+              if (!(await onMudar(messageId, e.valor))) setValor(antes);
+            }}
+            className="rounded-full border bg-white/80 px-2.5 py-1 text-xs font-medium"
+            style={ativo ? { backgroundColor: e.cor, color: e.texto, borderColor: e.texto } : { color: "#52525b" }}
+          >
+            {t(`status_${e.valor}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // Várias imagens ajudam a mostrar uma avaria de mais de um ângulo; mais do que
 // isto já é um álbum, e cada uma é um envio à parte.
@@ -35,6 +78,7 @@ export function MessageWall({
   codigo,
   color,
   manutencao = false,
+  onMudarEstado,
 }: {
   blockId: string;
   titulo: string;
@@ -45,7 +89,21 @@ export function MessageWall({
   // No mural de manutenção cada participação tem estado, e é ele que lhe dá
   // a cor de fundo.
   manutencao?: boolean;
+  // Presente quando quem vê desbloqueou a edição da página com o código.
+  onMudarEstado?: MudarEstado;
 }) {
+  // A cor de cada ocorrência acompanha o estado escolhido aqui, sem esperar
+  // pelo recarregar da página.
+  const [estados, setEstados] = useState<Record<string, string>>({});
+  const mudar: MudarEstado | undefined = onMudarEstado
+    ? async (id, estado) => {
+        const antes = estados[id];
+        setEstados((s) => ({ ...s, [id]: estado }));
+        const ok = await onMudarEstado(id, estado);
+        if (!ok) setEstados((s) => ({ ...s, [id]: antes }));
+        return ok;
+      }
+    : undefined;
   const router = useRouter();
   const t = useTranslations("Wall");
   const locale = useLocale();
@@ -250,7 +308,7 @@ export function MessageWall({
               className="rounded-lg px-3 py-2"
               style={
                 manutencao
-                  ? { backgroundColor: estadoManutencao(m.estado).cor }
+                  ? { backgroundColor: estadoManutencao(estados[m.id] ?? m.estado).cor }
                   : { backgroundColor: "#fafafa" }
               }
             >
@@ -263,10 +321,10 @@ export function MessageWall({
                     className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
                     style={{
                       backgroundColor: "#ffffffcc",
-                      color: estadoManutencao(m.estado).texto,
+                      color: estadoManutencao(estados[m.id] ?? m.estado).texto,
                     }}
                   >
-                    {t(`status_${estadoManutencao(m.estado).valor}`)}
+                    {t(`status_${estadoManutencao(estados[m.id] ?? m.estado).valor}`)}
                   </span>
                 ) : null}
                 <span className="shrink-0 text-xs text-zinc-500">
@@ -296,6 +354,9 @@ export function MessageWall({
                     </a>
                   ))}
                 </div>
+              ) : null}
+              {manutencao && mudar ? (
+                <EstadoChips messageId={m.id} atual={estados[m.id] ?? m.estado} onMudar={mudar} />
               ) : null}
             </div>
           ))

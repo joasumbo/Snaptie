@@ -143,6 +143,21 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   const [single, setSingle] = useState<Pending | null>(null);
   const [novas, setNovas] = useState<Pending[]>([]);
 
+  // Vídeo: a imagem que aparece antes de carregar no play. Sem ela, mostra-se
+  // o primeiro fotograma do próprio vídeo.
+  const [capa, setCapa] = useState(str(c, "capa"));
+  const [capaNova, setCapaNova] = useState<Pending | null>(null);
+  const capaInput = useRef<HTMLInputElement>(null);
+  // Carrossel de imagens: passar sozinho, de quantos em quantos segundos.
+  const [automatico, setAutomatico] = useState(c.automatico === true);
+  const [intervalo, setIntervalo] = useState(String([3, 4, 6, 8].includes(Number(c.intervalo)) ? c.intervalo : 4));
+  // Carrossel de vídeos: os já guardados e os escolhidos agora.
+  const [videos, setVideos] = useState<string[]>(
+    Array.isArray(c.videos) ? (c.videos as unknown[]).filter((v): v is string => typeof v === "string") : [],
+  );
+  const [videosNovos, setVideosNovos] = useState<Pending[]>([]);
+  const videosInput = useRef<HTMLInputElement>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -231,13 +246,29 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         case "pdf": {
           // Upload the picked file now (only on confirm); keep the existing one otherwise.
           const finalUrl = single ? await uploadFile(single.file, singleKind!) : url;
-          conteudo = { url: finalUrl };
+          if (field === "video") {
+            const finalCapa = capaNova ? await uploadFile(capaNova.file, "image") : capa;
+            conteudo = { url: finalUrl, capa: finalCapa };
+          } else {
+            conteudo = { url: finalUrl };
+          }
           break;
         }
         case "carrossel": {
           const uploaded: string[] = [];
           for (const p of novas) uploaded.push(await uploadFile(p.file, "image"));
-          conteudo = { imagens: [...imagens, ...uploaded], orientacao };
+          conteudo = {
+            imagens: [...imagens, ...uploaded],
+            orientacao,
+            automatico,
+            intervalo: Number(intervalo),
+          };
+          break;
+        }
+        case "videos": {
+          const enviados: string[] = [];
+          for (const p of videosNovos) enviados.push(await uploadFile(p.file, "video"));
+          conteudo = { videos: [...videos, ...enviados] };
           break;
         }
         case "botaoImagem": {
@@ -580,6 +611,119 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                   }}
                 />
               </Field>
+            ) : null}
+
+            {field === "video" ? (
+              <Field label="Imagem de capa (opcional)">
+                {capaNova || capa ? (
+                  <div className="flex items-center gap-3 rounded-lg border p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={capaNova?.preview ?? capa} alt="" className="h-14 w-24 rounded-md object-cover" />
+                    <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                      Aparece antes de carregar no play.
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => {
+                        if (capaNova) URL.revokeObjectURL(capaNova.preview);
+                        setCapaNova(null);
+                        setCapa("");
+                      }}
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button type="button" variant="outline" onClick={() => capaInput.current?.click()}>
+                      <Upload />
+                      Escolher imagem
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Sem imagem de capa, a página mostra o primeiro fotograma do vídeo.
+                    </p>
+                  </>
+                )}
+                <input
+                  ref={capaInput}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) setCapaNova({ file: f, preview: URL.createObjectURL(f) });
+                  }}
+                />
+              </Field>
+            ) : null}
+
+            {field === "videos" ? (
+              <Field label="Vídeos">
+                <div className="space-y-2">
+                  {videos.length > 0 || videosNovos.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {videos.map((v, i) => (
+                        <li key={`v${i}`} className="flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm">
+                          <Film className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1 truncate">Vídeo {i + 1}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setVideos((arr) => arr.filter((_, j) => j !== i))}
+                          >
+                            <X />
+                          </Button>
+                        </li>
+                      ))}
+                      {videosNovos.map((p, i) => (
+                        <li key={`n${i}`} className="flex items-center gap-2 rounded-lg border border-primary/40 px-2 py-1.5 text-sm">
+                          <Film className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1 truncate">{p.file.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setVideosNovos((arr) => arr.filter((_, j) => j !== i))}
+                          >
+                            <X />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <Button type="button" variant="outline" onClick={() => videosInput.current?.click()}>
+                    <Upload />
+                    Adicionar vídeos
+                  </Button>
+                  <input
+                    ref={videosInput}
+                    type="file"
+                    accept="video/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const fs = Array.from(e.target.files ?? []);
+                      e.target.value = "";
+                      setVideosNovos((arr) => [...arr, ...fs.map((file) => ({ file, preview: "" }))]);
+                    }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Na página aparecem lado a lado; ao tocar num, abre em ecrã inteiro e passa-se para o
+                    seguinte deslizando.
+                  </p>
+                </div>
+              </Field>
+            ) : null}
+
+            {field === "descarregarQr" ? (
+              <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                Mostra o QR code desta página com botões para o descarregar em PNG ou SVG, para quem o
+                quiser imprimir ou partilhar.
+              </p>
             ) : null}
 
             {field === "botaoImagem" ? (
@@ -941,6 +1085,32 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                       e.target.value = "";
                     }}
                   />
+                  <label className="flex items-center gap-2 pt-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={automatico}
+                      onChange={(e) => setAutomatico(e.target.checked)}
+                      className="size-4"
+                    />
+                    Passar sozinho
+                  </label>
+                  {automatico ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      A cada
+                      <select
+                        value={intervalo}
+                        onChange={(e) => setIntervalo(e.target.value)}
+                        className="h-8 rounded-lg border bg-transparent px-2 text-sm text-foreground"
+                      >
+                        {[3, 4, 6, 8].map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                      segundos. Pára enquanto o visitante desliza.
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <span className="text-sm text-muted-foreground">
                       Formato das imagens:

@@ -3,7 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
-import { isContentBlock } from "@/lib/qr";
+import { isContentBlock, ESTADOS_MANUTENCAO } from "@/lib/qr";
 import {
   visitorIp,
   checkPinRate,
@@ -222,4 +222,48 @@ export async function requestPublicUpload(input: {
     contentType: input.contentType,
   });
   return { ok: true, uploadUrl, publicUrl: publicUrlFor(prepared.key) };
+}
+
+// Mudar o estado de uma ocorrência na própria página, sem ir ao painel. Pede o
+// mesmo código de edição e a permissão de conteúdo. Pode mudar:
+//   - as ocorrências dos murais de manutenção desta página;
+//   - se a página tem a "Lista de ocorrências", as de todas as lojas da empresa
+//     dona da página — é para isso que a lista existe.
+// Nunca as de outra empresa.
+export async function mudarEstadoOcorrencia(input: {
+  codigo: string;
+  pin: string;
+  messageId: string;
+  estado: string;
+}): Promise<EditResult> {
+  const auth = await authorize(input.codigo, input.pin);
+  if (!auth.ok) return auth;
+  const qr = auth.qr;
+  if (!qr.edicaoPublica) return { ok: false, message: "Sem permissão." };
+  if (!ESTADOS_MANUTENCAO.some((e) => e.valor === input.estado)) {
+    return { ok: false, message: "Estado inválido." };
+  }
+
+  const mensagem = await prisma.qrMessage.findUnique({
+    where: { id: input.messageId },
+    select: { id: true, block: { select: { tipo: true, qrId: true, qr: { select: { companyId: true } } } } },
+  });
+  if (!mensagem || mensagem.block.tipo !== "MANUTENCAO") {
+    return { ok: false, message: "Ocorrência não encontrada." };
+  }
+
+  const daPagina = mensagem.block.qrId === qr.id;
+  const temLista =
+    !daPagina &&
+    mensagem.block.qr.companyId === qr.companyId &&
+    (await prisma.qrBlock.count({ where: { qrId: qr.id, tipo: "OCORRENCIAS", ativo: true } })) > 0;
+  if (!daPagina && !temLista) return { ok: false, message: "Sem permissão." };
+
+  try {
+    await prisma.qrMessage.update({ where: { id: mensagem.id }, data: { estado: input.estado } });
+  } catch (e) {
+    console.error("[public-edit:mudarEstadoOcorrencia]", e);
+    return { ok: false, message: "Não foi possível guardar." };
+  }
+  return { ok: true };
 }

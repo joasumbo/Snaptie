@@ -38,6 +38,8 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   OPINIAO: "Opinião privada",
   LEMBRETE: "Lembrete",
   OCORRENCIAS: "Lista de ocorrências",
+  CARROSSEL_VIDEOS: "Carrossel de vídeos",
+  DESCARREGAR_QR: "Descarregar o QR",
   CHAT: "Registo / Histórico",
   FEED: "Mural de mensagens",
   FORMULARIO: "Formulário",
@@ -72,6 +74,8 @@ export const CONTENT_TYPES: BlockType[] = [
   "OPINIAO",
   "LEMBRETE",
   "OCORRENCIAS",
+  "CARROSSEL_VIDEOS",
+  "DESCARREGAR_QR",
 ];
 
 // Os dois botões lado a lado são sempre dois e ocupam metade da largura cada —
@@ -166,7 +170,9 @@ export type FieldKind =
   | "googleReview"
   | "opiniao"
   | "lembrete"
-  | "ocorrencias";
+  | "ocorrencias"
+  | "videos"
+  | "descarregarQr";
 
 export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   LINK: "url",
@@ -189,6 +195,8 @@ export const TYPE_FIELD: Record<BlockType, FieldKind> = {
   OPINIAO: "opiniao",
   LEMBRETE: "lembrete",
   OCORRENCIAS: "ocorrencias",
+  CARROSSEL_VIDEOS: "videos",
+  DESCARREGAR_QR: "descarregarQr",
   // The wall has no content to fill in: the visitors write it.
   FEED: "mural",
   // Botões que marcam acontecimentos com a hora, mais o histórico do que já
@@ -245,7 +253,9 @@ export function temTitulo(tipo: BlockType): boolean {
     tipo === "AVALIACAO_GOOGLE" ||
     tipo === "OPINIAO" ||
     tipo === "LEMBRETE" ||
-    tipo === "OCORRENCIAS"
+    tipo === "OCORRENCIAS" ||
+    tipo === "CARROSSEL_VIDEOS" ||
+    tipo === "DESCARREGAR_QR"
   );
 }
 

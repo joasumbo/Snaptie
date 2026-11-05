@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { registarEvento } from "@/app/[empresa]/[codigo]/wall-actions";
 import { type WallMessage } from "./message-wall";
@@ -30,6 +31,7 @@ export function EventLog({
   codigo?: string;
   color: string;
 }) {
+  const t = useTranslations("Elementos");
   const router = useRouter();
   const [aEnviar, setAEnviar] = useState<string | null>(null);
 
@@ -40,10 +42,10 @@ export function EventLog({
     try {
       const r = await registarEvento({ codigo, blockId, acao });
       if (r.ok) {
-        toast.success(`${acao} — registado`);
+        toast.success(t("registado", { acao }));
         router.refresh();
       } else {
-        toast.error("Não foi possível registar.");
+        toast.error(t("registoFalhou"));
       }
     } finally {
       setAEnviar(null);
@@ -80,9 +82,9 @@ export function EventLog({
       </div>
 
       <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
-        <p className="text-sm font-semibold text-zinc-900">Histórico</p>
+        <p className="text-sm font-semibold text-zinc-900">{t("historico")}</p>
         {mensagens.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-400">Ainda sem registos.</p>
+          <p className="mt-2 text-sm text-zinc-400">{t("semRegistos")}</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-3">
             {/* Do mais antigo para o mais recente: um percurso lê-se por ordem. */}

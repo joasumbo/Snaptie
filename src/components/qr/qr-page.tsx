@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import {
   Globe,
   Phone,
@@ -11,8 +11,6 @@ import {
   FileText,
   MessageCircle,
   Type,
-  ChevronLeft,
-  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import type { BlockType } from "@prisma/client";
@@ -26,9 +24,10 @@ import {
   parBotoes,
 } from "@/lib/qr";
 import { WifiCard } from "./wifi-card";
-import { MessageWall, type WallMessage } from "./message-wall";
+import { MessageWall, type MudarEstado, type WallMessage } from "./message-wall";
 import { EventLog } from "./event-log";
 import { GoogleReview, LembreteCard, OcorrenciasLista, OpiniaoForm } from "./extra-elements";
+import { CarrosselImagens, CarrosselVideos, DescarregarQr, videoComFotograma } from "./carrossel";
 
 const ICONS: Record<string, LucideIcon> = {
   Globe,
@@ -153,12 +152,13 @@ function ContentElement({
   block,
   codigo,
   primary,
+  onMudarEstado,
 }: {
   block: QrPageBlock;
   codigo?: string;
   primary: string;
+  onMudarEstado?: MudarEstado;
 }) {
-  const t = useTranslations("PublicPage");
   if (block.tipo === "CHAT") {
     // Registo: o visitante não escreve, escolhe uma das ações configuradas e
     // fica a marca com a hora.
@@ -201,6 +201,7 @@ function ContentElement({
         codigo={codigo}
         ocorrencias={block.ocorrencias}
         color={block.cor || primary}
+        onMudarEstado={onMudarEstado}
       />
     );
   }
@@ -213,6 +214,7 @@ function ContentElement({
         // O mural de manutenção é o mesmo mural, com estado em cada
         // participação e um aviso por email do lado do servidor.
         manutencao={block.tipo === "MANUTENCAO"}
+        onMudarEstado={onMudarEstado}
         blockId={block.id}
         titulo={block.titulo}
         descricao={block.descricao}
@@ -346,7 +348,27 @@ function ContentElement({
   if (block.tipo === "VIDEO") {
     const url = str(block.conteudo, "url");
     if (!url) return null;
-    return <video src={url} controls className="w-full rounded-xl" />;
+    // Antes do play mostra a capa escolhida, ou o primeiro fotograma do vídeo:
+    // sem isto, a caixa ficava branca até se carregar.
+    const capa = str(block.conteudo, "capa");
+    return (
+      <video
+        src={videoComFotograma(url)}
+        poster={capa || undefined}
+        preload="metadata"
+        playsInline
+        controls
+        className="w-full rounded-xl bg-zinc-900"
+      />
+    );
+  }
+  if (block.tipo === "CARROSSEL_VIDEOS") {
+    const videos = list(block.conteudo, "videos");
+    if (videos.length === 0) return null;
+    return <CarrosselVideos videos={videos} titulo={block.titulo} />;
+  }
+  if (block.tipo === "DESCARREGAR_QR") {
+    return <DescarregarQr titulo={block.titulo} codigo={codigo} />;
   }
   if (block.tipo === "CARROSSEL") {
     const imgs = list(block.conteudo, "imagens");
@@ -355,29 +377,14 @@ function ContentElement({
     // (landscape rectangle vs portrait rectangle).
     const landscape = str(block.conteudo, "orientacao") === "horizontal";
     const aspect = landscape ? "aspect-[4/3]" : "aspect-[3/4]";
-    const many = imgs.length > 1;
     return (
-      <div>
-        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1">
-          {imgs.map((src, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={i}
-              src={src}
-              alt={`${block.titulo} ${i + 1}`}
-              // Full width keeps the page clean; the hint below signals the swipe.
-              className={`${aspect} w-full shrink-0 snap-center rounded-xl object-cover`}
-            />
-          ))}
-        </div>
-        {many ? (
-          <div className="mt-1.5 flex items-center justify-center gap-1 text-xs text-zinc-400">
-            <ChevronLeft className="size-3.5" />
-            <span>{t("swipeMore")}</span>
-            <ChevronRight className="size-3.5" />
-          </div>
-        ) : null}
-      </div>
+      <CarrosselImagens
+        imagens={imgs}
+        titulo={block.titulo}
+        aspect={aspect}
+        automatico={block.conteudo.automatico === true}
+        intervalo={Number(block.conteudo.intervalo) || 4}
+      />
     );
   }
   return null;
@@ -387,13 +394,17 @@ export function QrPage({
   data,
   footer,
   codigo,
+  onMudarEstado,
 }: {
   data: QrPageData;
   footer?: React.ReactNode;
+  // Só com a edição da página desbloqueada: muda o estado das ocorrências.
+  onMudarEstado?: MudarEstado;
   // Present on the real page, absent in the dashboard preview — which is what
   // makes the message wall read-only there.
   codigo?: string;
 }) {
+  const t = useTranslations("Elementos");
   const primary = data.corPrimaria || "#6366f1";
   const logo = data.logo;
   const logoSize = LOGO_SIZE[data.logoTamanho] ?? 64;
@@ -466,14 +477,14 @@ export function QrPage({
 
         <div className="mt-6 flex w-full flex-col gap-3">
           {data.blocks.length === 0 ? (
-            <p className="text-sm text-zinc-400">Sem conteúdos.</p>
+            <p className="text-sm text-zinc-400">{t("semConteudos")}</p>
           ) : (
             data.blocks.map((block) => (
               // "contents" não mexe no layout; só marca de que elemento vem
               // um clique, para as estatísticas.
               <div key={block.id} data-bloco={block.id} className="contents">
                 {isContentBlock(block.tipo) ? (
-                  <ContentElement block={block} codigo={codigo} primary={primary} />
+                  <ContentElement block={block} codigo={codigo} primary={primary} onMudarEstado={onMudarEstado} />
                 ) : (
                   <ActionButton block={block} primary={primary} />
                 )}

@@ -74,6 +74,8 @@ enum BlockType {
   OPINIAO // formulário privado: vai por email ao dono, não aparece na página
   LEMBRETE // email ao dono numa data, num dia do mês ou num dia da semana
   OCORRENCIAS // lista das ocorrências de todas as lojas da empresa, com Excel
+  CARROSSEL_VIDEOS // vídeos lado a lado que abrem em ecrã inteiro
+  DESCARREGAR_QR // o QR da página, com botões para o descarregar
   // Tipos futuros
   CHAT
   FEED
