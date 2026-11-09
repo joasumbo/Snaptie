@@ -104,7 +104,9 @@
     "tooMany": "Too many attempts. Try again in {minutos} min.",
     "editMode": "Edit mode: tap an issue's status to change it.",
     "editExit": "Exit",
-    "editStatesHint": "You can also change the status of issues right on the page: close this window and tap each one's status."
+    "editStatesHint": "You can also change the status of issues right on the page: close this window and tap each one's status.",
+    "unavailableTitle": "Page temporarily unavailable",
+    "unavailableText": "This page is currently suspended. Please try again later."
   },
   "Wifi": {
     "pointCamera": "Point your phone's camera to connect",
@@ -230,6 +232,16 @@
     "paidText": "Thank you! You're all set.",
     "pending": "Your payment is being confirmed. You can close this page; it will be recorded once accepted.",
     "expired": "This payment is no longer available.",
-    "back": "Back"
+    "back": "Back",
+    "email": "Email",
+    "emailHint": "Where we send your receipt",
+    "name": "Name or company",
+    "nif": "Tax number",
+    "address": "Address",
+    "optional": "optional",
+    "emailInvalid": "Enter a valid email to receive the receipt.",
+    "receipt": "Download receipt",
+    "sentTo": "We sent the receipt to {email}.",
+    "billingData": "Receipt details"
   }
 }

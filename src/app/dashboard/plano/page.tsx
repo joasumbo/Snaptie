@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { PLANOS } from "@/lib/planos";
 import MeuPlano from "@/components/pagamentos/meu-plano";
-import { cartaoAtual, faturasDaEmpresa } from "@/lib/stripe-pagamentos";
+import { cartaoAtual } from "@/lib/stripe-pagamentos";
 import { getLocale } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -21,15 +21,20 @@ export default async function PlanoPage() {
         subscricaoEstado: true,
         subscricaoFim: true,
         subscricaoCancela: true,
+        suspensaPagamento: true,
+        emFaltaDesde: true,
+        nome: true,
+        nif: true,
+        morada: true,
         pacote: { select: { id: true, nome: true, limiteQrs: true } },
       },
     }),
     prisma.pacote.findMany({
-      where: { ativo: true, stripePriceId: { not: null } },
+      where: { ativo: true, stripePriceId: { not: null }, OR: [{ companyId: null }, { companyId: user.companyId }] },
       orderBy: [{ ordem: "asc" }, { precoCentimos: "asc" }],
     }),
     prisma.pagamento.findMany({
-      where: { companyId: user.companyId, tipo: { in: ["pacote", "renovacao"] }, estado: "pago" },
+      where: { companyId: user.companyId, tipo: { in: ["pacote", "renovacao"] }, estado: { in: ["pago", "falhou"] } },
       orderBy: { createdAt: "desc" },
       take: 24,
     }),
@@ -37,8 +42,7 @@ export default async function PlanoPage() {
   ]);
 
   const limite = company.pacote?.limiteQrs ?? PLANOS[company.plano].limiteQrs;
-  const [faturas, cartao, locale] = await Promise.all([
-    faturasDaEmpresa(user.companyId).catch(() => []),
+  const [cartao, locale] = await Promise.all([
     cartaoAtual(user.companyId).catch(() => null),
     getLocale(),
   ]);
@@ -54,7 +58,9 @@ export default async function PlanoPage() {
         fim={company.subscricaoFim?.toISOString() ?? null}
         cancela={company.subscricaoCancela}
         cartao={cartao}
-        faturas={faturas}
+        suspensa={company.suspensaPagamento}
+        emFalta={Boolean(company.emFaltaDesde)}
+        faturacao={{ nome: company.nome, nif: company.nif ?? "", morada: company.morada ?? "" }}
         chavePublica={process.env.STRIPE_PUBLISHABLE_KEY ?? ""}
         locale={locale}
         qrs={qrs}
@@ -73,7 +79,9 @@ export default async function PlanoPage() {
           descricao: p.descricao ?? "",
           valorCentimos: p.valorCentimos,
           moeda: p.moeda,
-          data: p.createdAt.toISOString(),
+          data: (p.pagoEm ?? p.createdAt).toISOString(),
+          estado: p.estado,
+          numero: p.numero,
         }))}
       />
     </div>

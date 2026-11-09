@@ -132,13 +132,20 @@ model Company {
   subscricaoEstado  String?   @map("subscricao_estado") // ativa, em_falta, cancelada, unico
   subscricaoFim     DateTime? @map("subscricao_fim")
   subscricaoCancela Boolean   @default(false) @map("subscricao_cancela") // cancela no fim do período
+  emFaltaDesde      DateTime? @map("em_falta_desde") // primeira renovação falhada por pagar
+  suspensaPagamento Boolean   @default(false) @map("suspensa_pagamento") // páginas fechadas por falta de pagamento
+  avisoRenovacao    DateTime? @map("aviso_renovacao") // período a que se refere o último aviso de renovação
+  // Dados para os comprovativos de pagamento
+  nif               String?
+  morada            String?
 
-  pacote        Pacote?        @relation(fields: [pacoteId], references: [id], onDelete: SetNull)
-  pagamentos    Pagamento[]
-  users         User[]
-  qrCodes       QrCode[]
-  files         File[]
-  subscriptions Subscription[]
+  pacote          Pacote?        @relation("PacoteDaEmpresa", fields: [pacoteId], references: [id], onDelete: SetNull)
+  pacotesPrivados Pacote[]       @relation("PacotePrivado")
+  pagamentos      Pagamento[]
+  users           User[]
+  qrCodes         QrCode[]
+  files           File[]
+  subscriptions   Subscription[]
 
   @@map("companies")
 }
@@ -351,10 +358,13 @@ model Pacote {
   ordem           Int      @default(0)
   stripeProductId String?  @map("stripe_product_id")
   stripePriceId   String?  @map("stripe_price_id")
+  // Pacote feito à medida de uma empresa (o Business): só ela o vê.
+  companyId       String?  @map("company_id")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  empresas   Company[]
+  empresa    Company?    @relation("PacotePrivado", fields: [companyId], references: [id], onDelete: Cascade)
+  empresas   Company[]   @relation("PacoteDaEmpresa")
   pagamentos Pagamento[]
 
   @@map("pacotes")
@@ -363,22 +373,29 @@ model Pacote {
 // Cada pagamento iniciado: de um pacote (empresa) ou do elemento Pagamento de
 // uma página (visitante). Nasce pendente e o webhook diz se foi pago.
 model Pagamento {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   tipo            String // pacote, botao
-  estado          String   @default("pendente") // pendente, pago, falhou, expirado
-  valorCentimos   Int      @map("valor_centimos")
-  moeda           String   @default("eur")
+  estado          String    @default("pendente") // pendente, pago, falhou, expirado
+  valorCentimos   Int       @map("valor_centimos")
+  moeda           String    @default("eur")
   descricao       String?
   email           String?
-  companyId       String?  @map("company_id")
-  pacoteId        String?  @map("pacote_id")
-  qrId            String?  @map("qr_id")
-  blockId         String?  @map("block_id")
+  companyId       String?   @map("company_id")
+  pacoteId        String?   @map("pacote_id")
+  qrId            String?   @map("qr_id")
+  blockId         String?   @map("block_id")
   // Referência no Stripe: pi_ (PaymentIntent), in_ (fatura) ou cs_ (antigo checkout)
-  stripeSessionId String?  @unique @map("stripe_session_id")
+  stripeSessionId String?   @unique @map("stripe_session_id")
   retorno         String? // para onde volta quem pagou (página do QR, o meu plano)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  numero          String?   @unique // número do comprovativo (SNP-2026-000001)
+  nomeCliente     String?   @map("nome_cliente")
+  nifCliente      String?   @map("nif_cliente")
+  moradaCliente   String?   @map("morada_cliente")
+  pagoEm          DateTime? @map("pago_em")
+  emailEnviadoEm  DateTime? @map("email_enviado_em") // comprovativo enviado
+  avisoFalhaEm    DateTime? @map("aviso_falha_em") // último aviso de pagamento falhado
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   pacote  Pacote?  @relation(fields: [pacoteId], references: [id], onDelete: SetNull)

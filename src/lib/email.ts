@@ -23,6 +23,11 @@ const resend = {
 const endereco = process.env.EMAIL_FROM ?? "noreply@example.com";
 const from = endereco.includes("<") ? endereco : `Snaptie <${endereco}>`;
 
+// Para os emails montados noutros ficheiros (pagamentos e cobranças).
+export function enviarEmail(opts: Omit<Parameters<Resend["emails"]["send"]>[0], "from">) {
+  return resend.emails.send({ from, ...opts } as Parameters<Resend["emails"]["send"]>[0]);
+}
+
 export async function sendPasswordResetEmail(to: string, link: string) {
   await resend.emails.send({
     from,

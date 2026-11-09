@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, CreditCard, Download, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, CreditCard, Download, Loader2 } from "lucide-react";
 import type { Plano } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { PLANOS, NOMES_FUNCIONALIDADES } from "@/lib/planos";
 import { NOMES_ESTADO_SUBSCRICAO, NOMES_INTERVALO, euros, type Intervalo } from "@/lib/pagamentos";
 import { FormularioCartao } from "@/components/pagamentos/formulario-cartao";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   guardarCartao,
+  guardarDadosEmpresa,
   mudarCancelamento,
   pedirTrocaCartao,
   subscreverPacote,
@@ -29,7 +32,6 @@ type PacoteVenda = {
   limiteQrs: number | null;
 };
 
-type Fatura = { id: string; numero: string; data: string; valorCentimos: number; moeda: string };
 
 function data(iso: string) {
   return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
@@ -43,13 +45,23 @@ export default function MeuPlano(props: {
   fim: string | null;
   cancela: boolean;
   cartao: string | null;
-  faturas: Fatura[];
+  suspensa: boolean;
+  emFalta: boolean;
+  faturacao: { nome: string; nif: string; morada: string };
   chavePublica: string;
   locale: string;
   qrs: number;
   limite: number | null;
   pacotes: PacoteVenda[];
-  pagamentos: { id: string; descricao: string; valorCentimos: number; moeda: string; data: string }[];
+  pagamentos: {
+    id: string;
+    descricao: string;
+    valorCentimos: number;
+    moeda: string;
+    data: string;
+    estado: string;
+    numero: string | null;
+  }[];
 }) {
   const router = useRouter();
   const [aAbrir, setAAbrir] = useState<string | null>(null);
@@ -87,9 +99,25 @@ export default function MeuPlano(props: {
 
   const subscrito = props.estado === "ativa" || props.estado === "em_falta";
   const def = PLANOS[props.plano];
+  const porPagar = props.pagamentos.find((p) => p.estado === "falhou");
 
   return (
     <div className="space-y-6">
+      {props.suspensa || props.emFalta ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
+          <AlertTriangle className="size-5 text-destructive" />
+          <span className="flex-1 text-destructive">
+            {props.suspensa
+              ? "O serviço está suspenso por falta de pagamento: as páginas e os QR codes da empresa não abrem. Assim que pagar, volta tudo ao normal."
+              : "Há um pagamento em falta. Regularize para o serviço não ser suspenso."}
+          </span>
+          {porPagar ? (
+            <Button size="sm" className="bg-destructive text-white hover:bg-destructive/90" onClick={() => router.push(`/pagar/${porPagar.id}`)}>
+              Pagar agora
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2">
@@ -189,39 +217,45 @@ export default function MeuPlano(props: {
         <p className="text-sm text-muted-foreground">De momento não há pacotes à venda. Fale connosco.</p>
       )}
 
-      {props.faturas.length || props.pagamentos.length ? (
+      {props.pagamentos.length ? (
         <Card>
           <CardHeader>
-            <CardTitle>Pagamentos e faturas</CardTitle>
+            <CardTitle>Pagamentos e comprovativos</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="divide-y text-sm">
-              {props.faturas.length
-                ? props.faturas.map((f) => (
-                    <li key={f.id} className="flex items-center justify-between gap-3 py-2">
-                      <span>
-                        {data(f.data)} · Fatura {f.numero}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <span className="font-medium">{euros(f.valorCentimos, f.moeda)}</span>
-                        <Button size="icon-sm" variant="ghost" aria-label="Descarregar fatura" nativeButton={false} render={<a href={`/api/faturas/${f.id}`} />}>
-                          <Download />
-                        </Button>
-                      </span>
-                    </li>
-                  ))
-                : props.pagamentos.map((p) => (
-                    <li key={p.id} className="flex justify-between gap-3 py-2">
-                      <span>
-                        {data(p.data)} · {p.descricao}
-                      </span>
-                      <span className="font-medium">{euros(p.valorCentimos, p.moeda)}</span>
-                    </li>
-                  ))}
+              {props.pagamentos.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+                  <span>
+                    {data(p.data)} · {p.descricao}
+                    {p.numero ? <span className="text-muted-foreground"> · {p.numero}</span> : null}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium">{euros(p.valorCentimos, p.moeda)}</span>
+                    {p.estado === "pago" ? (
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label="Descarregar comprovativo"
+                        nativeButton={false}
+                        render={<a href={`/pagar/${p.id}/comprovativo`} target="_blank" rel="noreferrer" />}
+                      >
+                        <Download />
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => router.push(`/pagar/${p.id}`)}>
+                        Pagar
+                      </Button>
+                    )}
+                  </span>
+                </li>
+              ))}
             </ul>
           </CardContent>
         </Card>
       ) : null}
+
+      <DadosFaturacao inicial={props.faturacao} />
 
       {segredoCartao ? (
         <Dialog open onOpenChange={(abrir) => !abrir && setSegredoCartao(null)}>
@@ -256,5 +290,43 @@ export default function MeuPlano(props: {
         </Dialog>
       ) : null}
     </div>
+  );
+}
+
+function DadosFaturacao({ inicial }: { inicial: { nome: string; nif: string; morada: string } }) {
+  const router = useRouter();
+  const [nif, setNif] = useState(inicial.nif);
+  const [morada, setMorada] = useState(inicial.morada);
+  const [aGravar, setAGravar] = useState(false);
+  async function gravar() {
+    setAGravar(true);
+    const r = await guardarDadosEmpresa({ nif, morada });
+    setAGravar(false);
+    if (!r.ok) toast.error(r.message);
+    else {
+      toast.success("Dados guardados.");
+      router.refresh();
+    }
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Dados para os comprovativos</CardTitle>
+        <CardDescription>Aparecem nos comprovativos dos pagamentos de {inicial.nome}.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
+        <div className="space-y-1.5">
+          <Label>NIF</Label>
+          <Input value={nif} onChange={(e) => setNif(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Morada</Label>
+          <Input value={morada} onChange={(e) => setMorada(e.target.value)} />
+        </div>
+        <Button variant="outline" onClick={gravar} disabled={aGravar}>
+          {aGravar ? <Loader2 className="animate-spin" /> : null} Guardar
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

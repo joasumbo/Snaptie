@@ -104,7 +104,9 @@
     "tooMany": "Demasiadas tentativas. Tente novamente dentro de {minutos} min.",
     "editMode": "Modo de edição: toque no estado de cada ocorrência para o mudar.",
     "editExit": "Sair",
-    "editStatesHint": "Também pode mudar o estado das ocorrências diretamente na página: feche esta janela e toque no estado de cada uma."
+    "editStatesHint": "Também pode mudar o estado das ocorrências diretamente na página: feche esta janela e toque no estado de cada uma.",
+    "unavailableTitle": "Página temporariamente indisponível",
+    "unavailableText": "Esta página está suspensa de momento. Tente novamente mais tarde."
   },
   "Wifi": {
     "pointCamera": "Aponte a câmara do telemóvel para ligar",
@@ -230,6 +232,16 @@
     "paidText": "Obrigado! Já está tudo tratado.",
     "pending": "O pagamento está a ser confirmado. Pode fechar esta página; fica registado assim que for aceite.",
     "expired": "Este pagamento já não está disponível.",
-    "back": "Voltar"
+    "back": "Voltar",
+    "email": "Email",
+    "emailHint": "Para onde enviamos o comprovativo",
+    "name": "Nome ou empresa",
+    "nif": "NIF",
+    "address": "Morada",
+    "optional": "opcional",
+    "emailInvalid": "Indique um email válido para receber o comprovativo.",
+    "receipt": "Descarregar comprovativo",
+    "sentTo": "Enviámos o comprovativo para {email}.",
+    "billingData": "Dados para o comprovativo"
   }
 }

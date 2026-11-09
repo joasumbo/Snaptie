@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { APP, stripe, stripeConfigurado } from "@/lib/stripe";
-import { ativarPacote, fimDoPeriodo, marcarPago, segredoWebhook } from "@/lib/stripe-pagamentos";
+import { ativarPacote, depoisDePago, fimDoPeriodo, marcarPago, segredoWebhook } from "@/lib/stripe-pagamentos";
+import { aposFalha, renovacaoFalhou } from "@/lib/cobrancas";
 
 export const dynamic = "force-dynamic";
 
@@ -67,8 +68,10 @@ async function pagamentoDoIntent(intent: Stripe.PaymentIntent) {
 async function intentPago(intent: Stripe.PaymentIntent) {
   const p = await pagamentoDoIntent(intent);
   if (!p) return;
-  await marcarPago(p.id, intent.receipt_email);
-  if (p.tipo === "pacote") await ativarPacote(p.id, null);
+  if (await marcarPago(p.id)) {
+    if (p.tipo === "pacote") await ativarPacote(p.id, null);
+    await depoisDePago(p.id);
+  }
 }
 
 async function intentFalhou(intent: Stripe.PaymentIntent) {
@@ -76,6 +79,9 @@ async function intentFalhou(intent: Stripe.PaymentIntent) {
   if (!p) return;
   // O cliente pode tentar outra vez com outro cartão na mesma página.
   await prisma.pagamento.updateMany({ where: { id: p.id, estado: "pendente" }, data: { estado: "falhou" } });
+  await aposFalha(p.id, intent.last_payment_error?.message ?? null).catch((e) =>
+    console.error("[stripe webhook] email falha", p.id, e),
+  );
 }
 
 async function faturaPaga(fatura: Stripe.Invoice) {
@@ -85,8 +91,10 @@ async function faturaPaga(fatura: Stripe.Invoice) {
   if (fatura.billing_reason === "subscription_create") {
     const p = await prisma.pagamento.findFirst({ where: { stripeSessionId: fatura.id } });
     if (!p) return;
-    await marcarPago(p.id, fatura.customer_email);
-    await ativarPacote(p.id, idDe(fatura.parent?.subscription_details?.subscription));
+    if (await marcarPago(p.id)) {
+      await ativarPacote(p.id, idDe(fatura.parent?.subscription_details?.subscription));
+      await depoisDePago(p.id);
+    }
     return;
   }
 
@@ -96,13 +104,14 @@ async function faturaPaga(fatura: Stripe.Invoice) {
   if (!customer) return;
   const company = await prisma.company.findFirst({ where: { stripeCustomerId: customer } });
   if (!company) return;
-  await prisma.pagamento.upsert({
+  // Uma renovação que falhou antes já tem linha (com o link enviado); passa a paga.
+  const p = await prisma.pagamento.upsert({
     where: { stripeSessionId: fatura.id },
     update: {},
     create: {
       stripeSessionId: fatura.id,
       tipo: "renovacao",
-      estado: "pago",
+      estado: "pendente",
       valorCentimos: fatura.amount_paid,
       moeda: fatura.currency,
       descricao: fatura.lines.data[0]?.description ?? "Renovação",
@@ -114,6 +123,7 @@ async function faturaPaga(fatura: Stripe.Invoice) {
   if (company.subscricaoEstado === "em_falta") {
     await prisma.company.update({ where: { id: company.id }, data: { subscricaoEstado: "ativa" } });
   }
+  if (await marcarPago(p.id)) await depoisDePago(p.id);
 }
 
 async function faturaFalhou(fatura: Stripe.Invoice) {
@@ -122,10 +132,9 @@ async function faturaFalhou(fatura: Stripe.Invoice) {
   if (fatura.billing_reason === "subscription_create") return;
   const customer = idDe(fatura.customer);
   if (!customer) return;
-  await prisma.company.updateMany({
-    where: { stripeCustomerId: customer, subscricaoId: { not: null } },
-    data: { subscricaoEstado: "em_falta" },
-  });
+  const company = await prisma.company.findFirst({ where: { stripeCustomerId: customer, subscricaoId: { not: null } } });
+  if (!company) return;
+  await renovacaoFalhou(fatura, company.id);
 }
 
 function estadoDe(sub: Stripe.Subscription): string {

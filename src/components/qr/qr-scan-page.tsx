@@ -9,6 +9,7 @@ import { lerOcorrencias } from "@/lib/ocorrencias";
 import { type QrPageBlock } from "@/components/qr/qr-page";
 import PublicQrView from "@/components/qr/public-qr-view";
 import QrGate from "@/components/qr/qr-gate";
+import PaginaIndisponivel from "@/components/qr/pagina-indisponivel";
 
 // A consulta que traz tudo o que uma página pública precisa. Exportada para que
 // as rotas possam usar exatamente a mesma forma de dados.
@@ -40,6 +41,12 @@ function asRecord(value: unknown): Record<string, unknown> {
 // mostram a mesma página — /{empresa}/{codigo} e /{empresa}, esta última
 // quando a empresa tem uma página principal.
 export default async function QrScanPage({ qr }: { qr: QrComRelacoes }) {
+  // Empresa suspensa por falta de pagamento: nada da página é mostrado, nem
+  // o scan conta. Volta tudo assim que o pagamento entra.
+  if (qr.company.suspensaPagamento) {
+    return <PaginaIndisponivel />;
+  }
+
   // Um QR fechado pára aqui: o visitante vê a barreira e o scan não é
   // registado, porque a página nunca chegou a ser mostrada.
   if (qr.acessoModo === "ativacao" && !qr.ativadoEm) {

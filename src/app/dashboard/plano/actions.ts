@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { prisma } from "@/lib/prisma";
 import {
   cancelarSubscricao,
   concluirTrocaCartao,
@@ -69,6 +70,21 @@ export async function guardarCartao(setupIntentId: string): Promise<Resultado> {
   } catch (e) {
     return falhou(e);
   }
+  revalidatePath("/dashboard/plano");
+  return { ok: true };
+}
+
+// NIF e morada da empresa, para os comprovativos dos pagamentos dela.
+export async function guardarDadosEmpresa(d: { nif: string; morada: string }): Promise<Resultado> {
+  const companyId = await empresaDoGestor();
+  if (!companyId) return SEM_PERMISSAO;
+  await prisma.company.update({
+    where: { id: companyId },
+    data: {
+      nif: String(d.nif ?? "").replace(/\s+/g, "").slice(0, 20) || null,
+      morada: String(d.morada ?? "").trim().slice(0, 200) || null,
+    },
+  });
   revalidatePath("/dashboard/plano");
   return { ok: true };
 }

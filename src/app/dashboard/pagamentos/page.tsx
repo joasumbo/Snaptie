@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
-import { limitesAtivos } from "@/lib/configuracao";
+import { CHAVES, diasTolerancia, lerConfig, lerEmissor, limitesAtivos } from "@/lib/configuracao";
 import { modoStripe, stripe, stripeConfigurado } from "@/lib/stripe";
 import { estadoWebhook } from "@/lib/stripe-pagamentos";
 import PagamentosAdmin from "@/components/pagamentos/pagamentos-admin";
@@ -21,13 +21,19 @@ async function contaStripe(): Promise<{ nome: string } | { erro: string } | null
 export default async function PagamentosPage() {
   await requireRole(["ADMIN"]);
 
+  const [emissor, avisoAdmin, dias, empresas] = await Promise.all([
+    lerEmissor(),
+    lerConfig(CHAVES.avisoAdmin),
+    diasTolerancia(),
+    prisma.company.findMany({ where: { deletedAt: null }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
+  ]);
   const [conta, webhook, limites, pacotes, pagamentos, subscritas] = await Promise.all([
     contaStripe(),
     stripeConfigurado() ? estadoWebhook().catch(() => ({ ligado: false as const })) : Promise.resolve({ ligado: false as const }),
     limitesAtivos(),
     prisma.pacote.findMany({
       orderBy: [{ ordem: "asc" }, { precoCentimos: "asc" }],
-      include: { _count: { select: { empresas: true } } },
+      include: { _count: { select: { empresas: true } }, empresa: { select: { nome: true } } },
     }),
     prisma.pagamento.findMany({
       orderBy: { createdAt: "desc" },
@@ -36,7 +42,16 @@ export default async function PagamentosPage() {
     }),
     prisma.company.findMany({
       where: { deletedAt: null, subscricaoEstado: { not: null } },
-      select: { id: true, nome: true, plano: true, subscricaoEstado: true, subscricaoFim: true, pacote: { select: { nome: true } } },
+      select: {
+        id: true,
+        nome: true,
+        plano: true,
+        subscricaoEstado: true,
+        subscricaoFim: true,
+        subscricaoCancela: true,
+        suspensaPagamento: true,
+        pacote: { select: { nome: true } },
+      },
       orderBy: { nome: "asc" },
     }),
   ]);
@@ -52,6 +67,10 @@ export default async function PagamentosPage() {
         conta={conta}
         webhook={webhook}
         limites={limites}
+        emissor={emissor}
+        avisoAdmin={avisoAdmin ?? ""}
+        dias={dias}
+        empresas={empresas}
         pacotes={pacotes.map((p) => ({
           id: p.id,
           nome: p.nome,
@@ -64,6 +83,8 @@ export default async function PagamentosPage() {
           ordem: p.ordem,
           sincronizado: Boolean(p.stripePriceId),
           empresas: p._count.empresas,
+          companyId: p.companyId,
+          empresaPrivada: p.empresa?.nome ?? null,
         }))}
         pagamentos={pagamentos.map((p) => ({
           id: p.id,
@@ -75,14 +96,16 @@ export default async function PagamentosPage() {
           empresa: p.company?.nome ?? "",
           email: p.email ?? "",
           data: p.createdAt.toISOString(),
-          link: p.tipo === "link" && p.estado !== "pago" ? `/pagar/${p.id}` : null,
+          link: p.estado !== "pago" && p.estado !== "expirado" && p.tipo !== "botao" ? `/pagar/${p.id}` : null,
+          numero: p.numero,
+          emailEnviado: Boolean(p.emailEnviadoEm),
         }))}
         subscritas={subscritas.map((c) => ({
           id: c.id,
           nome: c.nome,
           plano: c.plano,
           pacote: c.pacote?.nome ?? "",
-          estado: c.subscricaoEstado ?? "",
+          estado: c.suspensaPagamento ? "suspensa" : c.subscricaoCancela && c.subscricaoEstado === "ativa" ? "a_cancelar" : (c.subscricaoEstado ?? ""),
           fim: c.subscricaoFim?.toISOString() ?? null,
         }))}
       />

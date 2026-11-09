@@ -51,6 +51,13 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
             chavePublica={process.env.STRIPE_PUBLISHABLE_KEY ?? ""}
             locale={locale}
             retorno={dados.retorno}
+            pedeDados={dados.tipo === "botao" || dados.tipo === "link"}
+            dados={{
+              email: dados.email ?? "",
+              nome: dados.nomeCliente ?? "",
+              nif: dados.nifCliente ?? "",
+              morada: dados.moradaCliente ?? "",
+            }}
             textos={{
               botao: periodo ? t("subscribe", { valor }) : t("pay", { valor }),
               aProcessar: t("processing"),
@@ -61,6 +68,16 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
               pendente: t("pending"),
               expirado: t("expired"),
               voltar: t("back"),
+              email: t("email"),
+              emailHint: t("emailHint"),
+              nome: t("name"),
+              nif: t("nif"),
+              morada: t("address"),
+              opcional: t("optional"),
+              emailInvalido: t("emailInvalid"),
+              comprovativo: t("receipt"),
+              enviadoPara: t("sentTo", { email: "{email}" }),
+              dadosTitulo: t("billingData"),
             }}
           />
         </div>

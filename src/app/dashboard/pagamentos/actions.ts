@@ -5,8 +5,9 @@ import type { Plano } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { CHAVES, gravarConfig } from "@/lib/configuracao";
+import { aposPagamento } from "@/lib/cobrancas";
 import { INTERVALOS } from "@/lib/pagamentos";
-import { arquivarProduto, criarPagamentoAvulso, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
+import { arquivarProduto, criarPagamentoAvulso, iniciarPacote, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
 import { appUrl } from "@/lib/stripe";
 
 export type Resultado = { ok: true } | { ok: false; message: string };
@@ -33,6 +34,7 @@ export type PacoteInput = {
   limiteQrs: number | null;
   ativo: boolean;
   ordem: number;
+  companyId: string | null;
 };
 
 function validar(i: PacoteInput): string | null {
@@ -61,6 +63,7 @@ export async function guardarPacote(i: PacoteInput): Promise<Resultado> {
     limiteQrs: i.limiteQrs,
     ativo: i.ativo,
     ordem: Math.trunc(i.ordem) || 0,
+    companyId: i.companyId || null,
   };
 
   const anterior = i.id ? await prisma.pacote.findUnique({ where: { id: i.id } }) : null;
@@ -130,8 +133,22 @@ export async function criarLinkPagamento(i: {
   valorEuros: number;
   descricao: string;
   email: string;
+  companyId?: string | null;
+  pacoteId?: string | null;
 }): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
   if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  // Link de um pacote para uma empresa: quando ela paga, fica com o plano
+  // (e, se for mensal ou anual, com a subscrição a renovar sozinha).
+  if (i.pacoteId) {
+    if (!i.companyId) return { ok: false, message: "Escolha a empresa que vai pagar o pacote." };
+    try {
+      const id = await iniciarPacote(i.companyId, i.pacoteId);
+      revalidatePath("/dashboard/pagamentos");
+      return { ok: true, url: `${appUrl()}/pagar/${id}` };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) };
+    }
+  }
   if (!i.descricao.trim()) return { ok: false, message: "Diga a que se refere o pagamento." };
   if (!Number.isFinite(i.valorEuros) || i.valorEuros < 0.5) return { ok: false, message: "O valor mínimo é 0,50 €." };
   if (i.valorEuros > 100000) return { ok: false, message: "Valor demasiado alto." };
@@ -143,10 +160,44 @@ export async function criarLinkPagamento(i: {
       valorCentimos: Math.round(i.valorEuros * 100),
       descricao: i.descricao.trim(),
       email: email || null,
+      companyId: i.companyId || null,
     });
     revalidatePath("/dashboard/pagamentos");
     return { ok: true, url: `${appUrl()}/pagar/${id}` };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
   }
+}
+
+export async function reenviarComprovativo(id: string): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  try {
+    await aposPagamento(id, true);
+  } catch (e) {
+    return { ok: false, message: `Não foi possível enviar: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  return { ok: true };
+}
+
+export async function guardarFaturacao(i: {
+  nome: string;
+  nif: string;
+  morada: string;
+  email: string;
+  avisoAdmin: string;
+  dias: number;
+}): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  const dias = Math.trunc(i.dias);
+  if (!Number.isInteger(dias) || dias < 1 || dias > 60) return { ok: false, message: "A tolerância tem de ser entre 1 e 60 dias." };
+  await Promise.all([
+    gravarConfig(CHAVES.emissorNome, i.nome.trim()),
+    gravarConfig(CHAVES.emissorNif, i.nif.trim()),
+    gravarConfig(CHAVES.emissorMorada, i.morada.trim()),
+    gravarConfig(CHAVES.emissorEmail, i.email.trim()),
+    gravarConfig(CHAVES.avisoAdmin, i.avisoAdmin.trim()),
+    gravarConfig(CHAVES.diasTolerancia, String(dias)),
+  ]);
+  revalidatePath("/dashboard/pagamentos");
+  return { ok: true };
 }

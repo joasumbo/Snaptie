@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Copy, Link2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, FileText, Link2, Loader2, Mail, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Plano } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,11 @@ import {
   guardarPacote,
   criarLinkPagamento,
   ligarWebhookStripe,
+  reenviarComprovativo,
   mudarLimites,
   type PacoteInput,
 } from "@/app/dashboard/pagamentos/actions";
+import Faturacao from "@/components/pagamentos/faturacao-admin";
 
 type PacoteLinha = {
   id: string;
@@ -42,7 +44,13 @@ type PacoteLinha = {
   ordem: number;
   sincronizado: boolean;
   empresas: number;
+  companyId: string | null;
+  empresaPrivada: string | null;
 };
+
+type Empresa = { id: string; nome: string };
+type Emissor = { nome: string; nif: string; morada: string; email: string };
+const NENHUMA = "__nenhuma__";
 
 type PagamentoLinha = {
   id: string;
@@ -55,6 +63,8 @@ type PagamentoLinha = {
   email: string;
   data: string;
   link: string | null;
+  numero: string | null;
+  emailEnviado: boolean;
 };
 
 type Subscrita = {
@@ -90,6 +100,10 @@ export default function PagamentosAdmin(props: {
   conta: { nome: string } | { erro: string } | null;
   webhook: { ligado: false } | { ligado: true; url: string; estado: string };
   limites: boolean;
+  emissor: Emissor;
+  avisoAdmin: string;
+  dias: number;
+  empresas: Empresa[];
   pacotes: PacoteLinha[];
   pagamentos: PagamentoLinha[];
   subscritas: Subscrita[];
@@ -187,6 +201,8 @@ export default function PagamentosAdmin(props: {
         </CardContent>
       </Card>
 
+      <Faturacao emissor={props.emissor} avisoAdmin={props.avisoAdmin} dias={props.dias} />
+
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
@@ -228,7 +244,10 @@ export default function PagamentosAdmin(props: {
                         {euros(p.precoCentimos)}{" "}
                         <span className="text-muted-foreground">{NOMES_INTERVALO[p.intervalo as Intervalo]}</span>
                       </td>
-                      <td className="py-2 pr-3">{PLANO_LABELS[p.plano]}</td>
+                      <td className="py-2 pr-3">
+                        {PLANO_LABELS[p.plano]}
+                        {p.empresaPrivada ? <div className="text-xs text-muted-foreground">Só para {p.empresaPrivada}</div> : null}
+                      </td>
                       <td className="py-2 pr-3">{p.limiteQrs ?? "do plano"}</td>
                       <td className="py-2 pr-3">{p.empresas}</td>
                       <td className="py-2 pr-3">
@@ -261,7 +280,12 @@ export default function PagamentosAdmin(props: {
         </CardContent>
       </Card>
 
-      <LinkPagamento ativo={Boolean(ligado)} onCriado={() => router.refresh()} />
+      <LinkPagamento
+        ativo={Boolean(ligado)}
+        empresas={props.empresas}
+        pacotes={props.pacotes.filter((p) => p.ativo && p.sincronizado)}
+        onCriado={() => router.refresh()}
+      />
 
       <Card>
         <CardHeader>
@@ -316,6 +340,7 @@ export default function PagamentosAdmin(props: {
                     <th className="py-2 pr-3 font-medium">Empresa</th>
                     <th className="py-2 pr-3 font-medium">Valor</th>
                     <th className="py-2 pr-3 font-medium">Estado</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -342,6 +367,31 @@ export default function PagamentosAdmin(props: {
                         <Badge variant={p.estado === "pago" ? "default" : p.estado === "pendente" ? "secondary" : "destructive"}>
                           {NOMES_ESTADO_PAGAMENTO[p.estado] ?? p.estado}
                         </Badge>
+                        {p.numero ? <div className="mt-0.5 text-xs text-muted-foreground">{p.numero}</div> : null}
+                      </td>
+                      <td className="py-2 text-right whitespace-nowrap">
+                        {p.estado === "pago" ? (
+                          <>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label="Ver comprovativo"
+                              nativeButton={false}
+                              render={<a href={`/pagar/${p.id}/comprovativo`} target="_blank" rel="noreferrer" />}
+                            >
+                              <FileText />
+                            </Button>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label="Reenviar comprovativo por email"
+                              disabled={pendente}
+                              onClick={() => correr(() => reenviarComprovativo(p.id), "Comprovativo reenviado.")}
+                            >
+                              <Mail />
+                            </Button>
+                          </>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
@@ -354,6 +404,7 @@ export default function PagamentosAdmin(props: {
 
       {editar ? (
         <PacoteModal
+          empresas={props.empresas}
           pacote={editar === "novo" ? null : editar}
           onClose={() => setEditar(null)}
           onSaved={() => {
@@ -367,10 +418,12 @@ export default function PagamentosAdmin(props: {
 }
 
 function PacoteModal({
+  empresas,
   pacote,
   onClose,
   onSaved,
 }: {
+  empresas: Empresa[];
   pacote: PacoteLinha | null;
   onClose: () => void;
   onSaved: () => void;
@@ -383,6 +436,7 @@ function PacoteModal({
   const [limite, setLimite] = useState(pacote?.limiteQrs != null ? String(pacote.limiteQrs) : "");
   const [ativo, setAtivo] = useState(pacote?.ativo ?? true);
   const [ordem, setOrdem] = useState(String(pacote?.ordem ?? 0));
+  const [empresa, setEmpresa] = useState<string>(pacote?.companyId ?? NENHUMA);
   const [aGravar, setAGravar] = useState(false);
 
   async function gravar() {
@@ -396,6 +450,7 @@ function PacoteModal({
       limiteQrs: limite.trim() ? Number(limite) : null,
       ativo,
       ordem: Number(ordem) || 0,
+      companyId: empresa === NENHUMA ? null : empresa,
     };
     setAGravar(true);
     const r = await guardarPacote(input);
@@ -465,6 +520,29 @@ function PacoteModal({
               <Input inputMode="numeric" value={limite} placeholder="o do plano" onChange={(e) => setLimite(e.target.value)} />
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label>Quem vê o pacote</Label>
+            <Select value={empresa} onValueChange={(v) => setEmpresa(v as string)}>
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(v: string | null) =>
+                    !v || v === NENHUMA ? "Todas as empresas" : `Só ${empresas.find((e) => e.id === v)?.nome ?? ""}`
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NENHUMA}>Todas as empresas</SelectItem>
+                {empresas.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    Só {e.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Para o Business: um pacote com o preço acordado, que só essa empresa vê em O meu plano.
+            </p>
+          </div>
           <div className="grid grid-cols-2 items-end gap-3">
             <div className="space-y-1.5">
               <Label>Ordem na lista</Label>
@@ -496,7 +574,19 @@ function PacoteModal({
   );
 }
 
-function LinkPagamento({ ativo, onCriado }: { ativo: boolean; onCriado: () => void }) {
+function LinkPagamento({
+  ativo,
+  empresas,
+  pacotes,
+  onCriado,
+}: {
+  ativo: boolean;
+  empresas: Empresa[];
+  pacotes: PacoteLinha[];
+  onCriado: () => void;
+}) {
+  const [empresa, setEmpresa] = useState<string>(NENHUMA);
+  const [pacote, setPacote] = useState<string>(NENHUMA);
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [email, setEmail] = useState("");
@@ -509,6 +599,8 @@ function LinkPagamento({ ativo, onCriado }: { ativo: boolean; onCriado: () => vo
       descricao,
       valorEuros: Number(valor.replace(",", ".")),
       email,
+      companyId: empresa === NENHUMA ? null : empresa,
+      pacoteId: pacote === NENHUMA ? null : pacote,
     });
     setACriar(false);
     if (!r.ok) {
@@ -529,6 +621,59 @@ function LinkPagamento({ ativo, onCriado }: { ativo: boolean; onCriado: () => vo
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Empresa (opcional)</Label>
+            <Select value={empresa} onValueChange={(v) => setEmpresa(v as string)}>
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(v: string | null) => (!v || v === NENHUMA ? "Nenhuma (pagamento avulso)" : (empresas.find((e) => e.id === v)?.nome ?? ""))}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NENHUMA}>Nenhuma (pagamento avulso)</SelectItem>
+                {empresas.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Pacote (opcional)</Label>
+            <Select value={pacote} onValueChange={(v) => setPacote(v as string)}>
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {(v: string | null) => {
+                    const p = pacotes.find((x) => x.id === v);
+                    return p ? `${p.nome} · ${euros(p.precoCentimos)} ${NOMES_INTERVALO[p.intervalo as Intervalo]}` : "Nenhum (valor livre)";
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NENHUMA}>Nenhum (valor livre)</SelectItem>
+                {pacotes
+                  .filter((p) => !p.companyId || p.companyId === empresa)
+                  .map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome} · {euros(p.precoCentimos)} {NOMES_INTERVALO[p.intervalo as Intervalo]}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        {pacote !== NENHUMA ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Quando a empresa pagar, fica com o plano do pacote. Se for mensal ou anual, a subscrição renova sozinha.
+            </p>
+            <Button disabled={!ativo || aCriar || empresa === NENHUMA} onClick={criar}>
+              {aCriar ? <Loader2 className="animate-spin" /> : <Link2 />} Criar link
+            </Button>
+          </div>
+        ) : (
         <div className="grid gap-3 sm:grid-cols-[2fr_1fr_2fr_auto] sm:items-end">
           <div className="space-y-1.5">
             <Label>Descrição</Label>
@@ -546,6 +691,7 @@ function LinkPagamento({ ativo, onCriado }: { ativo: boolean; onCriado: () => vo
             {aCriar ? <Loader2 className="animate-spin" /> : <Link2 />} Criar link
           </Button>
         </div>
+        )}
         {url ? (
           <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
             <a href={url} target="_blank" rel="noreferrer" className="break-all font-medium text-indigo-600 hover:underline">

@@ -104,7 +104,9 @@
     "tooMany": "Demasiados intentos. Inténtelo de nuevo en {minutos} min.",
     "editMode": "Modo de edición: toque el estado de cada incidencia para cambiarlo.",
     "editExit": "Salir",
-    "editStatesHint": "También puede cambiar el estado de las incidencias en la propia página: cierre esta ventana y toque el estado de cada una."
+    "editStatesHint": "También puede cambiar el estado de las incidencias en la propia página: cierre esta ventana y toque el estado de cada una.",
+    "unavailableTitle": "Página temporalmente no disponible",
+    "unavailableText": "Esta página está suspendida por el momento. Inténtelo más tarde."
   },
   "Wifi": {
     "pointCamera": "Apunte la cámara del teléfono para conectar",
@@ -230,6 +232,16 @@
     "paidText": "¡Gracias! Ya está todo listo.",
     "pending": "El pago se está confirmando. Puede cerrar esta página; quedará registrado en cuanto se acepte.",
     "expired": "Este pago ya no está disponible.",
-    "back": "Volver"
+    "back": "Volver",
+    "email": "Email",
+    "emailHint": "Donde enviamos el comprobante",
+    "name": "Nombre o empresa",
+    "nif": "NIF",
+    "address": "Dirección",
+    "optional": "opcional",
+    "emailInvalid": "Indique un email válido para recibir el comprobante.",
+    "receipt": "Descargar comprobante",
+    "sentTo": "Hemos enviado el comprobante a {email}.",
+    "billingData": "Datos para el comprobante"
   }
 }

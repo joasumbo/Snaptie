@@ -5,6 +5,8 @@ import type { Pacote } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CHAVES, apagarConfig, gravarConfig, lerConfig } from "@/lib/configuracao";
 import { EVENTOS_WEBHOOK, MARCA, URL_WEBHOOK, stripe } from "@/lib/stripe";
+import { aposPagamento } from "@/lib/cobrancas";
+import { emailSubscricaoCancelada } from "@/lib/email-pagamentos";
 
 // ---------------------------------------------------------------- pacotes
 
@@ -130,9 +132,10 @@ export async function segredoWebhook(): Promise<string | null> {
 async function clienteDaEmpresa(companyId: string): Promise<string> {
   const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId } });
   if (company.stripeCustomerId) return company.stripeCustomerId;
+  // Sem email de propósito: o Stripe não tem para onde mandar recibos nem
+  // faturas. Os emails são todos nossos.
   const cliente = await stripe().customers.create({
     name: company.nome,
-    email: company.email,
     metadata: { ...MARCA, companyId },
   });
   await prisma.company.update({ where: { id: companyId }, data: { stripeCustomerId: cliente.id } });
@@ -167,7 +170,6 @@ export async function criarPagamentoAvulso(opcoes: {
     currency: "eur",
     description: `Snaptie: ${opcoes.descricao}`,
     automatic_payment_methods: { enabled: true },
-    receipt_email: opcoes.email || undefined,
     metadata: { ...MARCA, tipo: opcoes.tipo, pagamentoId: pagamento.id },
   });
   await prisma.pagamento.update({ where: { id: pagamento.id }, data: { stripeSessionId: intent.id } });
@@ -179,6 +181,7 @@ export async function criarPagamentoAvulso(opcoes: {
 export async function iniciarPacote(companyId: string, pacoteId: string): Promise<string> {
   const pacote = await prisma.pacote.findUnique({ where: { id: pacoteId } });
   if (!pacote || !pacote.ativo || !pacote.stripePriceId) throw new Error("Este pacote não está disponível.");
+  if (pacote.companyId && pacote.companyId !== companyId) throw new Error("Este pacote não está disponível.");
 
   const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId } });
   const recorrente = pacote.intervalo !== "unico";
@@ -273,12 +276,18 @@ export async function ativarPacote(pagamentoId: string, subscricaoId: string | n
   });
 }
 
-export async function marcarPago(pagamentoId: string, email?: string | null): Promise<boolean> {
+export async function marcarPago(pagamentoId: string): Promise<boolean> {
   const r = await prisma.pagamento.updateMany({
     where: { id: pagamentoId, estado: { not: "pago" } },
-    data: { estado: "pago", ...(email ? { email } : {}) },
+    data: { estado: "pago", pagoEm: new Date() },
   });
   return r.count > 0;
+}
+
+// Depois de marcar como pago: comprovativo e email. Uma falha no email não
+// pode desfazer o pagamento, por isso fica só registada.
+export async function depoisDePago(pagamentoId: string): Promise<void> {
+  await aposPagamento(pagamentoId).catch((e) => console.error("[pagamentos] email", pagamentoId, e));
 }
 
 // Confirma junto do Stripe se uma referência já está paga e, se estiver,
@@ -291,15 +300,19 @@ export async function confirmarReferencia(pagamentoId: string): Promise<"pago" |
   if (ref.startsWith("pi_")) {
     const intent = await stripe().paymentIntents.retrieve(ref);
     if (intent.status !== "succeeded") return "pendente";
-    await marcarPago(p.id, intent.receipt_email);
-    if (p.tipo === "pacote") await ativarPacote(p.id, null);
+    if (await marcarPago(p.id)) {
+      if (p.tipo === "pacote") await ativarPacote(p.id, null);
+      await depoisDePago(p.id);
+    }
     return "pago";
   }
   if (ref.startsWith("in_")) {
     const fatura = await stripe().invoices.retrieve(ref);
     if (fatura.status !== "paid") return "pendente";
-    await marcarPago(p.id, fatura.customer_email);
-    await ativarPacote(p.id, idDe(fatura.parent?.subscription_details?.subscription));
+    if (await marcarPago(p.id)) {
+      if (p.tipo === "pacote") await ativarPacote(p.id, idDe(fatura.parent?.subscription_details?.subscription));
+      await depoisDePago(p.id);
+    }
     return "pago";
   }
   return "pendente";
@@ -313,6 +326,9 @@ export type DadosPagamento = {
   moeda: string;
   descricao: string;
   email: string | null;
+  nomeCliente: string | null;
+  nifCliente: string | null;
+  moradaCliente: string | null;
   retorno: string | null;
   empresa: string | null;
   intervalo: string | null;
@@ -351,6 +367,9 @@ export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento 
     moeda: p.moeda,
     descricao: p.descricao ?? "",
     email: p.email,
+    nomeCliente: p.nomeCliente,
+    nifCliente: p.nifCliente,
+    moradaCliente: p.moradaCliente,
     retorno: p.retorno,
     empresa: p.company?.nome ?? null,
     intervalo: p.pacote?.intervalo ?? null,
@@ -365,10 +384,20 @@ export async function cancelarSubscricao(companyId: string, cancelar: boolean): 
   const c = await prisma.company.findUnique({ where: { id: companyId } });
   if (!c?.subscricaoId) throw new Error("A empresa não tem subscrição.");
   const sub = await stripe().subscriptions.update(c.subscricaoId, { cancel_at_period_end: cancelar });
+  const fim = fimDoPeriodo(sub);
   await prisma.company.update({
     where: { id: companyId },
-    data: { subscricaoFim: fimDoPeriodo(sub), subscricaoCancela: cancelar },
+    data: { subscricaoFim: fim, subscricaoCancela: cancelar },
   });
+  if (cancelar && fim) {
+    const pacote = c.pacoteId ? await prisma.pacote.findUnique({ where: { id: c.pacoteId } }) : null;
+    await emailSubscricaoCancelada({
+      para: c.email,
+      nome: c.nome,
+      pacote: pacote?.nome ?? "Snaptie",
+      data: fim.toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" }),
+    }).catch((e) => console.error("[pagamentos] email cancelamento", companyId, e));
+  }
 }
 
 export type Fatura = { id: string; numero: string; data: string; valorCentimos: number; moeda: string; estado: string };
@@ -439,4 +468,22 @@ export async function cartaoAtual(companyId: string): Promise<string | null> {
   if (!pm || typeof pm === "string") return null;
   if (pm.card) return `${pm.card.brand.toUpperCase()} terminado em ${pm.card.last4}`;
   return pm.type;
+}
+
+// O que quem paga escreve na nossa página: para o comprovativo e para o
+// email. Só antes de pagar; depois disso o comprovativo já não muda.
+export async function guardarDadosCliente(
+  pagamentoId: string,
+  dados: { email: string; nome: string; nif: string; morada: string },
+): Promise<boolean> {
+  const r = await prisma.pagamento.updateMany({
+    where: { id: pagamentoId, estado: { not: "pago" } },
+    data: {
+      email: dados.email || undefined,
+      nomeCliente: dados.nome || null,
+      nifCliente: dados.nif || null,
+      moradaCliente: dados.morada || null,
+    },
+  });
+  return r.count > 0;
 }

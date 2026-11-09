@@ -56,6 +56,8 @@ export function FormularioCartao(props: {
   retorno: string;
   textos: Textos;
   onConcluido: (id: string) => void | Promise<void>;
+  antesDeEnviar?: () => Promise<string | null>;
+  children?: React.ReactNode;
 }) {
   const stripePromise = useMemo(() => carregar(props.chavePublica), [props.chavePublica]);
   return (
@@ -78,6 +80,8 @@ function Interior(props: {
   retorno: string;
   textos: Textos;
   onConcluido: (id: string) => void | Promise<void>;
+  antesDeEnviar?: () => Promise<string | null>;
+  children?: React.ReactNode;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -90,6 +94,14 @@ function Interior(props: {
     if (!stripe || !elements) return;
     setErro(null);
     setAEnviar(true);
+    if (props.antesDeEnviar) {
+      const problema = await props.antesDeEnviar();
+      if (problema) {
+        setErro(problema);
+        setAEnviar(false);
+        return;
+      }
+    }
     const retorno = new URL(props.retorno, window.location.origin).toString();
     if (props.modo === "pagamento") {
       const r = await stripe.confirmPayment({
@@ -121,6 +133,7 @@ function Interior(props: {
 
   return (
     <form onSubmit={enviar} className="space-y-4">
+      {props.children}
       <PaymentElement
         onReady={() => setPronto(true)}
         options={{

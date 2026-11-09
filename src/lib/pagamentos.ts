@@ -27,6 +27,8 @@ export const NOMES_ESTADO_SUBSCRICAO: Record<string, string> = {
   em_falta: "Pagamento em falta",
   cancelada: "Cancelada",
   unico: "Paga (pagamento único)",
+  suspensa: "Suspensa por falta de pagamento",
+  a_cancelar: "Cancela no fim do período",
 };
 
 // O elemento Pagamento: o visitante paga um valor fixo, ou escolhe quanto.

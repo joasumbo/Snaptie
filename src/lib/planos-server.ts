@@ -100,6 +100,10 @@ export async function verificarLimiteQrs(
   novos: number,
 ): Promise<string | null> {
   if (actorRole === "ADMIN") return null;
+  const suspensa = await prisma.company.findUnique({ where: { id: companyId }, select: { suspensaPagamento: true } });
+  if (suspensa?.suspensaPagamento) {
+    return "O serviço está suspenso por falta de pagamento. Regularize em O meu plano para voltar a criar QR codes.";
+  }
   if (!(await limitesAtivos())) return null;
   const plano = await planoDaEmpresa(companyId);
   if (!plano) return "Empresa não encontrada.";

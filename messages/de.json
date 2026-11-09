@@ -106,7 +106,9 @@
     "tooMany": "Zu viele Versuche. Versuchen Sie es in {minutos} Min. erneut.",
     "editMode": "Bearbeitungsmodus: Tippen Sie auf den Status einer Meldung, um ihn zu ändern.",
     "editExit": "Beenden",
-    "editStatesHint": "Sie können den Status der Meldungen auch direkt auf der Seite ändern: Schließen Sie dieses Fenster und tippen Sie auf den jeweiligen Status."
+    "editStatesHint": "Sie können den Status der Meldungen auch direkt auf der Seite ändern: Schließen Sie dieses Fenster und tippen Sie auf den jeweiligen Status.",
+    "unavailableTitle": "Seite vorübergehend nicht verfügbar",
+    "unavailableText": "Diese Seite ist derzeit gesperrt. Bitte versuchen Sie es später erneut."
   },
   "Wifi": {
     "pointCamera": "Richten Sie die Kamera Ihres Telefons darauf, um sich zu verbinden",
@@ -232,6 +234,16 @@
     "paidText": "Vielen Dank! Alles erledigt.",
     "pending": "Die Zahlung wird bestätigt. Sie können diese Seite schließen; sie wird erfasst, sobald sie akzeptiert ist.",
     "expired": "Diese Zahlung ist nicht mehr verfügbar.",
-    "back": "Zurück"
+    "back": "Zurück",
+    "email": "E-Mail",
+    "emailHint": "Hierhin senden wir den Beleg",
+    "name": "Name oder Firma",
+    "nif": "Steuernummer",
+    "address": "Adresse",
+    "optional": "optional",
+    "emailInvalid": "Geben Sie eine gültige E-Mail für den Beleg ein.",
+    "receipt": "Beleg herunterladen",
+    "sentTo": "Wir haben den Beleg an {email} gesendet.",
+    "billingData": "Angaben für den Beleg"
   }
 }

@@ -106,7 +106,9 @@
     "tooMany": "Trop de tentatives. Réessayez dans {minutos} min.",
     "editMode": "Mode édition : touchez le statut d'un incident pour le changer.",
     "editExit": "Quitter",
-    "editStatesHint": "Vous pouvez aussi changer le statut des incidents directement sur la page : fermez cette fenêtre et touchez le statut de chacun."
+    "editStatesHint": "Vous pouvez aussi changer le statut des incidents directement sur la page : fermez cette fenêtre et touchez le statut de chacun.",
+    "unavailableTitle": "Page temporairement indisponible",
+    "unavailableText": "Cette page est suspendue pour le moment. Réessayez plus tard."
   },
   "Wifi": {
     "pointCamera": "Pointez la caméra de votre téléphone pour vous connecter",
@@ -232,6 +234,16 @@
     "paidText": "Merci ! Tout est en ordre.",
     "pending": "Le paiement est en cours de confirmation. Vous pouvez fermer cette page ; il sera enregistré dès son acceptation.",
     "expired": "Ce paiement n'est plus disponible.",
-    "back": "Retour"
+    "back": "Retour",
+    "email": "E-mail",
+    "emailHint": "Où nous envoyons le justificatif",
+    "name": "Nom ou société",
+    "nif": "N° fiscal",
+    "address": "Adresse",
+    "optional": "facultatif",
+    "emailInvalid": "Indiquez un e-mail valide pour recevoir le justificatif.",
+    "receipt": "Télécharger le justificatif",
+    "sentTo": "Nous avons envoyé le justificatif à {email}.",
+    "billingData": "Coordonnées pour le justificatif"
   }
 }

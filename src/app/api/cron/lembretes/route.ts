@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { corridaCobrancas } from "@/lib/cobrancas";
 import { prisma } from "@/lib/prisma";
 import { sendLembreteEmail } from "@/lib/email";
 import { agoraEmLisboa, calhaNoDia, descreverRegra, lerLembrete } from "@/lib/lembrete";
@@ -66,5 +67,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ agora, verificados: blocos.length, enviados, erros });
+  // Na mesma passagem: avisos de renovação e suspensões por falta de pagamento.
+  const cobrancas = await corridaCobrancas().catch((e) => {
+    console.error("[cron] cobrancas", e);
+    return { erro: true };
+  });
+
+  return NextResponse.json({ agora, verificados: blocos.length, enviados, erros, cobrancas });
 }
