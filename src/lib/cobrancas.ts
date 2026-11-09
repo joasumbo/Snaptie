@@ -410,3 +410,45 @@ export async function corridaCobrancas(): Promise<{ avisos: number; suspensas: n
   }
   return { avisos, suspensas, faturas };
 }
+
+// Envia a fatura-recibo (ou, sem ela, o comprovativo) de um pagamento para um
+// endereço à escolha. Usado no painel de faturação.
+export async function enviarDocumento(pagamentoId: string, para: string): Promise<"fatura" | "comprovativo"> {
+  const p = await prisma.pagamento.findUnique({ where: { id: pagamentoId } });
+  if (!p || p.estado !== "pago") throw new Error("Este pagamento não está pago.");
+  const d = await dadosComprovativo(p.id);
+  if (!d) throw new Error("Não foi possível ler o pagamento.");
+  if (p.moloniFaturaPdf && p.moloniFatura) {
+    await emailFaturaEmitida({
+      para,
+      nome: d.cliente.nome,
+      descricao: d.descricao,
+      valor: euros(d.valorCentimos, d.moeda),
+      numero: p.moloniFatura,
+      pdf: await lerPdfGuardado(p.moloniFaturaPdf),
+    });
+    return "fatura";
+  }
+  await emailPagamentoRecebido({
+    para,
+    nome: d.cliente.nome,
+    descricao: d.descricao,
+    valor: euros(d.valorCentimos, d.moeda),
+    numero: d.numero,
+    data: dia(d.pagoEm),
+    pdf: await gerarComprovativo(d),
+    documento: "comprovativo",
+  });
+  return "comprovativo";
+}
+
+// Volta a tentar emitir a fatura de um pagamento (botão do painel).
+export async function tentarFatura(pagamentoId: string): Promise<boolean> {
+  await prisma.pagamento.updateMany({ where: { id: pagamentoId, moloniFaturaId: -1 }, data: { moloniFaturaId: null } });
+  await prisma.pagamento.update({ where: { id: pagamentoId }, data: { moloniTentativas: 0 } });
+  const d = await dadosComprovativo(pagamentoId);
+  if (!d) return false;
+  const ok = await emitirFatura(pagamentoId, d.detalhe);
+  if (ok) await enviarFatura(pagamentoId);
+  return ok;
+}

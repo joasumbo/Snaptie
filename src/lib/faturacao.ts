@@ -163,15 +163,21 @@ function onde(f: Filtros): Prisma.PagamentoWhereInput {
   const quando: Prisma.DateTimeFilter = {};
   if (f.de) quando.gte = inicioDoDia(f.de);
   if (f.ate) quando.lt = new Date(inicioDoDia(f.ate).getTime() + 86_400_000);
-  if (f.de || f.ate) where.createdAt = quando;
+  // Pagos contam pela data do pagamento; os restantes, pela data em que foram criados.
+  if (f.de || f.ate) {
+    if (f.estado === "pago") where.OR = [{ pagoEm: quando }, { pagoEm: null, updatedAt: quando }];
+    else where.createdAt = quando;
+  }
   if (f.q) {
-    where.OR = [
+    where.AND = [{ OR: [
       { descricao: { contains: f.q, mode: "insensitive" } },
       { email: { contains: f.q, mode: "insensitive" } },
       { nomeCliente: { contains: f.q, mode: "insensitive" } },
       { numero: { contains: f.q, mode: "insensitive" } },
       { company: { nome: { contains: f.q, mode: "insensitive" } } },
-    ];
+      { moloniFatura: { contains: f.q, mode: "insensitive" } },
+      { nifCliente: { contains: f.q } },
+    ] }];
   }
   return where;
 }
@@ -186,12 +192,34 @@ export async function listaPagamentos(f: Filtros, todos = false) {
       orderBy: { createdAt: "desc" },
       take: todos ? 10_000 : POR_PAGINA,
       skip: todos ? 0 : (f.pagina - 1) * POR_PAGINA,
-      include: { company: { select: { nome: true } }, pacote: { select: { nome: true } } },
+      include: { company: { select: { nome: true, email: true, nif: true } }, pacote: { select: { nome: true } } },
     }),
     prisma.pagamento.count({ where }),
     prisma.pagamento.aggregate({ where, _sum: { valorCentimos: true } }),
   ]);
   return { linhas, contagem, soma: soma._sum.valorCentimos ?? 0 };
+}
+
+// O total do período escolhido, dividido por tipo de pagamento.
+export async function porTipo(f: Filtros): Promise<{ tipo: string; valor: number; n: number }[]> {
+  const g = await prisma.pagamento.groupBy({
+    by: ["tipo"],
+    where: onde(f),
+    _sum: { valorCentimos: true },
+    _count: { _all: true },
+  });
+  return g
+    .map((x) => ({ tipo: x.tipo, valor: x._sum.valorCentimos ?? 0, n: x._count._all }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+// Pagamentos pagos sem fatura emitida (a Moloni falhou ou ainda não chegou
+// a vez), desde que a faturação foi ligada.
+export async function faturasPorEmitir(desde: Date | null): Promise<number> {
+  if (!desde) return 0;
+  return prisma.pagamento.count({
+    where: { estado: "pago", pagoEm: { gte: desde }, OR: [{ moloniFaturaPdf: null }, { moloniFaturaId: null }] },
+  });
 }
 
 // O que está por receber: pagamentos falhados e empresas em falta ou suspensas.

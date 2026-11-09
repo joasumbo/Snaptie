@@ -576,7 +576,7 @@ function PacoteModal({
   );
 }
 
-function LinkPagamento({
+export function LinkPagamento({
   ativo,
   empresas,
   pacotes,

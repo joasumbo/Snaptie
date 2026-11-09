@@ -5,7 +5,7 @@ import type { Plano } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { CHAVES, gravarConfig } from "@/lib/configuracao";
-import { aposPagamento, proformaDe } from "@/lib/cobrancas";
+import { aposPagamento, enviarDocumento, proformaDe, tentarFatura } from "@/lib/cobrancas";
 import { emitirOrcamento, escolherSerie } from "@/lib/moloni-faturas";
 import { emailPedidoPagamento } from "@/lib/email-pagamentos";
 import { euros } from "@/lib/pagamentos";
@@ -230,5 +230,34 @@ export async function guardarSerieMoloni(id: number | null, nome: string | null)
   if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
   await escolherSerie(id, nome);
   revalidatePath("/dashboard/pagamentos");
+  return { ok: true };
+}
+
+export async function enviarDocumentoPorEmail(
+  id: string,
+  para: string,
+): Promise<{ ok: true; documento: string } | { ok: false; message: string }> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  const email = para.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "O email não é válido." };
+  try {
+    const documento = await enviarDocumento(id, email);
+    return { ok: true, documento: documento === "fatura" ? "Fatura-recibo enviada." : "Comprovativo enviado." };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function emitirFaturaAgora(id: string): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  try {
+    if (!(await tentarFatura(id))) {
+      const p = await db.pagamento.findUnique({ where: { id }, select: { moloniErro: true } });
+      return { ok: false, message: p?.moloniErro ? `A Moloni recusou: ${p.moloniErro}` : "A faturação Moloni não está ativa." };
+    }
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+  revalidatePath("/dashboard/faturacao");
   return { ok: true };
 }
