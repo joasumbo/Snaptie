@@ -34,6 +34,8 @@ export function appUrl(): string {
 export const URL_WEBHOOK = () => `${appUrl()}/api/stripe/webhook`;
 
 export const EVENTOS_WEBHOOK: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
+  "payment_intent.succeeded",
+  "payment_intent.payment_failed",
   "checkout.session.completed",
   "checkout.session.async_payment_succeeded",
   "checkout.session.async_payment_failed",

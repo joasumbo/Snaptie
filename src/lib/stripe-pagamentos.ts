@@ -4,8 +4,7 @@ import type Stripe from "stripe";
 import type { Pacote } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CHAVES, apagarConfig, gravarConfig, lerConfig } from "@/lib/configuracao";
-import { EVENTOS_WEBHOOK, MARCA, URL_WEBHOOK, appUrl, stripe } from "@/lib/stripe";
-import type { Intervalo } from "@/lib/pagamentos";
+import { EVENTOS_WEBHOOK, MARCA, URL_WEBHOOK, stripe } from "@/lib/stripe";
 
 // ---------------------------------------------------------------- pacotes
 
@@ -118,41 +117,15 @@ export async function segredoWebhook(): Promise<string | null> {
   return (await lerConfig(CHAVES.webhookSegredo)) ?? process.env.STRIPE_WEBHOOK_SECRET ?? null;
 }
 
-// ---------------------------------------------------------------- portal
-
-// O portal do cliente (cartão, faturas, cancelar) precisa de uma configuração.
-// Cria-se uma só do Snaptie, para não depender da predefinida da conta, que é
-// partilhada com os outros projetos.
-async function configuracaoPortal(): Promise<string> {
-  const guardada = await lerConfig(CHAVES.portalConfig);
-  if (guardada) return guardada;
-  const conf = await stripe().billingPortal.configurations.create({
-    business_profile: { headline: "Snaptie: o seu plano" },
-    default_return_url: `${appUrl()}/dashboard/plano`,
-    features: {
-      invoice_history: { enabled: true },
-      payment_method_update: { enabled: true },
-      customer_update: { enabled: true, allowed_updates: ["email", "address", "tax_id", "name"] },
-      subscription_cancel: { enabled: true, mode: "at_period_end" },
-    },
-    metadata: MARCA,
-  });
-  await gravarConfig(CHAVES.portalConfig, conf.id);
-  return conf.id;
-}
-
-export async function abrirPortal(companyId: string): Promise<string> {
-  const company = await prisma.company.findUnique({ where: { id: companyId } });
-  if (!company?.stripeCustomerId) throw new Error("Esta empresa ainda não tem pagamentos.");
-  const sessao = await stripe().billingPortal.sessions.create({
-    customer: company.stripeCustomerId,
-    configuration: await configuracaoPortal(),
-    return_url: `${appUrl()}/dashboard/plano`,
-  });
-  return sessao.url;
-}
-
-// ---------------------------------------------------------------- checkout
+// ---------------------------------------------------------------- pagamentos
+//
+// Tudo se paga numa página nossa, /pagar/<id>. O Stripe só fornece os campos
+// do cartão (obrigatório, para os dados do cartão nunca passarem pelo nosso
+// servidor) e processa o pagamento por trás.
+//
+// Cada pagamento guarda em stripeSessionId a referência do Stripe que o paga:
+//   pi_... um PaymentIntent (botão na página, link, pacote de pagamento único)
+//   in_... a primeira fatura de uma subscrição
 
 async function clienteDaEmpresa(companyId: string): Promise<string> {
   const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId } });
@@ -166,15 +139,67 @@ async function clienteDaEmpresa(companyId: string): Promise<string> {
   return cliente.id;
 }
 
-export async function checkoutPacote(companyId: string, pacoteId: string): Promise<string> {
+// Um pagamento avulso: botão numa página ou link criado no admin.
+export async function criarPagamentoAvulso(opcoes: {
+  tipo: "botao" | "link";
+  valorCentimos: number;
+  descricao: string;
+  companyId?: string | null;
+  qrId?: string | null;
+  blockId?: string | null;
+  email?: string | null;
+  retorno?: string | null;
+}): Promise<string> {
+  const pagamento = await prisma.pagamento.create({
+    data: {
+      tipo: opcoes.tipo,
+      valorCentimos: opcoes.valorCentimos,
+      descricao: opcoes.descricao,
+      email: opcoes.email || null,
+      companyId: opcoes.companyId ?? null,
+      qrId: opcoes.qrId ?? null,
+      blockId: opcoes.blockId ?? null,
+      retorno: opcoes.retorno ?? null,
+    },
+  });
+  const intent = await stripe().paymentIntents.create({
+    amount: opcoes.valorCentimos,
+    currency: "eur",
+    description: `Snaptie: ${opcoes.descricao}`,
+    automatic_payment_methods: { enabled: true },
+    receipt_email: opcoes.email || undefined,
+    metadata: { ...MARCA, tipo: opcoes.tipo, pagamentoId: pagamento.id },
+  });
+  await prisma.pagamento.update({ where: { id: pagamento.id }, data: { stripeSessionId: intent.id } });
+  return pagamento.id;
+}
+
+// Um pacote: subscrição (mensal ou anual) ou pagamento único. A subscrição
+// nasce por pagar; só fica ativa quando a primeira fatura é paga.
+export async function iniciarPacote(companyId: string, pacoteId: string): Promise<string> {
   const pacote = await prisma.pacote.findUnique({ where: { id: pacoteId } });
   if (!pacote || !pacote.ativo || !pacote.stripePriceId) throw new Error("Este pacote não está disponível.");
 
   const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId } });
   const recorrente = pacote.intervalo !== "unico";
   if (recorrente && company.subscricaoId && company.subscricaoEstado !== "cancelada") {
-    throw new Error("A empresa já tem uma subscrição. Para mudar de pacote, use Gerir subscrição ou cancele a atual.");
+    throw new Error("A empresa já tem uma subscrição. Cancele a atual antes de mudar de pacote.");
   }
+
+  // Quem carrega duas vezes em Subscrever volta ao mesmo pagamento, em vez de
+  // deixar subscrições por pagar penduradas no Stripe.
+  const aberto = await prisma.pagamento.findFirst({
+    where: {
+      companyId,
+      pacoteId,
+      tipo: "pacote",
+      estado: { in: ["pendente", "falhou"] },
+      createdAt: { gte: new Date(Date.now() - 60 * 60_000) },
+      valorCentimos: pacote.precoCentimos,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  if (aberto?.stripeSessionId) return aberto.id;
 
   const customer = await clienteDaEmpresa(companyId);
   const pagamento = await prisma.pagamento.create({
@@ -186,84 +211,232 @@ export async function checkoutPacote(companyId: string, pacoteId: string): Promi
       email: company.email,
       companyId,
       pacoteId,
+      retorno: "/dashboard/plano",
     },
   });
   const metadata = { ...MARCA, tipo: "pacote", pagamentoId: pagamento.id, companyId, pacoteId };
 
-  const sessao = await stripe().checkout.sessions.create({
-    mode: recorrente ? "subscription" : "payment",
-    customer,
-    line_items: [{ price: pacote.stripePriceId, quantity: 1 }],
-    metadata,
-    client_reference_id: companyId,
-    ...(recorrente
-      ? { subscription_data: { metadata } }
-      : { payment_intent_data: { metadata }, invoice_creation: { enabled: true, invoice_data: { metadata } } }),
-    allow_promotion_codes: true,
-    billing_address_collection: "auto",
-    tax_id_collection: { enabled: true },
-    customer_update: { name: "auto", address: "auto" },
-    locale: "pt",
-    success_url: `${appUrl()}/dashboard/plano?pagamento=ok`,
-    cancel_url: `${appUrl()}/dashboard/plano?pagamento=cancelado`,
-  });
-  await prisma.pagamento.update({ where: { id: pagamento.id }, data: { stripeSessionId: sessao.id } });
-  if (!sessao.url) throw new Error("O Stripe não devolveu o endereço do pagamento.");
-  return sessao.url;
+  let ref: string;
+  if (recorrente) {
+    const sub = await stripe().subscriptions.create({
+      customer,
+      items: [{ price: pacote.stripePriceId }],
+      payment_behavior: "default_incomplete",
+      payment_settings: { save_default_payment_method: "on_subscription" },
+      metadata,
+    });
+    const fatura = idDe(sub.latest_invoice);
+    if (!fatura) throw new Error("O Stripe não criou a fatura da subscrição.");
+    ref = fatura;
+  } else {
+    const intent = await stripe().paymentIntents.create({
+      amount: pacote.precoCentimos,
+      currency: pacote.moeda,
+      customer,
+      description: `Snaptie: ${pacote.nome}`,
+      automatic_payment_methods: { enabled: true },
+      metadata,
+    });
+    ref = intent.id;
+  }
+  await prisma.pagamento.update({ where: { id: pagamento.id }, data: { stripeSessionId: ref } });
+  return pagamento.id;
 }
 
-export async function checkoutBotao(opcoes: {
-  companyId: string;
-  qrId: string;
-  blockId: string;
-  nome: string;
-  pagina: string;
-  valorCentimos: number;
-  urlPagina: string;
-  locale: string;
-}): Promise<string> {
-  const pagamento = await prisma.pagamento.create({
+function idDe(v: string | { id?: string } | null | undefined): string | null {
+  if (!v) return null;
+  return typeof v === "string" ? v : (v.id ?? null);
+}
+
+export function fimDoPeriodo(sub: Stripe.Subscription): Date | null {
+  const fim = sub.cancel_at ?? sub.items.data[0]?.current_period_end ?? null;
+  return fim ? new Date(fim * 1000) : null;
+}
+
+// Dá à empresa o plano do pacote pago. Chamado pelo webhook e pela página de
+// pagamento (o que chegar primeiro); repetir não estraga nada.
+export async function ativarPacote(pagamentoId: string, subscricaoId: string | null): Promise<void> {
+  const pagamento = await prisma.pagamento.findUnique({ where: { id: pagamentoId }, include: { pacote: true } });
+  if (!pagamento?.companyId || !pagamento.pacote) return;
+  let fim: Date | null = null;
+  if (subscricaoId) fim = fimDoPeriodo(await stripe().subscriptions.retrieve(subscricaoId));
+  await prisma.company.update({
+    where: { id: pagamento.companyId },
     data: {
-      tipo: "botao",
-      valorCentimos: opcoes.valorCentimos,
-      descricao: opcoes.nome,
-      companyId: opcoes.companyId,
-      qrId: opcoes.qrId,
-      blockId: opcoes.blockId,
+      plano: pagamento.pacote.plano,
+      pacoteId: pagamento.pacote.id,
+      subscricaoId,
+      subscricaoEstado: subscricaoId ? "ativa" : "unico",
+      subscricaoFim: fim,
+      subscricaoCancela: false,
     },
   });
-  const metadata = {
-    ...MARCA,
-    tipo: "botao",
-    pagamentoId: pagamento.id,
-    companyId: opcoes.companyId,
-    qrId: opcoes.qrId,
-    blockId: opcoes.blockId,
-  };
-  const locais = ["pt", "en", "es", "fr", "de"] as const;
-  const locale = locais.find((l) => l === opcoes.locale) ?? "auto";
-  const sessao = await stripe().checkout.sessions.create({
-    mode: "payment",
-    submit_type: "pay",
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: "eur",
-          unit_amount: opcoes.valorCentimos,
-          product_data: { name: opcoes.nome, description: opcoes.pagina || undefined, metadata: MARCA },
-        },
-      },
-    ],
-    metadata,
-    payment_intent_data: { metadata, description: `${opcoes.nome} (${opcoes.pagina})` },
-    locale,
-    success_url: `${opcoes.urlPagina}?pagamento=ok`,
-    cancel_url: `${opcoes.urlPagina}?pagamento=cancelado`,
-  });
-  await prisma.pagamento.update({ where: { id: pagamento.id }, data: { stripeSessionId: sessao.id } });
-  if (!sessao.url) throw new Error("O Stripe não devolveu o endereço do pagamento.");
-  return sessao.url;
 }
 
-export type { Intervalo };
+export async function marcarPago(pagamentoId: string, email?: string | null): Promise<boolean> {
+  const r = await prisma.pagamento.updateMany({
+    where: { id: pagamentoId, estado: { not: "pago" } },
+    data: { estado: "pago", ...(email ? { email } : {}) },
+  });
+  return r.count > 0;
+}
+
+// Confirma junto do Stripe se uma referência já está paga e, se estiver,
+// regista-o. Nunca confia no que o browser diz.
+export async function confirmarReferencia(pagamentoId: string): Promise<"pago" | "pendente"> {
+  const p = await prisma.pagamento.findUnique({ where: { id: pagamentoId } });
+  if (!p?.stripeSessionId) return "pendente";
+  if (p.estado === "pago") return "pago";
+  const ref = p.stripeSessionId;
+  if (ref.startsWith("pi_")) {
+    const intent = await stripe().paymentIntents.retrieve(ref);
+    if (intent.status !== "succeeded") return "pendente";
+    await marcarPago(p.id, intent.receipt_email);
+    if (p.tipo === "pacote") await ativarPacote(p.id, null);
+    return "pago";
+  }
+  if (ref.startsWith("in_")) {
+    const fatura = await stripe().invoices.retrieve(ref);
+    if (fatura.status !== "paid") return "pendente";
+    await marcarPago(p.id, fatura.customer_email);
+    await ativarPacote(p.id, idDe(fatura.parent?.subscription_details?.subscription));
+    return "pago";
+  }
+  return "pendente";
+}
+
+export type DadosPagamento = {
+  id: string;
+  tipo: string;
+  estado: string;
+  valorCentimos: number;
+  moeda: string;
+  descricao: string;
+  email: string | null;
+  retorno: string | null;
+  empresa: string | null;
+  intervalo: string | null;
+  clientSecret: string | null;
+};
+
+export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento | null> {
+  const p = await prisma.pagamento.findUnique({
+    where: { id },
+    include: { company: { select: { nome: true } }, pacote: { select: { intervalo: true } } },
+  });
+  if (!p || !p.stripeSessionId) return null;
+
+  let estado = p.estado;
+  let clientSecret: string | null = null;
+  if (estado !== "pago" && estado !== "expirado") {
+    if ((await confirmarReferencia(p.id)) === "pago") estado = "pago";
+  }
+  if (estado !== "pago" && estado !== "expirado") {
+    const ref = p.stripeSessionId;
+    if (ref.startsWith("pi_")) {
+      const intent = await stripe().paymentIntents.retrieve(ref);
+      if (intent.status === "canceled") estado = "expirado";
+      else clientSecret = intent.client_secret;
+    } else if (ref.startsWith("in_")) {
+      const fatura = await stripe().invoices.retrieve(ref, { expand: ["confirmation_secret"] });
+      if (fatura.status === "void" || fatura.status === "uncollectible") estado = "expirado";
+      else clientSecret = fatura.confirmation_secret?.client_secret ?? null;
+    }
+  }
+  return {
+    id: p.id,
+    tipo: p.tipo,
+    estado,
+    valorCentimos: p.valorCentimos,
+    moeda: p.moeda,
+    descricao: p.descricao ?? "",
+    email: p.email,
+    retorno: p.retorno,
+    empresa: p.company?.nome ?? null,
+    intervalo: p.pacote?.intervalo ?? null,
+    clientSecret,
+  };
+}
+
+// ---------------------------------------------------------------- subscrição
+
+// Cancela no fim do período pago, ou desfaz o cancelamento.
+export async function cancelarSubscricao(companyId: string, cancelar: boolean): Promise<void> {
+  const c = await prisma.company.findUnique({ where: { id: companyId } });
+  if (!c?.subscricaoId) throw new Error("A empresa não tem subscrição.");
+  const sub = await stripe().subscriptions.update(c.subscricaoId, { cancel_at_period_end: cancelar });
+  await prisma.company.update({
+    where: { id: companyId },
+    data: { subscricaoFim: fimDoPeriodo(sub), subscricaoCancela: cancelar },
+  });
+}
+
+export type Fatura = { id: string; numero: string; data: string; valorCentimos: number; moeda: string; estado: string };
+
+export async function faturasDaEmpresa(companyId: string): Promise<Fatura[]> {
+  const c = await prisma.company.findUnique({ where: { id: companyId } });
+  if (!c?.stripeCustomerId) return [];
+  const lista = await stripe().invoices.list({ customer: c.stripeCustomerId, limit: 24 });
+  return lista.data
+    .filter((f) => f.status === "paid")
+    .map((f) => ({
+      id: f.id!,
+      numero: f.number ?? "",
+      data: new Date(f.created * 1000).toISOString(),
+      valorCentimos: f.amount_paid,
+      moeda: f.currency,
+      estado: f.status ?? "",
+    }));
+}
+
+// O PDF da fatura, servido por nós: o browser nunca sai do Snaptie.
+export async function pdfDaFatura(
+  companyId: string,
+  faturaId: string,
+): Promise<{ pdf: ArrayBuffer; nome: string } | null> {
+  const c = await prisma.company.findUnique({ where: { id: companyId } });
+  if (!c?.stripeCustomerId) return null;
+  const f = await stripe().invoices.retrieve(faturaId);
+  if (idDe(f.customer) !== c.stripeCustomerId || !f.invoice_pdf) return null;
+  const r = await fetch(f.invoice_pdf);
+  if (!r.ok) return null;
+  return { pdf: await r.arrayBuffer(), nome: `fatura-${f.number ?? f.id}.pdf` };
+}
+
+// Trocar o cartão: os dados entram na nossa página; ao voltar, o cartão novo
+// passa a ser o da subscrição.
+export async function iniciarTrocaCartao(companyId: string): Promise<string> {
+  const customer = await clienteDaEmpresa(companyId);
+  const setup = await stripe().setupIntents.create({
+    customer,
+    automatic_payment_methods: { enabled: true },
+    usage: "off_session",
+    metadata: { ...MARCA, companyId },
+  });
+  return setup.client_secret!;
+}
+
+export async function concluirTrocaCartao(companyId: string, setupIntentId: string): Promise<boolean> {
+  const c = await prisma.company.findUnique({ where: { id: companyId } });
+  if (!c?.stripeCustomerId) return false;
+  const setup = await stripe().setupIntents.retrieve(setupIntentId);
+  if (setup.status !== "succeeded" || idDe(setup.customer) !== c.stripeCustomerId) return false;
+  const metodo = idDe(setup.payment_method);
+  if (!metodo) return false;
+  await stripe().customers.update(c.stripeCustomerId, { invoice_settings: { default_payment_method: metodo } });
+  if (c.subscricaoId) await stripe().subscriptions.update(c.subscricaoId, { default_payment_method: metodo });
+  return true;
+}
+
+export async function cartaoAtual(companyId: string): Promise<string | null> {
+  const c = await prisma.company.findUnique({ where: { id: companyId } });
+  if (!c?.stripeCustomerId) return null;
+  const cliente = await stripe().customers.retrieve(c.stripeCustomerId, {
+    expand: ["invoice_settings.default_payment_method"],
+  });
+  if (cliente.deleted) return null;
+  const pm = cliente.invoice_settings?.default_payment_method;
+  if (!pm || typeof pm === "string") return null;
+  if (pm.card) return `${pm.card.brand.toUpperCase()} terminado em ${pm.card.last4}`;
+  return pm.type;
+}

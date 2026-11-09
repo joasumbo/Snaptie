@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { CHAVES, gravarConfig } from "@/lib/configuracao";
 import { INTERVALOS } from "@/lib/pagamentos";
-import { arquivarProduto, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
+import { arquivarProduto, criarPagamentoAvulso, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
+import { appUrl } from "@/lib/stripe";
 
 export type Resultado = { ok: true } | { ok: false; message: string };
 
@@ -121,4 +122,31 @@ export async function mudarLimites(ativos: boolean): Promise<Resultado> {
   await gravarConfig(CHAVES.limitesAtivos, ativos ? "1" : "0");
   revalidatePath("/dashboard/pagamentos");
   return { ok: true };
+}
+
+// Um link para mandar a quem tem de pagar: abre a nossa página de pagamento.
+// Cada link serve para um pagamento.
+export async function criarLinkPagamento(i: {
+  valorEuros: number;
+  descricao: string;
+  email: string;
+}): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  if (!i.descricao.trim()) return { ok: false, message: "Diga a que se refere o pagamento." };
+  if (!Number.isFinite(i.valorEuros) || i.valorEuros < 0.5) return { ok: false, message: "O valor mínimo é 0,50 €." };
+  if (i.valorEuros > 100000) return { ok: false, message: "Valor demasiado alto." };
+  const email = i.email.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "O email não é válido." };
+  try {
+    const id = await criarPagamentoAvulso({
+      tipo: "link",
+      valorCentimos: Math.round(i.valorEuros * 100),
+      descricao: i.descricao.trim(),
+      email: email || null,
+    });
+    revalidatePath("/dashboard/pagamentos");
+    return { ok: true, url: `${appUrl()}/pagar/${id}` };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
 }

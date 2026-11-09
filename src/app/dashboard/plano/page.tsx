@@ -4,26 +4,23 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { PLANOS } from "@/lib/planos";
 import MeuPlano from "@/components/pagamentos/meu-plano";
+import { cartaoAtual, faturasDaEmpresa } from "@/lib/stripe-pagamentos";
+import { getLocale } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlanoPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ pagamento?: string }>;
-}) {
+export default async function PlanoPage() {
   const user = await requireRole(["GESTOR_EMPRESA"]);
   if (!user.companyId) redirect("/dashboard");
-  const sp = await searchParams;
 
   const [company, pacotes, pagamentos, qrs] = await Promise.all([
     prisma.company.findUniqueOrThrow({
       where: { id: user.companyId },
       select: {
         plano: true,
-        stripeCustomerId: true,
         subscricaoEstado: true,
         subscricaoFim: true,
+        subscricaoCancela: true,
         pacote: { select: { id: true, nome: true, limiteQrs: true } },
       },
     }),
@@ -40,18 +37,26 @@ export default async function PlanoPage({
   ]);
 
   const limite = company.pacote?.limiteQrs ?? PLANOS[company.plano].limiteQrs;
+  const [faturas, cartao, locale] = await Promise.all([
+    faturasDaEmpresa(user.companyId).catch(() => []),
+    cartaoAtual(user.companyId).catch(() => null),
+    getLocale(),
+  ]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <PageHeader title="O meu plano" description="O plano da sua empresa no Snaptie e os pagamentos feitos." />
       <MeuPlano
-        retorno={sp.pagamento === "ok" ? "ok" : sp.pagamento === "cancelado" ? "cancelado" : null}
         plano={company.plano}
         pacoteAtual={company.pacote?.id ?? null}
         nomePacote={company.pacote?.nome ?? null}
         estado={company.subscricaoEstado}
         fim={company.subscricaoFim?.toISOString() ?? null}
-        temCliente={Boolean(company.stripeCustomerId)}
+        cancela={company.subscricaoCancela}
+        cartao={cartao}
+        faturas={faturas}
+        chavePublica={process.env.STRIPE_PUBLISHABLE_KEY ?? ""}
+        locale={locale}
         qrs={qrs}
         limite={limite}
         pacotes={pacotes.map((p) => ({

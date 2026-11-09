@@ -75,6 +75,7 @@ export default async function PagamentosPage() {
           empresa: p.company?.nome ?? "",
           email: p.email ?? "",
           data: p.createdAt.toISOString(),
+          link: p.tipo === "link" && p.estado !== "pago" ? `/pagar/${p.id}` : null,
         }))}
         subscritas={subscritas.map((c) => ({
           id: c.id,

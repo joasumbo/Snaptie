@@ -184,7 +184,7 @@
     "payOk": "Pagamento recebido. Obrigado!",
     "payCancel": "O pagamento foi cancelado. Nada foi cobrado.",
     "payInvalid": "Indique um valor entre {min} e {max}.",
-    "paySecure": "Pagamento seguro pelo Stripe",
+    "paySecure": "Pagamento seguro",
     "payError": "Não foi possível abrir o pagamento. Tente de novo."
   },
   "Tipos": {
@@ -216,5 +216,20 @@
     "GALERIA": "Galeria",
     "PLAYLIST": "Playlist",
     "PAGAMENTO": "Pagamento"
+  },
+  "Pagar": {
+    "title": "Pagamento",
+    "pay": "Pagar {valor}",
+    "subscribe": "Subscrever por {valor}",
+    "perMonth": "por mês",
+    "perYear": "por ano",
+    "processing": "A processar…",
+    "secure": "Pagamento seguro e encriptado",
+    "error": "Não foi possível concluir o pagamento. Tente de novo.",
+    "paidTitle": "Pagamento recebido",
+    "paidText": "Obrigado! Já está tudo tratado.",
+    "pending": "O pagamento está a ser confirmado. Pode fechar esta página; fica registado assim que for aceite.",
+    "expired": "Este pagamento já não está disponível.",
+    "back": "Voltar"
   }
 }

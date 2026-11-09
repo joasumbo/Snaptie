@@ -22,6 +22,7 @@ const RESERVED_SLUGS = new Set([
   "forgot-password",
   "reset-password",
   "s",
+  "pagar",
   "api",
   "_next",
   "favicon.ico",

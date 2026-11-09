@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, Link2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Plano } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
 import {
   apagarPacote,
   guardarPacote,
+  criarLinkPagamento,
   ligarWebhookStripe,
   mudarLimites,
   type PacoteInput,
@@ -53,6 +54,7 @@ type PagamentoLinha = {
   empresa: string;
   email: string;
   data: string;
+  link: string | null;
 };
 
 type Subscrita = {
@@ -69,7 +71,15 @@ const NOMES_TIPO: Record<string, string> = {
   pacote: "Pacote",
   renovacao: "Renovação",
   botao: "Botão na página",
+  link: "Link de pagamento",
 };
+
+function copiar(texto: string) {
+  navigator.clipboard.writeText(texto).then(
+    () => toast.success("Link copiado."),
+    () => toast.error("Não foi possível copiar."),
+  );
+}
 
 function data(iso: string) {
   return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -251,6 +261,8 @@ export default function PagamentosAdmin(props: {
         </CardContent>
       </Card>
 
+      <LinkPagamento ativo={Boolean(ligado)} onCriado={() => router.refresh()} />
+
       <Card>
         <CardHeader>
           <CardTitle>Empresas com plano pago</CardTitle>
@@ -314,6 +326,15 @@ export default function PagamentosAdmin(props: {
                       <td className="py-2 pr-3">
                         {p.descricao}
                         {p.email ? <div className="text-xs text-muted-foreground">{p.email}</div> : null}
+                        {p.link ? (
+                          <button
+                            type="button"
+                            className="mt-0.5 flex items-center gap-1 text-xs text-indigo-600 hover:underline"
+                            onClick={() => copiar(window.location.origin + p.link)}
+                          >
+                            <Copy className="size-3" /> Copiar link
+                          </button>
+                        ) : null}
                       </td>
                       <td className="py-2 pr-3">{p.empresa}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">{euros(p.valorCentimos, p.moeda)}</td>
@@ -472,5 +493,70 @@ function PacoteModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function LinkPagamento({ ativo, onCriado }: { ativo: boolean; onCriado: () => void }) {
+  const [descricao, setDescricao] = useState("");
+  const [valor, setValor] = useState("");
+  const [email, setEmail] = useState("");
+  const [url, setUrl] = useState<string | null>(null);
+  const [aCriar, setACriar] = useState(false);
+
+  async function criar() {
+    setACriar(true);
+    const r = await criarLinkPagamento({
+      descricao,
+      valorEuros: Number(valor.replace(",", ".")),
+      email,
+    });
+    setACriar(false);
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
+    setUrl(r.url);
+    onCriado();
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Link de pagamento</CardTitle>
+        <CardDescription>
+          Cria um link para a nossa página de pagamento, para mandar a quem tem de pagar. Cada link
+          serve para um pagamento e aparece na lista abaixo.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-[2fr_1fr_2fr_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <Label>Descrição</Label>
+            <Input value={descricao} placeholder="Instalação de 10 placas QR" onChange={(e) => setDescricao(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Valor (€)</Label>
+            <Input inputMode="decimal" value={valor} placeholder="50,00" onChange={(e) => setValor(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Email para o recibo (opcional)</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <Button disabled={!ativo || aCriar} onClick={criar}>
+            {aCriar ? <Loader2 className="animate-spin" /> : <Link2 />} Criar link
+          </Button>
+        </div>
+        {url ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
+            <a href={url} target="_blank" rel="noreferrer" className="break-all font-medium text-indigo-600 hover:underline">
+              {url}
+            </a>
+            <Button size="sm" variant="outline" onClick={() => copiar(url)}>
+              <Copy /> Copiar
+            </Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

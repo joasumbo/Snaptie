@@ -126,11 +126,12 @@ model Company {
   deletedAt     DateTime?     @map("deleted_at") // soft delete
 
   // Pagamentos (Stripe). O pacote e o estado vêm do webhook, nunca do browser.
-  stripeCustomerId String?   @map("stripe_customer_id")
-  pacoteId         String?   @map("pacote_id")
-  subscricaoId     String?   @map("subscricao_id")
-  subscricaoEstado String?   @map("subscricao_estado") // ativa, em_falta, cancelada, unico
-  subscricaoFim    DateTime? @map("subscricao_fim")
+  stripeCustomerId  String?   @map("stripe_customer_id")
+  pacoteId          String?   @map("pacote_id")
+  subscricaoId      String?   @map("subscricao_id")
+  subscricaoEstado  String?   @map("subscricao_estado") // ativa, em_falta, cancelada, unico
+  subscricaoFim     DateTime? @map("subscricao_fim")
+  subscricaoCancela Boolean   @default(false) @map("subscricao_cancela") // cancela no fim do período
 
   pacote        Pacote?        @relation(fields: [pacoteId], references: [id], onDelete: SetNull)
   pagamentos    Pagamento[]
@@ -373,7 +374,9 @@ model Pagamento {
   pacoteId        String?  @map("pacote_id")
   qrId            String?  @map("qr_id")
   blockId         String?  @map("block_id")
+  // Referência no Stripe: pi_ (PaymentIntent), in_ (fatura) ou cs_ (antigo checkout)
   stripeSessionId String?  @unique @map("stripe_session_id")
+  retorno         String? // para onde volta quem pagou (página do QR, o meu plano)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

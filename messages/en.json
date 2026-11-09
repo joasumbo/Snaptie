@@ -184,7 +184,7 @@
     "payOk": "Payment received. Thank you!",
     "payCancel": "The payment was cancelled. Nothing was charged.",
     "payInvalid": "Enter an amount between {min} and {max}.",
-    "paySecure": "Secure payment by Stripe",
+    "paySecure": "Secure payment",
     "payError": "Could not open the payment. Please try again."
   },
   "Tipos": {
@@ -216,5 +216,20 @@
     "GALERIA": "Gallery",
     "PLAYLIST": "Playlist",
     "PAGAMENTO": "Payment"
+  },
+  "Pagar": {
+    "title": "Payment",
+    "pay": "Pay {valor}",
+    "subscribe": "Subscribe for {valor}",
+    "perMonth": "per month",
+    "perYear": "per year",
+    "processing": "Processing…",
+    "secure": "Secure, encrypted payment",
+    "error": "The payment could not be completed. Please try again.",
+    "paidTitle": "Payment received",
+    "paidText": "Thank you! You're all set.",
+    "pending": "Your payment is being confirmed. You can close this page; it will be recorded once accepted.",
+    "expired": "This payment is no longer available.",
+    "back": "Back"
   }
 }

@@ -62,3 +62,7 @@ CREATE TABLE IF NOT EXISTS "configuracoes" (
   "updated_at" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "configuracoes_pkey" PRIMARY KEY ("chave")
 );
+
+-- Páginas de pagamento próprias (sem o checkout do Stripe).
+ALTER TABLE "pagamentos" ADD COLUMN IF NOT EXISTS "retorno" TEXT;
+ALTER TABLE "companies" ADD COLUMN IF NOT EXISTS "subscricao_cancela" BOOLEAN NOT NULL DEFAULT false;
