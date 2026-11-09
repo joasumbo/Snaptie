@@ -330,7 +330,7 @@ export async function emitirFatura(pagamentoId: string, detalhe: string | null):
     const cliente = await clienteDoPagamento(cfg.empresa!, refs, p);
     const data = dia(pago);
     const valor = p.valorCentimos / 100;
-    const r = await moloni<{ document_id: number }>("invoiceReceipts/insert", {
+    const dadosFatura = {
       company_id: cfg.empresa,
       date: data,
       expiration_date: data,
@@ -346,11 +346,24 @@ export async function emitirFatura(pagamentoId: string, detalhe: string | null):
           notes: "Pagamento online (Stripe)",
         },
       ],
-      ...(p.moloniOrcamentoId && p.moloniOrcamentoId > 0
-        ? { associated_documents: [{ associated_id: p.moloniOrcamentoId, value: valor }] }
-        : {}),
+      ...(p.moloniOrcamento ? { notes: `Ref. pró-forma ${p.moloniOrcamento}` } : {}),
       status: 1,
-    });
+    };
+    // A fatura liga-se à pró-forma quando as duas são do mesmo cliente. Se a
+    // pró-forma saiu para consumidor final e quem pagou deu os seus dados, a
+    // Moloni recusa a ligação: a fatura sai sem ela, com a referência nas notas.
+    let r: { document_id: number };
+    try {
+      r = await moloni<{ document_id: number }>("invoiceReceipts/insert", {
+        ...dadosFatura,
+        ...(p.moloniOrcamentoId && p.moloniOrcamentoId > 0
+          ? { associated_documents: [{ associated_id: p.moloniOrcamentoId, value: valor }] }
+          : {}),
+      });
+    } catch (e) {
+      if (!(p.moloniOrcamentoId && p.moloniOrcamentoId > 0)) throw e;
+      r = await moloni<{ document_id: number }>("invoiceReceipts/insert", dadosFatura);
+    }
     const numero = await numeroDoDocumento(cfg.empresa!, r.document_id);
     await prisma.pagamento.update({
       where: { id: p.id },

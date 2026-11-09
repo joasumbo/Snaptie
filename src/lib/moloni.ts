@@ -84,7 +84,10 @@ export async function moloni<T = unknown>(endpoint: string, dados: Record<string
     cache: "no-store",
   });
   const j = await r.json().catch(() => null);
-  if (!r.ok || (j && typeof j === "object" && "error" in j)) {
+  // Num insert ou update, só conta como feito com valid = 1. Os erros vêm
+  // como uma lista de códigos, que de outra forma passava por resposta.
+  const escrita = /\/(insert|update|delete)$/.test(endpoint);
+  if (!r.ok || (j && typeof j === "object" && "error" in j) || (escrita && (j as { valid?: number } | null)?.valid !== 1)) {
     throw new Error(`Moloni ${endpoint}: ${JSON.stringify(j).slice(0, 300)}`);
   }
   return j as T;
