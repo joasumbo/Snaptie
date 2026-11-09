@@ -47,6 +47,7 @@
   },
   "Nav": {
     "dashboard": "Übersicht",
+    "billing": "Umsatz",
     "payments": "Zahlungen",
     "plan": "Mein Tarif",
     "companies": "Unternehmen",

@@ -45,6 +45,7 @@
   },
   "Nav": {
     "dashboard": "Dashboard",
+    "billing": "Revenue",
     "payments": "Payments",
     "plan": "My plan",
     "companies": "Companies",

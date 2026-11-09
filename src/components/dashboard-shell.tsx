@@ -12,6 +12,7 @@ import {
   QrCode,
   BarChart3,
   CreditCard,
+  Wallet,
   LogOut,
   CircleUserRound,
   ChevronDown,
@@ -56,6 +57,12 @@ const NAV_ITEMS: NavItem[] = [
     key: "stats",
     icon: BarChart3,
     roles: ["ADMIN", "GESTOR_EMPRESA", "GESTOR_QR"],
+  },
+  {
+    href: "/dashboard/faturacao",
+    key: "billing",
+    icon: Wallet,
+    roles: ["ADMIN"],
   },
   {
     href: "/dashboard/pagamentos",

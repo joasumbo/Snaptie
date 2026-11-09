@@ -45,6 +45,7 @@
   },
   "Nav": {
     "dashboard": "Painel",
+    "billing": "Faturação",
     "payments": "Pagamentos",
     "plan": "O meu plano",
     "companies": "Empresas",

@@ -5,6 +5,8 @@ import { CHAVES, diasTolerancia, lerConfig, lerEmissor, limitesAtivos } from "@/
 import { modoStripe, stripe, stripeConfigurado } from "@/lib/stripe";
 import { estadoWebhook } from "@/lib/stripe-pagamentos";
 import PagamentosAdmin from "@/components/pagamentos/pagamentos-admin";
+import MoloniAdmin from "@/components/pagamentos/moloni-admin";
+import { estadoMoloni } from "@/lib/moloni";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +64,7 @@ export default async function PagamentosPage() {
         title="Pagamentos"
         description="Pacotes à venda, ligação ao Stripe e pagamentos recebidos."
       />
+      <MoloniAdmin estado={await estadoMoloni()} />
       <PagamentosAdmin
         modo={modoStripe()}
         conta={conta}

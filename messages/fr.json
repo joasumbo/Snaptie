@@ -47,6 +47,7 @@
   },
   "Nav": {
     "dashboard": "Tableau de bord",
+    "billing": "Facturation",
     "payments": "Paiements",
     "plan": "Mon forfait",
     "companies": "Entreprises",
