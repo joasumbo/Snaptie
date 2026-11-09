@@ -52,11 +52,14 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
             locale={locale}
             retorno={dados.retorno}
             pedeDados={dados.tipo === "botao" || dados.tipo === "link"}
+            fatura={dados.fatura}
             dados={{
               email: dados.email ?? "",
               nome: dados.nomeCliente ?? "",
               nif: dados.nifCliente ?? "",
               morada: dados.moradaCliente ?? "",
+              codigoPostal: dados.cpCliente ?? "",
+              cidade: dados.cidadeCliente ?? "",
             }}
             textos={{
               botao: periodo ? t("subscribe", { valor }) : t("pay", { valor }),
@@ -73,11 +76,25 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
               nome: t("name"),
               nif: t("nif"),
               morada: t("address"),
+              codigoPostal: t("postcode"),
+              cidade: t("city"),
               opcional: t("optional"),
-              emailInvalido: t("emailInvalid"),
               comprovativo: t("receipt"),
-              enviadoPara: t("sentTo", { email: "{email}" }),
-              dadosTitulo: t("billingData"),
+              fatura: t("invoice"),
+              enviadoPara: t("sentInvoice", { email: "{email}" }),
+              passo1: t("step1"),
+              passo2: t("step2"),
+              continuar: t("next"),
+              alterar: t("change"),
+              faturaEm: t("invoiceTo"),
+              nifDica: t("nifHint"),
+              erros: {
+                email: t("emailInvalid"),
+                nome: t("nameRequired"),
+                nif: t("nifInvalid"),
+                codigoPostal: t("postcodeInvalid"),
+                geral: t("error"),
+              },
             }}
           />
         </div>

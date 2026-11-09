@@ -138,6 +138,9 @@ model Company {
   // Dados para os comprovativos de pagamento
   nif               String?
   morada            String?
+  codigoPostal      String?   @map("codigo_postal")
+  cidade            String?
+  moloniClienteId   Int?      @map("moloni_cliente_id")
 
   pacote          Pacote?        @relation("PacoteDaEmpresa", fields: [pacoteId], references: [id], onDelete: SetNull)
   pacotesPrivados Pacote[]       @relation("PacotePrivado")
@@ -391,9 +394,21 @@ model Pagamento {
   nomeCliente     String?   @map("nome_cliente")
   nifCliente      String?   @map("nif_cliente")
   moradaCliente   String?   @map("morada_cliente")
+  cpCliente       String?   @map("cp_cliente")
+  cidadeCliente   String?   @map("cidade_cliente")
+  faturaEnviadaEm DateTime? @map("fatura_enviada_em") // email com a fatura-recibo enviado
   pagoEm          DateTime? @map("pago_em")
   emailEnviadoEm  DateTime? @map("email_enviado_em") // comprovativo enviado
   avisoFalhaEm    DateTime? @map("aviso_falha_em") // último aviso de pagamento falhado
+  // Moloni: o orçamento (pró-forma) da cobrança e a fatura-recibo do pagamento
+  moloniOrcamentoId Int?     @map("moloni_orcamento_id")
+  moloniOrcamento   String?  @map("moloni_orcamento") // número, ex. SNP 2026/12
+  moloniOrcamentoPdf String? @map("moloni_orcamento_pdf") // chave no R2
+  moloniFaturaId    Int?     @map("moloni_fatura_id")
+  moloniFatura      String?  @map("moloni_fatura")
+  moloniFaturaPdf   String?  @map("moloni_fatura_pdf")
+  moloniErro        String?  @map("moloni_erro")
+  moloniTentativas  Int      @default(0) @map("moloni_tentativas")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

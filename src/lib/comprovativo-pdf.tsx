@@ -63,15 +63,28 @@ const s = StyleSheet.create({
   rodape: { position: "absolute", left: 48, right: 48, bottom: 30, flexDirection: "row", justifyContent: "space-between", fontSize: 7.5, color: CINZA, borderTopWidth: 1, borderColor: LINHA, paddingTop: 8 },
 });
 
-// O símbolo do Snaptie: quatro módulos de QR, desenhados aqui para o PDF não
-// depender de imagens.
+// O símbolo do Snaptie (os três cantos de um QR e os módulos), o mesmo do
+// site, desenhado aqui para o PDF não depender de imagens.
 function Simbolo() {
+  const canto = (x: number, y: number) => [
+    <Rect key={`c${x}${y}`} x={x} y={y} width={7} height={7} rx={2.2} stroke={TINTA} strokeWidth={1.7} fill="none" />,
+    <Rect key={`m${x}${y}`} x={x + 2.4} y={y + 2.4} width={2.2} height={2.2} rx={0.7} fill={TINTA} />,
+  ];
+  const modulos = [
+    [14.3, 14.3],
+    [19.1, 14.3],
+    [16.7, 16.7],
+    [14.3, 19.1],
+    [19.1, 19.1],
+  ];
   return (
-    <Svg width={20} height={20} viewBox="0 0 20 20">
-      <Rect x={0} y={0} width={8.5} height={8.5} rx={2.2} fill={TINTA} />
-      <Rect x={11.5} y={0} width={8.5} height={8.5} rx={2.2} fill={TINTA} />
-      <Rect x={0} y={11.5} width={8.5} height={8.5} rx={2.2} fill={TINTA} />
-      <Rect x={11.5} y={11.5} width={8.5} height={8.5} rx={4.25} fill={MARCA} />
+    <Svg width={22} height={22} viewBox="0 0 24 24">
+      {canto(2.5, 2.5)}
+      {canto(14.5, 2.5)}
+      {canto(2.5, 14.5)}
+      {modulos.map(([x, y]) => (
+        <Rect key={`d${x}${y}`} x={x} y={y} width={2.4} height={2.4} rx={0.7} fill={TINTA} />
+      ))}
     </Svg>
   );
 }

@@ -329,10 +329,13 @@ export type DadosPagamento = {
   nomeCliente: string | null;
   nifCliente: string | null;
   moradaCliente: string | null;
+  cpCliente: string | null;
+  cidadeCliente: string | null;
   retorno: string | null;
   empresa: string | null;
   intervalo: string | null;
   clientSecret: string | null;
+  fatura: boolean;
 };
 
 export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento | null> {
@@ -370,10 +373,13 @@ export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento 
     nomeCliente: p.nomeCliente,
     nifCliente: p.nifCliente,
     moradaCliente: p.moradaCliente,
+    cpCliente: p.cpCliente,
+    cidadeCliente: p.cidadeCliente,
     retorno: p.retorno,
     empresa: p.company?.nome ?? null,
     intervalo: p.pacote?.intervalo ?? null,
     clientSecret,
+    fatura: Boolean(p.moloniFaturaPdf),
   };
 }
 
@@ -474,7 +480,7 @@ export async function cartaoAtual(companyId: string): Promise<string | null> {
 // email. Só antes de pagar; depois disso o comprovativo já não muda.
 export async function guardarDadosCliente(
   pagamentoId: string,
-  dados: { email: string; nome: string; nif: string; morada: string },
+  dados: { email: string; nome: string; nif: string; morada: string; codigoPostal: string; cidade: string },
 ): Promise<boolean> {
   const r = await prisma.pagamento.updateMany({
     where: { id: pagamentoId, estado: { not: "pago" } },
@@ -483,6 +489,8 @@ export async function guardarDadosCliente(
       nomeCliente: dados.nome || null,
       nifCliente: dados.nif || null,
       moradaCliente: dados.morada || null,
+      cpCliente: dados.codigoPostal || null,
+      cidadeCliente: dados.cidade || null,
     },
   });
   return r.count > 0;

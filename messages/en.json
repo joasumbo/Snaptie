@@ -243,6 +243,19 @@
     "emailInvalid": "Enter a valid email to receive the receipt.",
     "receipt": "Download receipt",
     "sentTo": "We sent the receipt to {email}.",
-    "billingData": "Receipt details"
+    "billingData": "Receipt details",
+    "postcode": "Postcode",
+    "city": "City",
+    "nameRequired": "Enter your name.",
+    "nifInvalid": "The tax number is not valid.",
+    "postcodeInvalid": "Use the format 1234-567.",
+    "step1": "Your details",
+    "step2": "Payment",
+    "next": "Continue to payment",
+    "change": "Change",
+    "invoiceTo": "The invoice is issued to",
+    "nifHint": "Without a tax number, the invoice is issued to a final consumer.",
+    "invoice": "Download invoice-receipt",
+    "sentInvoice": "The confirmation and the invoice-receipt are on their way to {email}."
   }
 }

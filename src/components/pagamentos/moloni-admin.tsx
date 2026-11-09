@@ -10,11 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { desligarContaMoloni, escolherEmpresaMoloni, ligarContaMoloni } from "@/app/dashboard/pagamentos/moloni-actions";
+import { guardarSerieMoloni } from "@/app/dashboard/pagamentos/actions";
 
 type Empresa = { company_id: number; name: string; vat: string };
 type Estado = { ligado: false } | { ligado: true; utilizador: string; empresa: string | null; empresas: Empresa[] };
 
-export default function MoloniAdmin({ estado }: { estado: Estado }) {
+export default function MoloniAdmin({
+  estado,
+  serie,
+  series,
+}: {
+  estado: Estado;
+  serie: number | null;
+  series: { id: number; nome: string }[];
+}) {
   const router = useRouter();
   const [utilizador, setUtilizador] = useState("");
   const [palavra, setPalavra] = useState("");
@@ -85,6 +94,53 @@ export default function MoloniAdmin({ estado }: { estado: Estado }) {
                     {e.name} {e.vat ? `· ${e.vat}` : ""}
                   </Button>
                 ))}
+              </div>
+            ) : null}
+            {estado.empresa ? (
+              <div className="space-y-2 rounded-lg border p-3">
+                <div className="font-medium">Série das faturas</div>
+                <p className="text-xs text-muted-foreground">
+                  A série tem de estar comunicada à AT (o contabilista trata disso na Moloni). Enquanto não houver série
+                  escolhida, os clientes recebem o comprovativo Snaptie e não é emitida fatura.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {series.map((s) => (
+                    <Button
+                      key={s.id}
+                      size="sm"
+                      variant={serie === s.id ? "default" : "outline"}
+                      disabled={aCorrer}
+                      onClick={async () => {
+                        if (serie !== s.id && !confirm(`Emitir as faturas na série ${s.nome}? A partir de agora, cada pagamento gera uma fatura-recibo real.`)) return;
+                        setACorrer(true);
+                        const r = await guardarSerieMoloni(s.id, s.nome);
+                        setACorrer(false);
+                        if (!r.ok) toast.error(r.message);
+                        else router.refresh();
+                      }}
+                    >
+                      {s.nome}
+                    </Button>
+                  ))}
+                  {serie ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={aCorrer}
+                      onClick={async () => {
+                        await guardarSerieMoloni(null, null);
+                        router.refresh();
+                      }}
+                    >
+                      Parar faturação
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-xs">
+                  {serie
+                    ? "Faturação ativa: cada pagamento confirmado gera uma fatura-recibo, e cada cobrança uma pró-forma (orçamento)."
+                    : "Faturação desligada."}
+                </p>
               </div>
             ) : null}
             <Button size="sm" variant="ghost" className="text-destructive" onClick={desligar}>

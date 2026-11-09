@@ -47,7 +47,8 @@ export default async function FaturacaoPage({
           email: p.email ?? "",
           valorCentimos: p.valorCentimos,
           moeda: p.moeda,
-          numero: p.numero,
+          numero: p.moloniFatura ?? p.numero,
+          fatura: Boolean(p.moloniFaturaPdf),
         }))}
       />
     </div>

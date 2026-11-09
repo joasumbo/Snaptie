@@ -245,6 +245,19 @@
     "emailInvalid": "Geben Sie eine gültige E-Mail für den Beleg ein.",
     "receipt": "Beleg herunterladen",
     "sentTo": "Wir haben den Beleg an {email} gesendet.",
-    "billingData": "Angaben für den Beleg"
+    "billingData": "Angaben für den Beleg",
+    "postcode": "Postleitzahl",
+    "city": "Stadt",
+    "nameRequired": "Geben Sie Ihren Namen ein.",
+    "nifInvalid": "Die Steuernummer ist ungültig.",
+    "postcodeInvalid": "Format 1234-567 verwenden.",
+    "step1": "Ihre Angaben",
+    "step2": "Zahlung",
+    "next": "Weiter zur Zahlung",
+    "change": "Ändern",
+    "invoiceTo": "Die Rechnung lautet auf",
+    "nifHint": "Ohne Steuernummer wird die Rechnung an einen Endverbraucher ausgestellt.",
+    "invoice": "Rechnung herunterladen",
+    "sentInvoice": "Die Bestätigung und die Rechnung gehen an {email}."
   }
 }

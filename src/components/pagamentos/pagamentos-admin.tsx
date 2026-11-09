@@ -65,6 +65,8 @@ type PagamentoLinha = {
   link: string | null;
   numero: string | null;
   emailEnviado: boolean;
+  fatura: boolean;
+  proforma: string | null;
 };
 
 type Subscrita = {
@@ -377,7 +379,7 @@ export default function PagamentosAdmin(props: {
                               variant="ghost"
                               aria-label="Ver comprovativo"
                               nativeButton={false}
-                              render={<a href={`/pagar/${p.id}/comprovativo`} target="_blank" rel="noreferrer" />}
+                              render={<a href={`/pagar/${p.id}/${p.fatura ? "fatura" : "comprovativo"}`} target="_blank" rel="noreferrer" />}
                             >
                               <FileText />
                             </Button>

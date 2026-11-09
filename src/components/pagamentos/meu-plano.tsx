@@ -61,6 +61,7 @@ export default function MeuPlano(props: {
     data: string;
     estado: string;
     numero: string | null;
+    fatura: boolean;
   }[];
 }) {
   const router = useRouter();
@@ -238,7 +239,7 @@ export default function MeuPlano(props: {
                         variant="ghost"
                         aria-label="Descarregar comprovativo"
                         nativeButton={false}
-                        render={<a href={`/pagar/${p.id}/comprovativo`} target="_blank" rel="noreferrer" />}
+                        render={<a href={`/pagar/${p.id}/${p.fatura ? "fatura" : "comprovativo"}`} target="_blank" rel="noreferrer" />}
                       >
                         <Download />
                       </Button>

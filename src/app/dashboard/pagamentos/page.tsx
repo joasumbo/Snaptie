@@ -7,6 +7,7 @@ import { estadoWebhook } from "@/lib/stripe-pagamentos";
 import PagamentosAdmin from "@/components/pagamentos/pagamentos-admin";
 import MoloniAdmin from "@/components/pagamentos/moloni-admin";
 import { estadoMoloni } from "@/lib/moloni";
+import { configuracaoFaturas, seriesMoloni } from "@/lib/moloni-faturas";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,11 @@ export default async function PagamentosPage() {
         title="Pagamentos"
         description="Pacotes à venda, ligação ao Stripe e pagamentos recebidos."
       />
-      <MoloniAdmin estado={await estadoMoloni()} />
+      <MoloniAdmin
+        estado={await estadoMoloni()}
+        serie={(await configuracaoFaturas()).serie}
+        series={await seriesMoloni().catch(() => [])}
+      />
       <PagamentosAdmin
         modo={modoStripe()}
         conta={conta}
@@ -100,7 +105,9 @@ export default async function PagamentosPage() {
           email: p.email ?? "",
           data: p.createdAt.toISOString(),
           link: p.estado !== "pago" && p.estado !== "expirado" && p.tipo !== "botao" ? `/pagar/${p.id}` : null,
-          numero: p.numero,
+          numero: p.moloniFatura ?? p.numero,
+          fatura: Boolean(p.moloniFaturaPdf),
+          proforma: p.moloniOrcamento,
           emailEnviado: Boolean(p.emailEnviadoEm),
         }))}
         subscritas={subscritas.map((c) => ({

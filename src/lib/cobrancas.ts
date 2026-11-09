@@ -4,7 +4,10 @@ import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { CHAVES, diasTolerancia, lerConfig, lerEmissor, numeroComprovativo } from "@/lib/configuracao";
 import { gerarComprovativo, type DadosComprovativo } from "@/lib/comprovativo-pdf";
+import { emitirFatura, emitirOrcamento, faturacaoAtiva, lerPdfGuardado, pendentesSemFatura } from "@/lib/moloni-faturas";
 import {
+  emailFaturaEmitida,
+  emailPagamentoConfirmado,
   emailPagamentoFalhou,
   emailPagamentoRecebido,
   emailRenovacaoFalhou,
@@ -154,23 +157,81 @@ export async function aposPagamento(pagamentoId: string, reenviar = false): Prom
     });
     if (r.count === 0) return;
   }
+  const d = await dadosComprovativo(p.id);
+  if (!d) return;
+  const moloniLigada = await faturacaoAtiva();
   try {
-    const d = await dadosComprovativo(p.id);
-    if (!d) return;
-    await emailPagamentoRecebido({
-      para,
-      copia: await copiaAdmin(),
-      nome: d.cliente.nome,
-      descricao: d.descricao,
-      valor: euros(d.valorCentimos, d.moeda),
-      numero: d.numero,
-      data: dia(d.pagoEm),
-      pdf: await gerarComprovativo(d),
-    });
+    if (moloniLigada) {
+      // Com a Moloni: primeiro a confirmação do pagamento, sem anexo; a
+      // fatura-recibo segue num segundo email, assim que é emitida.
+      await emailPagamentoConfirmado({
+        para,
+        copia: await copiaAdmin(),
+        nome: d.cliente.nome,
+        descricao: d.descricao,
+        valor: euros(d.valorCentimos, d.moeda),
+        data: dia(d.pagoEm),
+        metodo: d.metodo,
+      });
+    } else {
+      // Sem Moloni: o comprovativo Snaptie em anexo.
+      await emailPagamentoRecebido({
+        para,
+        copia: await copiaAdmin(),
+        nome: d.cliente.nome,
+        descricao: d.descricao,
+        valor: euros(d.valorCentimos, d.moeda),
+        numero: d.numero,
+        data: dia(d.pagoEm),
+        pdf: await gerarComprovativo(d),
+        documento: "comprovativo",
+      });
+    }
   } catch (e) {
     console.error("[cobrancas] email pagamento", p.id, e);
     await prisma.pagamento.update({ where: { id: p.id }, data: { emailEnviadoEm: null } });
     throw e;
+  }
+
+  if (moloniLigada) {
+    // Se a Moloni falhar agora, o temporizador emite e envia mais tarde.
+    const ok = await emitirFatura(p.id, d.detalhe).catch((e) => {
+      console.error("[cobrancas] fatura", p.id, e);
+      return false;
+    });
+    if (ok) await enviarFatura(p.id, reenviar);
+  }
+}
+
+// O segundo email: a fatura-recibo da Moloni em PDF. Uma vez por pagamento.
+export async function enviarFatura(pagamentoId: string, reenviar = false): Promise<boolean> {
+  const p = await prisma.pagamento.findUnique({ where: { id: pagamentoId }, include: { company: true } });
+  if (!p?.moloniFaturaPdf || !p.moloniFatura) return false;
+  const para = p.email || p.company?.email;
+  if (!para) return false;
+  if (!reenviar) {
+    const r = await prisma.pagamento.updateMany({
+      where: { id: p.id, faturaEnviadaEm: null },
+      data: { faturaEnviadaEm: new Date() },
+    });
+    if (r.count === 0) return false;
+  }
+  try {
+    const d = await dadosComprovativo(p.id);
+    await emailFaturaEmitida({
+      para,
+      copia: await copiaAdmin(),
+      nome: d?.cliente.nome ?? null,
+      descricao: d?.descricao ?? p.descricao ?? "Pagamento",
+      valor: euros(p.valorCentimos, p.moeda),
+      numero: p.moloniFatura,
+      pdf: await lerPdfGuardado(p.moloniFaturaPdf),
+    });
+    return true;
+  } catch (e) {
+    console.error("[cobrancas] email fatura", p.id, e);
+    if (!reenviar) await prisma.pagamento.update({ where: { id: p.id }, data: { faturaEnviadaEm: null } });
+    return false;
   }
 }
 
@@ -233,7 +294,9 @@ export async function renovacaoFalhou(fatura: Stripe.Invoice, companyId: string)
   });
   if (r.count === 0) return;
   const limite = new Date(desde.getTime() + (await diasTolerancia()) * 86_400_000);
+  await emitirOrcamento(p.id).catch(() => false);
   await emailRenovacaoFalhou({
+      proforma: await proformaDe(p.id),
       para: company.email,
       copia: await copiaAdmin(),
       nome: company.nome,
@@ -244,11 +307,49 @@ export async function renovacaoFalhou(fatura: Stripe.Invoice, companyId: string)
     });
 }
 
-// Corre a cada 15 minutos, com os lembretes: avisos de renovação e suspensões.
-export async function corridaCobrancas(): Promise<{ avisos: number; suspensas: number }> {
+// A pró-forma (orçamento Moloni) de um pagamento, para anexar.
+export async function proformaDe(pagamentoId: string): Promise<{ numero: string; pdf: Buffer } | null> {
+  const p = await prisma.pagamento.findUnique({
+    where: { id: pagamentoId },
+    select: { moloniOrcamento: true, moloniOrcamentoPdf: true },
+  });
+  if (!p?.moloniOrcamento || !p.moloniOrcamentoPdf) return null;
+  try {
+    return { numero: p.moloniOrcamento, pdf: await lerPdfGuardado(p.moloniOrcamentoPdf) };
+  } catch {
+    return null;
+  }
+}
+
+// Faturas que a Moloni não emitiu na hora: tenta de novo e, se o cliente já
+// tinha recebido o comprovativo, manda-lhe a fatura.
+async function faturasEmAtraso(): Promise<number> {
+  // Uma emissão interrompida a meio fica marcada a -1; passados 10 minutos
+  // volta a poder ser tentada.
+  await prisma.pagamento.updateMany({
+    where: { moloniFaturaId: -1, updatedAt: { lt: new Date(Date.now() - 10 * 60_000) } },
+    data: { moloniFaturaId: null },
+  });
+  let n = 0;
+  for (const id of await pendentesSemFatura()) {
+    const d = await dadosComprovativo(id);
+    if (!d || !(await emitirFatura(id, d.detalhe))) continue;
+    n++;
+    await enviarFatura(id);
+  }
+  return n;
+}
+
+// Corre a cada 15 minutos, com os lembretes: avisos de renovação, suspensões
+// e faturas em atraso.
+export async function corridaCobrancas(): Promise<{ avisos: number; suspensas: number; faturas: number }> {
   let avisos = 0;
   let suspensas = 0;
   const agora = new Date();
+  const faturas = await faturasEmAtraso().catch((e) => {
+    console.error("[cobrancas] faturas em atraso", e);
+    return 0;
+  });
 
   // Três dias antes da renovação, um aviso por período.
   const aRenovar = await prisma.company.findMany({
@@ -307,5 +408,5 @@ export async function corridaCobrancas(): Promise<{ avisos: number; suspensas: n
       console.error("[cobrancas] suspensao", c.id, e);
     }
   }
-  return { avisos, suspensas };
+  return { avisos, suspensas, faturas };
 }

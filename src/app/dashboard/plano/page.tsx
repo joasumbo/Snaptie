@@ -81,7 +81,8 @@ export default async function PlanoPage() {
           moeda: p.moeda,
           data: (p.pagoEm ?? p.createdAt).toISOString(),
           estado: p.estado,
-          numero: p.numero,
+          numero: p.moloniFatura ?? p.numero,
+          fatura: Boolean(p.moloniFaturaPdf),
         }))}
       />
     </div>

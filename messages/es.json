@@ -243,6 +243,19 @@
     "emailInvalid": "Indique un email válido para recibir el comprobante.",
     "receipt": "Descargar comprobante",
     "sentTo": "Hemos enviado el comprobante a {email}.",
-    "billingData": "Datos para el comprobante"
+    "billingData": "Datos para el comprobante",
+    "postcode": "Código postal",
+    "city": "Ciudad",
+    "nameRequired": "Indique su nombre.",
+    "nifInvalid": "El NIF no es válido.",
+    "postcodeInvalid": "Use el formato 1234-567.",
+    "step1": "Sus datos",
+    "step2": "Pago",
+    "next": "Continuar al pago",
+    "change": "Cambiar",
+    "invoiceTo": "La factura se emite a nombre de",
+    "nifHint": "Sin NIF, la factura se emite como consumidor final.",
+    "invoice": "Descargar factura-recibo",
+    "sentInvoice": "La confirmación y la factura-recibo se envían a {email}."
   }
 }

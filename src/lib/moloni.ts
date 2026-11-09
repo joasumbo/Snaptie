@@ -29,11 +29,11 @@ function credenciais() {
   return { id, segredo };
 }
 
-async function ler(chave: string): Promise<string | null> {
+export async function ler(chave: string): Promise<string | null> {
   return (await prisma.configuracao.findUnique({ where: { chave } }))?.valor ?? null;
 }
 
-async function gravar(chave: string, valor: string) {
+export async function gravar(chave: string, valor: string) {
   await prisma.configuracao.upsert({ where: { chave }, create: { chave, valor }, update: { valor } });
 }
 

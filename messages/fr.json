@@ -245,6 +245,19 @@
     "emailInvalid": "Indiquez un e-mail valide pour recevoir le justificatif.",
     "receipt": "Télécharger le justificatif",
     "sentTo": "Nous avons envoyé le justificatif à {email}.",
-    "billingData": "Coordonnées pour le justificatif"
+    "billingData": "Coordonnées pour le justificatif",
+    "postcode": "Code postal",
+    "city": "Ville",
+    "nameRequired": "Indiquez votre nom.",
+    "nifInvalid": "Le numéro fiscal n'est pas valide.",
+    "postcodeInvalid": "Utilisez le format 1234-567.",
+    "step1": "Vos coordonnées",
+    "step2": "Paiement",
+    "next": "Continuer vers le paiement",
+    "change": "Modifier",
+    "invoiceTo": "La facture est émise au nom de",
+    "nifHint": "Sans numéro fiscal, la facture est émise au nom d'un consommateur final.",
+    "invoice": "Télécharger la facture-reçu",
+    "sentInvoice": "La confirmation et la facture-reçu sont envoyées à {email}."
   }
 }

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     folha: "Pagamentos",
     colunas: [
       { titulo: "Data", largura: 18 },
-      { titulo: "Comprovativo", largura: 18 },
+      { titulo: "Fatura / comprovativo", largura: 22 },
       { titulo: "Tipo", largura: 18 },
       { titulo: "Descrição", largura: 34 },
       { titulo: "Empresa", largura: 26 },
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     ],
     linhas: linhas.map((p) => [
       p.pagoEm ?? p.createdAt,
-      p.numero ?? "",
+      p.moloniFatura ?? p.numero ?? "",
       TIPOS[p.tipo] ?? p.tipo,
       p.descricao ?? "",
       p.company?.nome ?? "",

@@ -36,6 +36,7 @@ type Linha = {
   valorCentimos: number;
   moeda: string;
   numero: string | null;
+  fatura: boolean;
 };
 type Filtros = { de: string; ate: string; tipo: string; estado: string; q: string; pagina: number };
 
@@ -408,7 +409,7 @@ export default function FaturacaoView(props: {
                             variant="ghost"
                             aria-label="Ver comprovativo"
                             nativeButton={false}
-                            render={<a href={`/pagar/${p.id}/comprovativo`} target="_blank" rel="noreferrer" />}
+                            render={<a href={`/pagar/${p.id}/${p.fatura ? "fatura" : "comprovativo"}`} target="_blank" rel="noreferrer" />}
                           >
                             <FileText />
                           </Button>

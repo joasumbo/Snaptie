@@ -5,7 +5,11 @@ import type { Plano } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { CHAVES, gravarConfig } from "@/lib/configuracao";
-import { aposPagamento } from "@/lib/cobrancas";
+import { aposPagamento, proformaDe } from "@/lib/cobrancas";
+import { emitirOrcamento, escolherSerie } from "@/lib/moloni-faturas";
+import { emailPedidoPagamento } from "@/lib/email-pagamentos";
+import { euros } from "@/lib/pagamentos";
+import { prisma as db } from "@/lib/prisma";
 import { INTERVALOS } from "@/lib/pagamentos";
 import { arquivarProduto, criarPagamentoAvulso, iniciarPacote, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
 import { appUrl } from "@/lib/stripe";
@@ -143,6 +147,7 @@ export async function criarLinkPagamento(i: {
     if (!i.companyId) return { ok: false, message: "Escolha a empresa que vai pagar o pacote." };
     try {
       const id = await iniciarPacote(i.companyId, i.pacoteId);
+      await cobrar(id);
       revalidatePath("/dashboard/pagamentos");
       return { ok: true, url: `${appUrl()}/pagar/${id}` };
     } catch (e) {
@@ -162,6 +167,7 @@ export async function criarLinkPagamento(i: {
       email: email || null,
       companyId: i.companyId || null,
     });
+    await cobrar(id);
     revalidatePath("/dashboard/pagamentos");
     return { ok: true, url: `${appUrl()}/pagar/${id}` };
   } catch (e) {
@@ -198,6 +204,31 @@ export async function guardarFaturacao(i: {
     gravarConfig(CHAVES.avisoAdmin, i.avisoAdmin.trim()),
     gravarConfig(CHAVES.diasTolerancia, String(dias)),
   ]);
+  revalidatePath("/dashboard/pagamentos");
+  return { ok: true };
+}
+
+// Uma cobrança feita pelo admin: pró-forma na Moloni (se ligada) e, havendo
+// email, o pedido de pagamento com o link. Nada disto impede o link de ser
+// criado: se falhar, o link continua a servir.
+async function cobrar(pagamentoId: string) {
+  await emitirOrcamento(pagamentoId).catch(() => false);
+  const p = await db.pagamento.findUnique({ where: { id: pagamentoId }, include: { company: true } });
+  const para = p?.email || p?.company?.email;
+  if (!p || !para) return;
+  await emailPedidoPagamento({
+    para,
+    nome: p.nomeCliente || p.company?.nome || null,
+    descricao: p.tipo === "pacote" ? `Snaptie ${p.descricao ?? ""}`.trim() : p.descricao || "Pagamento",
+    valor: euros(p.valorCentimos, p.moeda),
+    link: `${appUrl()}/pagar/${p.id}`,
+    proforma: await proformaDe(p.id),
+  }).catch((e) => console.error("[pagamentos] pedido", p.id, e));
+}
+
+export async function guardarSerieMoloni(id: number | null, nome: string | null): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  await escolherSerie(id, nome);
   revalidatePath("/dashboard/pagamentos");
   return { ok: true };
 }
