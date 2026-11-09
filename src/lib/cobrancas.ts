@@ -103,7 +103,7 @@ export async function dadosComprovativo(pagamentoId: string): Promise<DadosCompr
     valorCentimos: p.valorCentimos,
     moeda: p.moeda,
     metodo,
-    referencia: p.numero!,
+    referencia: p.id.slice(-10).toUpperCase(),
     cliente: {
       nome: p.nomeCliente || (daEmpresa ? p.company!.nome : null),
       nif: p.nifCliente || (daEmpresa ? p.company!.nif : null),
