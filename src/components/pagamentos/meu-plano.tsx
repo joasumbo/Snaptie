@@ -34,7 +34,7 @@ type PacoteVenda = {
 
 
 function data(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
+  return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Lisbon" });
 }
 
 export default function MeuPlano(props: {

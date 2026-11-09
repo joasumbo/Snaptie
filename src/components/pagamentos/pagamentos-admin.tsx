@@ -94,7 +94,7 @@ function copiar(texto: string) {
 }
 
 function data(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Lisbon" });
 }
 
 export default function PagamentosAdmin(props: {
