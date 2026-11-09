@@ -155,6 +155,8 @@ export default function CompaniesView({ companies }: { companies: CompanyRow[] }
                   corPrimaria: c.corPrimaria,
                   corSecundaria: c.corSecundaria,
                   plano: c.plano,
+                  precoMensal: c.precoMensal,
+                  limiteQrs: c.limiteQrs,
                 },
               })
             }

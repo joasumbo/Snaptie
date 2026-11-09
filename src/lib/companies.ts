@@ -1,5 +1,6 @@
 import type { CompanyStatus, Plano } from "@prisma/client";
 import type { Tone } from "./tone";
+import { ORDEM_PLANOS, PLANOS } from "./planos";
 
 export const COMPANY_STATUS_LABELS: Record<CompanyStatus, string> = {
   ATIVA: "Ativa",
@@ -13,13 +14,11 @@ export const COMPANY_STATUS_TONE: Record<CompanyStatus, Tone> = {
   INATIVA: "neutral",
 };
 
-export const PLANO_LABELS: Record<Plano, string> = {
-  FREE: "Free",
-  STARTER: "Starter",
-  PRO: "Pro",
-  ENTERPRISE: "Enterprise",
-};
+// Os nomes comerciais vêm da definição dos planos (ver lib/planos.ts).
+export const PLANO_LABELS = Object.fromEntries(
+  ORDEM_PLANOS.map((p) => [p, PLANOS[p].nome]),
+) as Record<Plano, string>;
 
-export const PLANO_OPTIONS = (Object.keys(PLANO_LABELS) as Plano[]).map(
-  (value) => ({ label: PLANO_LABELS[value], value }),
+export const PLANO_OPTIONS = ORDEM_PLANOS.map(
+  (value) => ({ label: PLANOS[value].nome, value }),
 );

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { zipSync } from "fflate";
 import { requireQrManager, baseUrl, publicUrl, csvCell } from "@/lib/qr-export";
 import { ErroCartaz, lerCartaz, nomeFicheiro, renderCartazPng } from "@/lib/cartaz-render";
+import { verificarFuncionalidade } from "@/lib/planos-server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -25,6 +26,10 @@ export const maxDuration = 300;
 export async function GET(req: NextRequest) {
   const actor = await requireQrManager();
   if (!actor) return NextResponse.json({ error: "Sem permissao" }, { status: 401 });
+  if (actor.role !== "ADMIN") {
+    const bloqueio = await verificarFuncionalidade(actor.role, actor.companyId ?? "", "exportacao");
+    if (bloqueio) return NextResponse.json({ error: bloqueio }, { status: 403 });
+  }
 
   const p = req.nextUrl.searchParams;
   const lote = p.get("lote");

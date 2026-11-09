@@ -8,7 +8,14 @@ export default async function CompaniesPage() {
 
   const companies = await prisma.company.findMany({
     where: { deletedAt: null },
-    include: { _count: { select: { users: true, qrCodes: true } } },
+    include: {
+      _count: { select: { users: true, qrCodes: true } },
+      subscriptions: {
+        where: { estado: "ATIVA" },
+        orderBy: { dataInicio: "desc" },
+        take: 1,
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -22,6 +29,8 @@ export default async function CompaniesPage() {
     corPrimaria: c.corPrimaria,
     corSecundaria: c.corSecundaria,
     plano: c.plano,
+    precoMensal: c.subscriptions[0]?.valorMensal ? Number(c.subscriptions[0].valorMensal) : null,
+    limiteQrs: c.subscriptions[0]?.limiteQrs ?? null,
     estado: c.estado,
     userCount: c._count.users,
     qrCount: c._count.qrCodes,

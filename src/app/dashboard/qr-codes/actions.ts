@@ -18,6 +18,7 @@ import {
 import { SUPPORTED_LOCALES } from "@/i18n/request";
 import { validarCartaz } from "@/lib/cartaz";
 import { imagemPermitida } from "@/lib/cartaz-render";
+import { verificarFuncionalidade, verificarLimiteQrs } from "@/lib/planos-server";
 
 export type ActionResult =
   | { ok: true; id?: string }
@@ -110,6 +111,9 @@ export async function createQrCode(input: {
     companyId = actor.companyId;
   }
 
+  const limite = await verificarLimiteQrs(actor.role, companyId, 1);
+  if (limite) return { ok: false, message: limite };
+
   const qr = await prisma.qrCode.create({
     data: {
       nome: input.nome.trim(),
@@ -200,6 +204,12 @@ export async function updateQrCode(input: {
     const escolhido = input.idioma.trim();
     if (escolhido && !(SUPPORTED_LOCALES as readonly string[]).includes(escolhido)) {
       return { ok: false, message: "Idioma inválido." };
+    }
+    // Só se trava quem escolhe um idioma novo: uma página que já o tinha
+    // continua a poder ser gravada depois de a empresa descer de plano.
+    if (escolhido && escolhido !== qr.idioma) {
+      const bloqueio = await verificarFuncionalidade(actor.role, qr.companyId, "idiomaFixo");
+      if (bloqueio) return { ok: false, message: bloqueio };
     }
     idiomaData.idioma = escolhido || null;
   }
@@ -498,6 +508,11 @@ export async function duplicateQrCodeSeries(input: {
   if (actor.role !== "ADMIN" && source.companyId !== actor.companyId) {
     return { ok: false, message: "Sem permissão." };
   }
+
+  const bloqueio =
+    (await verificarFuncionalidade(actor.role, source.companyId, "serie")) ??
+    (await verificarLimiteQrs(actor.role, source.companyId, count));
+  if (bloqueio) return { ok: false, message: bloqueio };
 
   try {
     const lote = randomCode(12);
