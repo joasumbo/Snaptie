@@ -237,7 +237,7 @@
     "expired": "Ce paiement n'est plus disponible.",
     "back": "Retour",
     "email": "E-mail",
-    "emailHint": "Où nous envoyons le justificatif",
+    "emailHint": "Où nous envoyons la confirmation et la facture",
     "name": "Nom ou société",
     "nif": "N° fiscal",
     "address": "Adresse",

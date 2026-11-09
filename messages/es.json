@@ -235,7 +235,7 @@
     "expired": "Este pago ya no está disponible.",
     "back": "Volver",
     "email": "Email",
-    "emailHint": "Donde enviamos el comprobante",
+    "emailHint": "Donde enviamos la confirmación y la factura",
     "name": "Nombre o empresa",
     "nif": "NIF",
     "address": "Dirección",

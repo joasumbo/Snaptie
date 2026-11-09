@@ -235,7 +235,7 @@
     "expired": "This payment is no longer available.",
     "back": "Back",
     "email": "Email",
-    "emailHint": "Where we send your receipt",
+    "emailHint": "Where we send the confirmation and the invoice",
     "name": "Name or company",
     "nif": "Tax number",
     "address": "Address",
