@@ -45,6 +45,8 @@
   },
   "Nav": {
     "dashboard": "Panel",
+    "payments": "Pagos",
+    "plan": "Mi plan",
     "companies": "Empresas",
     "qrCodes": "Códigos QR",
     "stats": "Estadísticas",
@@ -175,7 +177,15 @@
     "anterior": "Anterior",
     "seguinte": "Siguiente",
     "qrTitle": "Guarde el QR de esta página",
-    "qrPreview": "El QR aparece en la página publicada."
+    "qrPreview": "El QR aparece en la página publicada.",
+    "payTitle": "Pago",
+    "payButton": "Pagar",
+    "payAmount": "Importe a pagar (€)",
+    "payOk": "Pago recibido. ¡Gracias!",
+    "payCancel": "El pago se ha cancelado. No se ha cobrado nada.",
+    "payInvalid": "Indique un importe entre {min} y {max}.",
+    "paySecure": "Pago seguro con Stripe",
+    "payError": "No se pudo abrir el pago. Inténtelo de nuevo."
   },
   "Tipos": {
     "TEXTO": "Texto",
@@ -204,6 +214,7 @@
     "FEED": "Muro de mensajes",
     "FORMULARIO": "Formulario",
     "GALERIA": "Galería",
-    "PLAYLIST": "Lista de reproducción"
+    "PLAYLIST": "Lista de reproducción",
+    "PAGAMENTO": "Pago"
   }
 }

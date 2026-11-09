@@ -47,6 +47,8 @@
   },
   "Nav": {
     "dashboard": "Tableau de bord",
+    "payments": "Paiements",
+    "plan": "Mon forfait",
     "companies": "Entreprises",
     "qrCodes": "QR codes",
     "stats": "Statistiques",
@@ -177,7 +179,15 @@
     "anterior": "Précédent",
     "seguinte": "Suivant",
     "qrTitle": "Gardez le QR de cette page",
-    "qrPreview": "Le QR apparaît sur la page publiée."
+    "qrPreview": "Le QR apparaît sur la page publiée.",
+    "payTitle": "Paiement",
+    "payButton": "Payer",
+    "payAmount": "Montant à payer (€)",
+    "payOk": "Paiement reçu. Merci !",
+    "payCancel": "Le paiement a été annulé. Rien n'a été débité.",
+    "payInvalid": "Indiquez un montant entre {min} et {max}.",
+    "paySecure": "Paiement sécurisé par Stripe",
+    "payError": "Impossible d'ouvrir le paiement. Réessayez."
   },
   "Tipos": {
     "TEXTO": "Texte",
@@ -206,6 +216,7 @@
     "FEED": "Mur de messages",
     "FORMULARIO": "Formulaire",
     "GALERIA": "Galerie",
-    "PLAYLIST": "Playlist"
+    "PLAYLIST": "Playlist",
+    "PAGAMENTO": "Paiement"
   }
 }

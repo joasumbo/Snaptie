@@ -47,6 +47,8 @@
   },
   "Nav": {
     "dashboard": "Übersicht",
+    "payments": "Zahlungen",
+    "plan": "Mein Tarif",
     "companies": "Unternehmen",
     "qrCodes": "QR-Codes",
     "stats": "Statistiken",
@@ -177,7 +179,15 @@
     "anterior": "Zurück",
     "seguinte": "Weiter",
     "qrTitle": "QR-Code dieser Seite speichern",
-    "qrPreview": "Der QR-Code erscheint auf der veröffentlichten Seite."
+    "qrPreview": "Der QR-Code erscheint auf der veröffentlichten Seite.",
+    "payTitle": "Zahlung",
+    "payButton": "Bezahlen",
+    "payAmount": "Zu zahlender Betrag (€)",
+    "payOk": "Zahlung erhalten. Vielen Dank!",
+    "payCancel": "Die Zahlung wurde abgebrochen. Es wurde nichts belastet.",
+    "payInvalid": "Geben Sie einen Betrag zwischen {min} und {max} ein.",
+    "paySecure": "Sichere Zahlung über Stripe",
+    "payError": "Die Zahlung konnte nicht geöffnet werden. Bitte erneut versuchen."
   },
   "Tipos": {
     "TEXTO": "Text",
@@ -206,6 +216,7 @@
     "FEED": "Nachrichtenwand",
     "FORMULARIO": "Formular",
     "GALERIA": "Galerie",
-    "PLAYLIST": "Playlist"
+    "PLAYLIST": "Playlist",
+    "PAGAMENTO": "Zahlung"
   }
 }

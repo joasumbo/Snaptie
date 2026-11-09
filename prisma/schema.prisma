@@ -73,6 +73,7 @@ enum BlockType {
   AVALIACAO_GOOGLE // botão que abre a avaliação da ficha Google do negócio
   OPINIAO // formulário privado: vai por email ao dono, não aparece na página
   LEMBRETE // email ao dono numa data, num dia do mês ou num dia da semana
+  PAGAMENTO // botão de pagamento (Stripe) com valor fixo ou à escolha
   OCORRENCIAS // lista das ocorrências de todas as lojas da empresa, com Excel
   CARROSSEL_VIDEOS // vídeos lado a lado que abrem em ecrã inteiro
   DESCARREGAR_QR // o QR da página, com botões para o descarregar
@@ -90,16 +91,16 @@ enum BlockType {
 
 // Utilizadores da plataforma (admin Snaptie, gestores e funcionários das empresas)
 model User {
-  id         String     @id @default(cuid())
-  nome       String
-  email      String     @unique
-  password   String // hash bcrypt — nunca a password em claro
-  role       UserRole   @default(VISUALIZADOR)
-  status     UserStatus @default(ATIVO)
-  companyId  String?    @map("company_id")
-  ultimoLogin DateTime? @map("ultimo_login")
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
+  id          String     @id @default(cuid())
+  nome        String
+  email       String     @unique
+  password    String // hash bcrypt — nunca a password em claro
+  role        UserRole   @default(VISUALIZADOR)
+  status      UserStatus @default(ATIVO)
+  companyId   String?    @map("company_id")
+  ultimoLogin DateTime?  @map("ultimo_login")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
@@ -124,6 +125,15 @@ model Company {
   updatedAt     DateTime      @updatedAt @map("updated_at")
   deletedAt     DateTime?     @map("deleted_at") // soft delete
 
+  // Pagamentos (Stripe). O pacote e o estado vêm do webhook, nunca do browser.
+  stripeCustomerId String?   @map("stripe_customer_id")
+  pacoteId         String?   @map("pacote_id")
+  subscricaoId     String?   @map("subscricao_id")
+  subscricaoEstado String?   @map("subscricao_estado") // ativa, em_falta, cancelada, unico
+  subscricaoFim    DateTime? @map("subscricao_fim")
+
+  pacote        Pacote?        @relation(fields: [pacoteId], references: [id], onDelete: SetNull)
+  pagamentos    Pagamento[]
   users         User[]
   qrCodes       QrCode[]
   files         File[]
@@ -134,49 +144,49 @@ model Company {
 
 // Cada QR criado na plataforma
 model QrCode {
-  id            String   @id @default(cuid())
-  nome          String
-  descricao     String?
-  slug          String   @unique
-  codigo        String?  @unique // código curto aleatório usado no URL público
-  companyId     String   @map("company_id")
-  templateId    String?  @map("template_id")
-  logo          String?
-  imagemCapa    String?  @map("imagem_capa") // imagem horizontal no topo da página
-  logoTamanho   String   @default("M") @map("logo_tamanho") // P, M, G
-  logoForma     String   @default("circulo") @map("logo_forma") // quadrado, circulo
-  nomeTamanho   String   @default("M") @map("nome_tamanho") // P, M, G
-  mostrarLogo   Boolean  @default(true) @map("mostrar_logo")
-  mostrarNome   Boolean  @default(true) @map("mostrar_nome")
-  edicaoPublica Boolean  @default(false) @map("edicao_publica") // visitante pode editar conteúdos
-  edicaoPersonalizacao Boolean @default(false) @map("edicao_personalizacao") // visitante pode editar a aparência
-  edicaoPin     String?  @map("edicao_pin") // hash do código exigido para editar
+  id                   String    @id @default(cuid())
+  nome                 String
+  descricao            String?
+  slug                 String    @unique
+  codigo               String?   @unique // código curto aleatório usado no URL público
+  companyId            String    @map("company_id")
+  templateId           String?   @map("template_id")
+  logo                 String?
+  imagemCapa           String?   @map("imagem_capa") // imagem horizontal no topo da página
+  logoTamanho          String    @default("M") @map("logo_tamanho") // P, M, G
+  logoForma            String    @default("circulo") @map("logo_forma") // quadrado, circulo
+  nomeTamanho          String    @default("M") @map("nome_tamanho") // P, M, G
+  mostrarLogo          Boolean   @default(true) @map("mostrar_logo")
+  mostrarNome          Boolean   @default(true) @map("mostrar_nome")
+  edicaoPublica        Boolean   @default(false) @map("edicao_publica") // visitante pode editar conteúdos
+  edicaoPersonalizacao Boolean   @default(false) @map("edicao_personalizacao") // visitante pode editar a aparência
+  edicaoPin            String?   @map("edicao_pin") // hash do código exigido para editar
   // Como o visitante chega à página: "aberto" (qualquer um vê), "ativacao" (o
   // primeiro visitante com o PIN ativa o QR e depois fica aberto) ou "privado"
   // (pede o PIN em todas as visitas).
-  acessoModo    String   @default("aberto") @map("acesso_modo")
-  acessoPin     String?  @map("acesso_pin") // hash do PIN de acesso/ativação
-  ativadoEm     DateTime? @map("ativado_em") // quando o QR foi ativado (modo "ativacao")
+  acessoModo           String    @default("aberto") @map("acesso_modo")
+  acessoPin            String?   @map("acesso_pin") // hash do PIN de acesso/ativação
+  ativadoEm            DateTime? @map("ativado_em") // quando o QR foi ativado (modo "ativacao")
   // Idioma fixo da página pública. A null, segue o idioma do visitante — que
   // serve um souvenir para turistas, mas não um mural interno de uma loja.
-  idioma        String?
-  corPrimaria   String?  @map("cor_primaria")
-  corSecundaria String?  @map("cor_secundaria")
-  estado        String   @default("rascunho") // ex.: rascunho, ativo, arquivado
-  publicado     Boolean  @default(false)
+  idioma               String?
+  corPrimaria          String?   @map("cor_primaria")
+  corSecundaria        String?   @map("cor_secundaria")
+  estado               String    @default("rascunho") // ex.: rascunho, ativo, arquivado
+  publicado            Boolean   @default(false)
   // Lote de criação em série: QRs duplicados a partir de um existente partilham
   // este identificador, o que permite exportá-los/imprimi-los como um conjunto.
-  lote          String?  // id do lote (null = criado individualmente)
-  cartaz        Json?    // desenho do cartaz para imprimir (src/lib/cartaz.tsx)
-  scansTotal    Int      @default(0) @map("scans_total")
-  ultimoScan    DateTime? @map("ultimo_scan")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  lote                 String? // id do lote (null = criado individualmente)
+  cartaz               Json? // desenho do cartaz para imprimir (src/lib/cartaz.tsx)
+  scansTotal           Int       @default(0) @map("scans_total")
+  ultimoScan           DateTime? @map("ultimo_scan")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
-  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  template  Template?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  blocks    QrBlock[]
-  analytics Analytics[]
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  template   Template?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  blocks     QrBlock[]
+  analytics  Analytics[]
   interacoes Interacao[]
 
   @@index([companyId])
@@ -187,22 +197,22 @@ model QrCode {
 
 // Elementos apresentados quando alguém faz scan de um QR (ações e conteúdos)
 model QrBlock {
-  id        String    @id @default(cuid())
-  qrId      String    @map("qr_id")
-  tipo      BlockType
-  titulo    String
-  icone     String?
-  cor       String? // cor opcional do elemento (sobrepõe a cor primária do QR)
-  descricao String? // descrição opcional do elemento
-  conteudo  Json? // conteúdo flexível conforme o tipo (url, texto, ficheiro, etc.)
-  ordem     Int       @default(0)
-  ativo     Boolean   @default(true)
-  editavelPublico Boolean @default(false) @map("editavel_publico") // visitante pode editar este elemento
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  qrId            String    @map("qr_id")
+  tipo            BlockType
+  titulo          String
+  icone           String?
+  cor             String? // cor opcional do elemento (sobrepõe a cor primária do QR)
+  descricao       String? // descrição opcional do elemento
+  conteudo        Json? // conteúdo flexível conforme o tipo (url, texto, ficheiro, etc.)
+  ordem           Int       @default(0)
+  ativo           Boolean   @default(true)
+  editavelPublico Boolean   @default(false) @map("editavel_publico") // visitante pode editar este elemento
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  qr       QrCode      @relation(fields: [qrId], references: [id], onDelete: Cascade)
-  mensagens QrMessage[]
+  qr         QrCode      @relation(fields: [qrId], references: [id], onDelete: Cascade)
+  mensagens  QrMessage[]
   interacoes Interacao[]
 
   @@index([qrId])
@@ -231,10 +241,10 @@ model QrMessage {
 // curtos e estão expostos na internet, por isso contam-se as falhas aqui (e não
 // em memória, que em serverless seria um contador por instância).
 model PinAttempt {
-  chave        String   @id // ex.: "edit:<qrId>:<ip>"
-  tentativas   Int      @default(0)
+  chave        String    @id // ex.: "edit:<qrId>:<ip>"
+  tentativas   Int       @default(0)
   bloqueadoAte DateTime? @map("bloqueado_ate")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@map("pin_attempts")
 }
@@ -323,4 +333,63 @@ model Subscription {
 
   @@index([companyId])
   @@map("subscriptions")
+}
+
+// Pacotes que o administrador cria no painel. Cada um tem um produto e um
+// preço no Stripe, criados e atualizados a partir daqui.
+model Pacote {
+  id              String   @id @default(cuid())
+  nome            String
+  descricao       String?
+  precoCentimos   Int      @map("preco_centimos")
+  moeda           String   @default("eur")
+  intervalo       String // mes, ano, unico
+  plano           Plano    @default(STARTER) // o plano que a empresa ganha ao pagar
+  limiteQrs       Int?     @map("limite_qrs") // sobrepõe o limite do plano
+  ativo           Boolean  @default(true)
+  ordem           Int      @default(0)
+  stripeProductId String?  @map("stripe_product_id")
+  stripePriceId   String?  @map("stripe_price_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  empresas   Company[]
+  pagamentos Pagamento[]
+
+  @@map("pacotes")
+}
+
+// Cada pagamento iniciado: de um pacote (empresa) ou do elemento Pagamento de
+// uma página (visitante). Nasce pendente e o webhook diz se foi pago.
+model Pagamento {
+  id              String   @id @default(cuid())
+  tipo            String // pacote, botao
+  estado          String   @default("pendente") // pendente, pago, falhou, expirado
+  valorCentimos   Int      @map("valor_centimos")
+  moeda           String   @default("eur")
+  descricao       String?
+  email           String?
+  companyId       String?  @map("company_id")
+  pacoteId        String?  @map("pacote_id")
+  qrId            String?  @map("qr_id")
+  blockId         String?  @map("block_id")
+  stripeSessionId String?  @unique @map("stripe_session_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  pacote  Pacote?  @relation(fields: [pacoteId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@map("pagamentos")
+}
+
+// Definições da plataforma guardadas pelo administrador (chave do Stripe,
+// segredo do webhook). Nunca são mostradas de volta por inteiro.
+model Configuracao {
+  chave     String   @id
+  valor     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("configuracoes")
 }

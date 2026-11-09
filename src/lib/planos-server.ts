@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Plano } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { limitesAtivos } from "@/lib/configuracao";
 import {
   PLANOS,
   mensagemSemFuncionalidade,
@@ -27,11 +28,15 @@ async function subscricaoAtiva(companyId: string) {
 export async function planoDaEmpresa(companyId: string): Promise<PlanoEmpresa | null> {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { plano: true },
+    select: { plano: true, pacote: { select: { limiteQrs: true } } },
   });
   if (!company) return null;
 
   const definicao = PLANOS[company.plano];
+  // Um pacote pago pode trazer um limite próprio, diferente do da tabela.
+  if (company.pacote?.limiteQrs != null) {
+    return { plano: company.plano, limiteQrs: company.pacote.limiteQrs, precoMensal: null };
+  }
   if (!definicao.precoPersonalizado) {
     return { plano: company.plano, limiteQrs: definicao.limiteQrs, precoMensal: null };
   }
@@ -83,6 +88,7 @@ export async function verificarFuncionalidade(
   f: Funcionalidade,
 ): Promise<string | null> {
   if (actorRole === "ADMIN") return null;
+  if (!(await limitesAtivos())) return null;
   const plano = await planoDaEmpresa(companyId);
   if (!plano) return "Empresa não encontrada.";
   return temFuncionalidade(plano.plano, f) ? null : mensagemSemFuncionalidade(f);
@@ -94,6 +100,7 @@ export async function verificarLimiteQrs(
   novos: number,
 ): Promise<string | null> {
   if (actorRole === "ADMIN") return null;
+  if (!(await limitesAtivos())) return null;
   const plano = await planoDaEmpresa(companyId);
   if (!plano) return "Empresa não encontrada.";
   if (plano.limiteQrs === null) return null;

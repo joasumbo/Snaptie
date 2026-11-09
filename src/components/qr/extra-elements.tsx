@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Bell, FileSpreadsheet, Loader2, Send, Star } from "lucide-react";
+import { Bell, CreditCard, FileSpreadsheet, Loader2, Send, Star } from "lucide-react";
 import { ESTADOS_MANUTENCAO, estadoManutencao } from "@/lib/qr";
 import type { OcorrenciaPublica } from "./qr-page";
 import { EstadoChips, type MudarEstado } from "./message-wall";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { postOpiniao } from "@/app/[empresa]/[codigo]/wall-actions";
 import { agoraEmLisboa, lerLembrete, proximoDia } from "@/lib/lembrete";
+import { PAGAMENTO_MAX_CENTIMOS, PAGAMENTO_MIN_CENTIMOS, lerPagamento } from "@/lib/pagamentos";
 
 // Os três elementos que avisam ou levam o visitante para fora: avaliar no
 // Google, deixar uma opinião privada e o lembrete do dono.
@@ -298,6 +299,96 @@ export function LembreteCard({
         <div className="text-sm text-zinc-600">{t("lembreteNext", { data })}</div>
         {l.mensagem ? <div className="mt-0.5 text-xs text-zinc-500">{l.mensagem}</div> : null}
       </div>
+    </div>
+  );
+}
+
+// O botão de pagamento: abre o checkout do Stripe com o valor do elemento, ou
+// com o que o visitante escolheu. Ao voltar do Stripe, a página diz se correu bem.
+export function PagamentoBotao({
+  blockId,
+  titulo,
+  codigo,
+  conteudo,
+  color,
+}: {
+  blockId: string;
+  titulo: string;
+  codigo?: string;
+  conteudo: Record<string, unknown>;
+  color: string;
+}) {
+  const t = useTranslations("Elementos");
+  const locale = useLocale();
+  const conf = lerPagamento(conteudo);
+  const [valor, setValor] = useState(
+    conf.valorCentimos ? String(conf.valorCentimos / 100).replace(".", ",") : "",
+  );
+  const [aAbrir, setAAbrir] = useState(false);
+  const fmt = (c: number) =>
+    new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(c / 100);
+
+  useEffect(() => {
+    const estado = new URLSearchParams(window.location.search).get("pagamento");
+    if (!estado) return;
+    if (estado === "ok") toast.success(t("payOk"));
+    else if (estado === "cancelado") toast(t("payCancel"));
+    const url = new URL(window.location.href);
+    url.searchParams.delete("pagamento");
+    window.history.replaceState(null, "", url.toString());
+  }, [t]);
+
+  async function pagar() {
+    const centimos = conf.valorLivre
+      ? Math.round(Number(valor.replace(",", ".")) * 100)
+      : conf.valorCentimos;
+    if (!Number.isFinite(centimos) || centimos < PAGAMENTO_MIN_CENTIMOS || centimos > PAGAMENTO_MAX_CENTIMOS) {
+      toast.error(t("payInvalid", { min: fmt(PAGAMENTO_MIN_CENTIMOS), max: fmt(PAGAMENTO_MAX_CENTIMOS) }));
+      return;
+    }
+    setAAbrir(true);
+    try {
+      const r = await fetch(`/api/pagamento/bloco/${blockId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo, valor: centimos, locale }),
+      });
+      const dados = (await r.json().catch(() => ({}))) as { url?: string };
+      if (!r.ok || !dados.url) throw new Error();
+      window.location.href = dados.url;
+    } catch {
+      setAAbrir(false);
+      toast.error(t("payError"));
+    }
+  }
+
+  return (
+    <div className="rounded-xl border bg-white p-4 text-center">
+      <div className="font-medium text-zinc-900">{titulo || t("payTitle")}</div>
+      {conf.valorLivre ? (
+        <label className="mt-3 block text-left text-sm text-zinc-600">
+          {t("payAmount")}
+          <Input
+            className="mt-1"
+            inputMode="decimal"
+            value={valor}
+            placeholder="10,00"
+            onChange={(e) => setValor(e.target.value)}
+          />
+        </label>
+      ) : (
+        <div className="mt-2 text-2xl font-semibold text-zinc-900">{fmt(conf.valorCentimos)}</div>
+      )}
+      <Button
+        className="mt-3 w-full text-white"
+        style={{ backgroundColor: color }}
+        disabled={aAbrir || !codigo}
+        onClick={pagar}
+      >
+        {aAbrir ? <Loader2 className="animate-spin" /> : <CreditCard />}
+        {conf.textoBotao || t("payButton")}
+      </Button>
+      <div className="mt-2 text-xs text-zinc-500">{t("paySecure")}</div>
     </div>
   );
 }

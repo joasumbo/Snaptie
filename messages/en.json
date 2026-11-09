@@ -45,6 +45,8 @@
   },
   "Nav": {
     "dashboard": "Dashboard",
+    "payments": "Payments",
+    "plan": "My plan",
     "companies": "Companies",
     "qrCodes": "QR Codes",
     "stats": "Statistics",
@@ -175,7 +177,15 @@
     "anterior": "Previous",
     "seguinte": "Next",
     "qrTitle": "Save this page's QR code",
-    "qrPreview": "The QR code appears on the published page."
+    "qrPreview": "The QR code appears on the published page.",
+    "payTitle": "Payment",
+    "payButton": "Pay",
+    "payAmount": "Amount to pay (€)",
+    "payOk": "Payment received. Thank you!",
+    "payCancel": "The payment was cancelled. Nothing was charged.",
+    "payInvalid": "Enter an amount between {min} and {max}.",
+    "paySecure": "Secure payment by Stripe",
+    "payError": "Could not open the payment. Please try again."
   },
   "Tipos": {
     "TEXTO": "Text",
@@ -204,6 +214,7 @@
     "FEED": "Message wall",
     "FORMULARIO": "Form",
     "GALERIA": "Gallery",
-    "PLAYLIST": "Playlist"
+    "PLAYLIST": "Playlist",
+    "PAGAMENTO": "Payment"
   }
 }

@@ -26,7 +26,7 @@ import {
 import { WifiCard } from "./wifi-card";
 import { MessageWall, type MudarEstado, type WallMessage } from "./message-wall";
 import { EventLog } from "./event-log";
-import { GoogleReview, LembreteCard, OcorrenciasLista, OpiniaoForm } from "./extra-elements";
+import { GoogleReview, LembreteCard, OcorrenciasLista, OpiniaoForm, PagamentoBotao } from "./extra-elements";
 import { CarrosselImagens, CarrosselVideos, DescarregarQr, videoComFotograma } from "./carrossel";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -184,6 +184,17 @@ function ContentElement({
       <GoogleReview
         titulo={block.titulo}
         url={typeof block.conteudo.url === "string" ? block.conteudo.url : ""}
+        color={block.cor || primary}
+      />
+    );
+  }
+  if (block.tipo === "PAGAMENTO") {
+    return (
+      <PagamentoBotao
+        blockId={block.id}
+        titulo={block.titulo}
+        codigo={codigo}
+        conteudo={block.conteudo}
         color={block.cor || primary}
       />
     );

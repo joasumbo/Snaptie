@@ -33,6 +33,7 @@ import {
 } from "@/lib/qr";
 import { addBlock, updateBlock } from "@/app/dashboard/qr-codes/actions";
 import { DIAS_SEMANA, lerLembrete, type RegraLembrete } from "@/lib/lembrete";
+import { lerPagamento, PAGAMENTO_MAX_CENTIMOS, PAGAMENTO_MIN_CENTIMOS } from "@/lib/pagamentos";
 import { Segmented } from "@/components/ui/segmented";
 
 export type EditableBlock = {
@@ -126,6 +127,13 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   const [diaSemana, setDiaSemana] = useState(String(lembreteInicial.diaSemana));
   const [hora, setHora] = useState(lembreteInicial.hora);
   const [mostrarLembrete, setMostrarLembrete] = useState(lembreteInicial.mostrar);
+  // O pagamento: valor fixo em euros, ou o visitante escolhe quanto.
+  const pagamentoInicial = lerPagamento(c);
+  const [valorPagamento, setValorPagamento] = useState(
+    pagamentoInicial.valorCentimos ? String(pagamentoInicial.valorCentimos / 100).replace(".", ",") : "",
+  );
+  const [valorLivre, setValorLivre] = useState(pagamentoInicial.valorLivre);
+  const [textoBotao, setTextoBotao] = useState(pagamentoInicial.textoBotao);
   // Os dois botões lado a lado. São sempre dois, por isso o estado tem sempre
   // dois lugares — nunca se acrescenta nem se tira nenhum.
   const [par, setPar] = useState<ParBotao[]>(() => parBotoes(c));
@@ -297,6 +305,15 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
         case "googleReview":
           conteudo = { url: url.trim() };
           break;
+        case "pagamento": {
+          const centimos = Math.round(Number(valorPagamento.replace(",", ".")) * 100);
+          conteudo = {
+            valorCentimos: Number.isFinite(centimos) && centimos > 0 ? centimos : 0,
+            valorLivre,
+            textoBotao: textoBotao.trim(),
+          };
+          break;
+        }
         case "lembrete":
           conteudo = {
             regra,
@@ -328,6 +345,13 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
       if (field === "googleReview" && !/^https:\/\//.test(url.trim())) {
         setError("Cole o link de avaliação da ficha Google (começa por https://).");
         return;
+      }
+      if (field === "pagamento") {
+        const v = Number(conteudo.valorCentimos);
+        if (!valorLivre && (v < PAGAMENTO_MIN_CENTIMOS || v > PAGAMENTO_MAX_CENTIMOS)) {
+          setError("Indique o valor a pagar, entre 1 € e 10 000 €.");
+          return;
+        }
       }
       if (field === "lembrete" && regra === "data" && !dataLembrete) {
         setError("Escolha a data do lembrete.");
@@ -829,6 +853,39 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                 descarregar a lista em Excel. Quem abrir a página vê a lista:
                 se for só para a equipa, proteja a página com PIN.
               </p>
+            ) : null}
+
+            {field === "pagamento" ? (
+              <>
+                <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                  Um botão que abre o pagamento seguro do Stripe (cartão, MB Way e
+                  outros métodos ativos na conta). O valor recebido entra na conta
+                  Stripe do Snaptie e aparece em Pagamentos.
+                </p>
+                <Field label={valorLivre ? "Valor sugerido (€, opcional)" : "Valor (€)"}>
+                  <Input
+                    inputMode="decimal"
+                    placeholder="10,00"
+                    value={valorPagamento}
+                    onChange={(e) => setValorPagamento(e.target.value)}
+                  />
+                </Field>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={valorLivre}
+                    onChange={(e) => setValorLivre(e.target.checked)}
+                  />
+                  O visitante escolhe o valor (entre 1 € e 10 000 €)
+                </label>
+                <Field label="Texto do botão (opcional)">
+                  <Input
+                    placeholder="Pagar"
+                    value={textoBotao}
+                    onChange={(e) => setTextoBotao(e.target.value)}
+                  />
+                </Field>
+              </>
             ) : null}
 
             {field === "googleReview" ? (
