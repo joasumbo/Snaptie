@@ -107,8 +107,20 @@ export async function ligarMoloni(utilizador: string, palavraPasse: string): Pro
 }
 
 export async function escolherEmpresa(id: number, nome: string) {
+  const anterior = await ler(K.empresa);
   await gravar(K.empresa, String(id));
   await gravar(K.empresaNome, nome);
+  if (anterior && anterior !== String(id)) {
+    // Os ids da Moloni são de cada empresa: a série, os clientes já criados e
+    // as pró-formas por pagar da empresa anterior não servem na nova. A série
+    // tem de ser escolhida outra vez e a faturação conta a partir daí.
+    await prisma.configuracao.deleteMany({ where: { chave: { in: ["moloni_serie_id", "moloni_serie_nome", "moloni_desde"] } } });
+    await prisma.company.updateMany({ where: { moloniClienteId: { not: null } }, data: { moloniClienteId: null } });
+    await prisma.pagamento.updateMany({
+      where: { estado: { not: "pago" }, moloniOrcamentoId: { not: null } },
+      data: { moloniOrcamentoId: null, moloniOrcamento: null, moloniOrcamentoPdf: null },
+    });
+  }
 }
 
 export async function desligarMoloni() {
