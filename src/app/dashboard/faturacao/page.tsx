@@ -45,6 +45,17 @@ export default async function FaturacaoPage({
     }),
   ]);
 
+  // As páginas dos QRs comprados na loja, para abrir a partir da ficha.
+  const comprados = lista.linhas.map((p) => p.qrCompradoId).filter((x): x is string => Boolean(x));
+  const paginas = new Map(
+    (
+      await prisma.qrCode.findMany({
+        where: { id: { in: comprados } },
+        select: { id: true, codigo: true, company: { select: { slug: true } } },
+      })
+    ).map((q) => [q.id, `/${q.company.slug}/${q.codigo}`]),
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <PageHeader title="Faturação" description="O que entrou pelo Snaptie, quem pagou e quando." />
@@ -99,6 +110,8 @@ export default async function FaturacaoPage({
           erroFatura: p.estado === "pago" && !p.moloniFaturaPdf ? p.moloniErro : null,
           emailEnviado: p.emailEnviadoEm?.toISOString() ?? null,
           faturaEnviada: p.faturaEnviadaEm?.toISOString() ?? null,
+          qrPagina: p.qrCompradoId ? (paginas.get(p.qrCompradoId) ?? null) : null,
+          qrEntregue: p.qrEntregueEm?.toISOString() ?? null,
         }))}
       />
     </div>

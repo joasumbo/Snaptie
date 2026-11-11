@@ -26,6 +26,7 @@ type TextosPagina = Textos & {
   comprovativo: string;
   fatura: string;
   enviadoPara: string;
+  qrEnviado: string;
   passo1: string;
   passo2: string;
   continuar: string;
@@ -45,6 +46,7 @@ export default function PaginaPagar(props: {
   locale: string;
   retorno: string | null;
   pedeDados: boolean;
+  qr?: boolean;
   fatura: boolean;
   dados: Dados;
   textos: TextosPagina;
@@ -99,6 +101,11 @@ export default function PaginaPagar(props: {
         <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
         <h2 className="mt-3 text-lg font-semibold text-zinc-900">{t.pagoTitulo}</h2>
         <p className="mt-1 text-sm text-zinc-500">{t.pagoTexto}</p>
+        {dados.email && props.qr ? (
+          <p className="mt-3 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700">
+            {t.qrEnviado.replace("{email}", dados.email)}
+          </p>
+        ) : null}
         {dados.email ? <p className="mt-1 text-sm text-zinc-500">{t.enviadoPara.replace("{email}", dados.email)}</p> : null}
         <Button
           className="mt-5 w-full bg-indigo-600 text-white hover:bg-indigo-700"

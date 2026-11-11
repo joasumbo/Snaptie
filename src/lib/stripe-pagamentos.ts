@@ -144,7 +144,7 @@ async function clienteDaEmpresa(companyId: string): Promise<string> {
 
 // Um pagamento avulso: botão numa página ou link criado no admin.
 export async function criarPagamentoAvulso(opcoes: {
-  tipo: "botao" | "link";
+  tipo: "botao" | "link" | "qr";
   valorCentimos: number;
   descricao: string;
   companyId?: string | null;
@@ -288,6 +288,10 @@ export async function marcarPago(pagamentoId: string): Promise<boolean> {
 // pode desfazer o pagamento, por isso fica só registada.
 export async function depoisDePago(pagamentoId: string): Promise<void> {
   await aposPagamento(pagamentoId).catch((e) => console.error("[pagamentos] email", pagamentoId, e));
+  // Uma compra na loja: o QR segue logo num email à parte. Se falhar, o
+  // temporizador tenta de novo. (Importado aqui: a loja usa este ficheiro.)
+  const { entregarQr } = await import("@/lib/loja");
+  await entregarQr(pagamentoId).catch((e) => console.error("[loja] entrega", pagamentoId, e));
 }
 
 // Confirma junto do Stripe se uma referência já está paga e, se estiver,

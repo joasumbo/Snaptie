@@ -258,6 +258,7 @@
     "invoiceTo": "Die Rechnung lautet auf",
     "nifHint": "Ohne Steuernummer wird die Rechnung an einen Endverbraucher ausgestellt.",
     "invoice": "Rechnung herunterladen",
-    "sentInvoice": "Die Bestätigung und die Rechnung gehen an {email}."
+    "sentInvoice": "Die Bestätigung und die Rechnung gehen an {email}.",
+    "sentQr": "Ihr QR-Code und der Code zum Bearbeiten der Seite werden an {email} gesendet."
   }
 }

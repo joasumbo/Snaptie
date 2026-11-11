@@ -6,6 +6,7 @@ import { modoStripe, stripe, stripeConfigurado } from "@/lib/stripe";
 import { estadoWebhook } from "@/lib/stripe-pagamentos";
 import PagamentosAdmin from "@/components/pagamentos/pagamentos-admin";
 import MoloniAdmin from "@/components/pagamentos/moloni-admin";
+import LojaAdmin from "@/components/pagamentos/loja-admin";
 import { estadoMoloni } from "@/lib/moloni";
 import { configuracaoFaturas, seriesMoloni } from "@/lib/moloni-faturas";
 
@@ -59,6 +60,26 @@ export default async function PagamentosPage() {
     }),
   ]);
 
+  // A loja: o que está à venda (com as vendas de cada um) e os QRs que se
+  // podem pôr à venda (fora as cópias já vendidas e as cópias em série).
+  const [aVenda, vendas, comprados, todos] = await Promise.all([
+    prisma.qrCode.findMany({
+      where: { precoVenda: { not: null } },
+      select: { id: true, nome: true, precoVenda: true, publicado: true, company: { select: { nome: true } } },
+      orderBy: { nome: "asc" },
+    }),
+    prisma.pagamento.groupBy({ by: ["qrId"], where: { tipo: "qr", estado: "pago" }, _count: { _all: true } }),
+    prisma.pagamento.findMany({ where: { qrCompradoId: { not: null } }, select: { qrCompradoId: true } }),
+    prisma.qrCode.findMany({
+      where: { lote: null, company: { deletedAt: null } },
+      select: { id: true, nome: true, company: { select: { nome: true } } },
+      orderBy: { updatedAt: "desc" },
+      take: 2000,
+    }),
+  ]);
+  const vendidos = new Map(vendas.map((v) => [v.qrId, v._count._all]));
+  const copias = new Set(comprados.map((c) => c.qrCompradoId));
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <PageHeader
@@ -69,6 +90,17 @@ export default async function PagamentosPage() {
         estado={await estadoMoloni()}
         serie={(await configuracaoFaturas()).serie}
         series={await seriesMoloni().catch(() => [])}
+      />
+      <LojaAdmin
+        aVenda={aVenda.map((q) => ({
+          id: q.id,
+          nome: q.nome,
+          empresa: q.company.nome,
+          precoCentimos: q.precoVenda!,
+          publicado: q.publicado,
+          vendidos: vendidos.get(q.id) ?? 0,
+        }))}
+        qrs={todos.filter((q) => !copias.has(q.id)).map((q) => ({ id: q.id, nome: q.nome, empresa: q.company.nome }))}
       />
       <PagamentosAdmin
         modo={modoStripe()}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { corridaCobrancas } from "@/lib/cobrancas";
 import { manterMoloni } from "@/lib/moloni";
+import { entregasEmAtraso } from "@/lib/loja";
 import { prisma } from "@/lib/prisma";
 import { sendLembreteEmail } from "@/lib/email";
 import { agoraEmLisboa, calhaNoDia, descreverRegra, lerLembrete } from "@/lib/lembrete";
@@ -76,6 +77,7 @@ export async function GET(req: NextRequest) {
 
   // Mantém a ligação à Moloni viva (o acesso caduca ao fim de 14 dias sem uso).
   await manterMoloni().catch((e) => console.error("[cron] moloni", e));
+  await entregasEmAtraso().catch((e) => console.error("[cron] loja", e));
 
   return NextResponse.json({ agora, verificados: blocos.length, enviados, erros, cobrancas });
 }

@@ -14,7 +14,7 @@ const CLARO = "#e0e7ff";
 const MAIS_CLARO = "#eef2ff";
 const TINTA = "#18181b";
 
-const ILUSTRACOES = ["pago", "fatura", "falha", "renovacao", "pedido", "suspenso", "reativado"] as const;
+const ILUSTRACOES = ["pago", "fatura", "falha", "renovacao", "pedido", "suspenso", "reativado", "qr"] as const;
 type Ilustracao = (typeof ILUSTRACOES)[number];
 
 export function generateStaticParams() {
@@ -208,6 +208,30 @@ function desenho(n: Ilustracao) {
         <Fundo>
           <Folha x={145} y={36} />
           <Selo cor="#f59e0b" simbolo="pausa" x={262} y={160} />
+        </Fundo>
+      );
+    case "qr":
+      return (
+        <Fundo>
+          <div
+            style={{
+              position: "absolute",
+              left: 140,
+              top: 34,
+              width: 160,
+              height: 160,
+              borderRadius: 18,
+              backgroundColor: "#ffffff",
+              border: `2px solid ${CLARO}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 12px 28px rgba(79,70,229,.18)",
+            }}
+          >
+            <MarcaOg tamanho={112} cor={TINTA} fundo="#ffffff" />
+          </div>
+          <Selo cor="#10b981" simbolo="check" x={262} y={160} />
         </Fundo>
       );
     case "reativado":

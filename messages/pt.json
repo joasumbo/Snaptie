@@ -256,6 +256,7 @@
     "invoiceTo": "A fatura sai em nome de",
     "nifHint": "Sem NIF, a fatura sai como consumidor final.",
     "invoice": "Descarregar fatura-recibo",
-    "sentInvoice": "A confirmação e a fatura-recibo seguem para {email}."
+    "sentInvoice": "A confirmação e a fatura-recibo seguem para {email}.",
+    "sentQr": "O seu QR code e o código para editar a página seguem para {email}."
   }
 }

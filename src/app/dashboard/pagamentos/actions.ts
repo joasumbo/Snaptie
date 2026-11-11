@@ -13,6 +13,7 @@ import { prisma as db } from "@/lib/prisma";
 import { INTERVALOS } from "@/lib/pagamentos";
 import { arquivarProduto, criarPagamentoAvulso, iniciarPacote, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
 import { appUrl } from "@/lib/stripe";
+import { entregarQr, precoNaLoja } from "@/lib/loja";
 
 export type Resultado = { ok: true } | { ok: false; message: string };
 
@@ -255,6 +256,37 @@ export async function emitirFaturaAgora(id: string): Promise<Resultado> {
       const p = await db.pagamento.findUnique({ where: { id }, select: { moloniErro: true } });
       return { ok: false, message: p?.moloniErro ? `A Moloni recusou: ${p.moloniErro}` : "A faturação Moloni não está ativa." };
     }
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+  revalidatePath("/dashboard/faturacao");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------- loja
+
+// Põe um QR à venda na loja (/loja) com um preço, ou tira-o (preço null).
+export async function precoQrNaLoja(qrId: string, precoEuros: number | null): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  const qr = await db.qrCode.findUnique({ where: { id: qrId }, select: { id: true } });
+  if (!qr) return { ok: false, message: "QR não encontrado." };
+  if (precoEuros != null) {
+    if (!Number.isFinite(precoEuros) || precoEuros < 0.5) return { ok: false, message: "O preço mínimo é 0,50 €." };
+    if (precoEuros > 10000) return { ok: false, message: "Preço demasiado alto." };
+  }
+  await precoNaLoja(qr.id, precoEuros == null ? null : Math.round(precoEuros * 100));
+  revalidatePath("/dashboard/pagamentos");
+  revalidatePath("/loja");
+  return { ok: true };
+}
+
+// Volta a mandar o QR de uma compra, com um código de edição novo.
+export async function reenviarQrComprado(id: string, para: string): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  const email = para.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "O email não é válido." };
+  try {
+    if (!(await entregarQr(id, { reenviar: true, para: email }))) return { ok: false, message: "Esta compra não tem QR para enviar." };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
   }

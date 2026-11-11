@@ -258,6 +258,7 @@
     "invoiceTo": "La facture est émise au nom de",
     "nifHint": "Sans numéro fiscal, la facture est émise au nom d'un consommateur final.",
     "invoice": "Télécharger la facture-reçu",
-    "sentInvoice": "La confirmation et la facture-reçu sont envoyées à {email}."
+    "sentInvoice": "La confirmation et la facture-reçu sont envoyées à {email}.",
+    "sentQr": "Votre QR code et le code pour modifier la page sont envoyés à {email}."
   }
 }

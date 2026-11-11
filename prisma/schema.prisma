@@ -189,6 +189,9 @@ model QrCode {
   // este identificador, o que permite exportá-los/imprimi-los como um conjunto.
   lote                 String? // id do lote (null = criado individualmente)
   cartaz               Json? // desenho do cartaz para imprimir (src/lib/cartaz.tsx)
+  // Preço na loja (/loja). Com valor, este QR é um modelo à venda: cada compra
+  // cria uma cópia dele para quem pagou. A null, não está à venda.
+  precoVenda           Int?      @map("preco_venda_centimos")
   scansTotal           Int       @default(0) @map("scans_total")
   ultimoScan           DateTime? @map("ultimo_scan")
   createdAt            DateTime  @default(now()) @map("created_at")
@@ -377,7 +380,7 @@ model Pacote {
 // uma página (visitante). Nasce pendente e o webhook diz se foi pago.
 model Pagamento {
   id              String    @id @default(cuid())
-  tipo            String // pacote, botao
+  tipo            String // pacote, renovacao, link, botao, qr
   estado          String    @default("pendente") // pendente, pago, falhou, expirado
   valorCentimos   Int       @map("valor_centimos")
   moeda           String    @default("eur")
@@ -409,6 +412,10 @@ model Pagamento {
   moloniFaturaPdf   String?  @map("moloni_fatura_pdf")
   moloniErro        String?  @map("moloni_erro")
   moloniTentativas  Int      @default(0) @map("moloni_tentativas")
+  // Compra na loja (tipo "qr"): qrId é o modelo, qrCompradoId a cópia criada
+  // para quem pagou, entregue por email com o PIN de edição.
+  qrCompradoId      String?  @map("qr_comprado_id")
+  qrEntregueEm      DateTime? @map("qr_entregue_em")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

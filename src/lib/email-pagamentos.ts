@@ -12,7 +12,7 @@ function esc(t: string): string {
 
 type Bloco = { rotulo: string; valor: string };
 
-export type Ilustracao = "pago" | "fatura" | "falha" | "renovacao" | "pedido" | "suspenso" | "reativado";
+export type Ilustracao = "pago" | "fatura" | "falha" | "renovacao" | "pedido" | "suspenso" | "reativado" | "qr";
 
 const BASE = (process.env.APP_URL || "https://mysnaptie.com").replace(/\/+$/, "");
 const LETRA = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -437,4 +437,58 @@ export async function emailPagamentoConfirmado(opts: {
       ],
     }),
   });
+}
+
+// A entrega de um QR comprado na loja: o link da página, o código para a
+// editar e o QR em anexo (PNG para usar já, SVG para uma gráfica). Este
+// email não pode perder-se, por isso uma recusa do Resend conta como erro.
+export async function emailQrEntregue(opts: {
+  para: string;
+  copia?: string | null;
+  nome: string | null;
+  produto: string;
+  link: string;
+  pin: string;
+  png: Buffer;
+  svg: string;
+  ficheiro: string;
+}) {
+  const ola = saudacao(opts.nome);
+  const r = await enviarEmail({
+    to: opts.para,
+    ...(opts.copia ? { bcc: opts.copia } : {}),
+    subject: `O seu Snaptie está pronto · ${opts.produto}`,
+    html: carta({
+      titulo: "O seu Snaptie está pronto",
+      ilustracao: "qr",
+      saudacao: ola,
+      paragrafos: [
+        `Obrigado pela sua compra. A página do seu <strong>${esc(opts.produto)}</strong> já está no ar e o QR code segue em anexo, pronto a imprimir.`,
+        "Para mudar as fotografias, os textos ou o aspeto da página, abra o link, carregue em <strong>Editar página</strong> e escreva o código de edição que está abaixo.",
+      ],
+      detalhes: [
+        { rotulo: "Produto", valor: opts.produto },
+        { rotulo: "Código de edição", valor: opts.pin },
+      ],
+      botao: { texto: "Abrir a minha página", url: opts.link },
+      nota: "Guarde este email. Quem tiver o código de edição pode alterar a página, por isso partilhe-o só com quem deve mexer nela. O ficheiro PNG serve para imprimir em casa; o SVG é o indicado para enviar a uma gráfica.",
+    }),
+    text: texto({
+      saudacao: ola,
+      linhas: [
+        `Obrigado pela sua compra. A página do seu ${opts.produto} já está no ar.`,
+        `Página: ${opts.link}`,
+        `Código de edição: ${opts.pin}`,
+        "Para alterar a página, abra o link, carregue em Editar página e escreva o código.",
+        "O QR code segue em anexo, em PNG e em SVG.",
+      ],
+    }),
+    attachments: [
+      { filename: `qr-${opts.ficheiro}.png`, content: opts.png },
+      { filename: `qr-${opts.ficheiro}.svg`, content: Buffer.from(opts.svg, "utf8") },
+    ],
+  });
+  if (r && typeof r === "object" && "error" in r && r.error) {
+    throw new Error(`Email não enviado: ${(r.error as { message?: string }).message ?? "erro do Resend"}`);
+  }
 }

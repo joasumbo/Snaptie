@@ -83,6 +83,7 @@ const NOMES_TIPO: Record<string, string> = {
   pacote: "Pacote",
   renovacao: "Renovação",
   botao: "Botão na página",
+  qr: "Loja (QR)",
   link: "Link de pagamento",
 };
 

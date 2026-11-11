@@ -138,7 +138,7 @@ export function lerFiltros(sp: Record<string, string | undefined>): Filtros {
   return {
     de: data(sp.de),
     ate: data(sp.ate),
-    tipo: ["pacote", "renovacao", "link", "botao"].includes(sp.tipo ?? "") ? sp.tipo! : "",
+    tipo: ["pacote", "renovacao", "link", "botao", "qr"].includes(sp.tipo ?? "") ? sp.tipo! : "",
     estado: ["pago", "pendente", "falhou", "expirado"].includes(sp.estado ?? "") ? sp.estado! : "pago",
     q: (sp.q ?? "").trim().slice(0, 80),
     pagina: Math.max(1, Math.min(1000, Number(sp.pagina) || 1)),

@@ -14,6 +14,7 @@ import {
   Loader2,
   Mail,
   Minus,
+  QrCode,
   Receipt,
   RefreshCw,
   Search,
@@ -27,7 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Segmented } from "@/components/ui/segmented";
 import { NOMES_ESTADO_PAGAMENTO, euros } from "@/lib/pagamentos";
 import { LinkPagamento } from "@/components/pagamentos/pagamentos-admin";
-import { emitirFaturaAgora, enviarDocumentoPorEmail } from "@/app/dashboard/pagamentos/actions";
+import { emitirFaturaAgora, enviarDocumentoPorEmail, reenviarQrComprado } from "@/app/dashboard/pagamentos/actions";
 
 type Totais = {
   hoje: number;
@@ -63,6 +64,8 @@ type Linha = {
   erroFatura: string | null;
   emailEnviado: string | null;
   faturaEnviada: string | null;
+  qrPagina: string | null;
+  qrEntregue: string | null;
 };
 type Filtros = { de: string; ate: string; tipo: string; estado: string; q: string; pagina: number };
 type PacoteLinkProps = Parameters<typeof LinkPagamento>[0]["pacotes"];
@@ -72,6 +75,7 @@ const TIPOS: Record<string, string> = {
   renovacao: "Renovação",
   link: "Link de pagamento",
   botao: "Botão na página",
+  qr: "Loja (QR)",
 };
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
@@ -301,6 +305,7 @@ function Ficha({ p, moloni, onClose }: { p: Linha; moloni: boolean; onClose: () 
   const [para, setPara] = useState(p.email);
   const [aEnviar, setAEnviar] = useState(false);
   const [aEmitir, iniciarEmitir] = useTransition();
+  const [aReenviarQr, iniciarReenviarQr] = useTransition();
   const pago = p.estado === "pago";
   const documento = p.fatura ? "fatura" : "comprovativo";
 
@@ -343,6 +348,15 @@ function Ficha({ p, moloni, onClose }: { p: Linha; moloni: boolean; onClose: () 
           {linha("Pró-forma", p.proforma)}
           {linha("Confirmação enviada", p.emailEnviado ? dataHora(p.emailEnviado) : null)}
           {linha("Fatura enviada", p.faturaEnviada ? dataHora(p.faturaEnviada) : null)}
+          {linha(
+            "QR comprado",
+            p.qrPagina ? (
+              <a href={p.qrPagina} target="_blank" rel="noreferrer" className="text-indigo-600 underline-offset-4 hover:underline">
+                Abrir página
+              </a>
+            ) : null,
+          )}
+          {linha("QR enviado", p.qrEntregue ? dataHora(p.qrEntregue) : p.tipo === "qr" && pago ? "Ainda não" : null)}
           {linha("Referência", p.id.slice(-10).toUpperCase())}
         </div>
 
@@ -385,6 +399,25 @@ function Ficha({ p, moloni, onClose }: { p: Linha; moloni: boolean; onClose: () 
               }
             >
               {aEmitir ? <Loader2 className="animate-spin" /> : <RefreshCw />} Emitir fatura agora
+            </Button>
+          ) : null}
+          {pago && p.tipo === "qr" ? (
+            <Button
+              variant="outline"
+              disabled={aReenviarQr}
+              onClick={() =>
+                iniciarReenviarQr(async () => {
+                  if (!confirm(`Enviar o QR para ${para}? Vai com um código de edição novo e o anterior deixa de funcionar.`)) return;
+                  const r = await reenviarQrComprado(p.id, para);
+                  if (!r.ok) toast.error(r.message);
+                  else {
+                    toast.success(`QR enviado para ${para}.`);
+                    router.refresh();
+                  }
+                })
+              }
+            >
+              {aReenviarQr ? <Loader2 className="animate-spin" /> : <QrCode />} Reenviar QR
             </Button>
           ) : null}
           {!pago && p.estado !== "expirado" && p.tipo !== "botao" ? (

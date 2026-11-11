@@ -256,6 +256,7 @@
     "invoiceTo": "The invoice is issued to",
     "nifHint": "Without a tax number, the invoice is issued to a final consumer.",
     "invoice": "Download invoice-receipt",
-    "sentInvoice": "The confirmation and the invoice-receipt are on their way to {email}."
+    "sentInvoice": "The confirmation and the invoice-receipt are on their way to {email}.",
+    "sentQr": "Your QR code and the code to edit your page are on their way to {email}."
   }
 }

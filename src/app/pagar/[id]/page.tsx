@@ -51,7 +51,8 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
             chavePublica={process.env.STRIPE_PUBLISHABLE_KEY ?? ""}
             locale={locale}
             retorno={dados.retorno}
-            pedeDados={dados.tipo === "botao" || dados.tipo === "link"}
+            pedeDados={dados.tipo === "botao" || dados.tipo === "link" || dados.tipo === "qr"}
+            qr={dados.tipo === "qr"}
             fatura={dados.fatura}
             dados={{
               email: dados.email ?? "",
@@ -82,6 +83,7 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
               comprovativo: t("receipt"),
               fatura: t("invoice"),
               enviadoPara: t("sentInvoice", { email: "{email}" }),
+              qrEnviado: t("sentQr", { email: "{email}" }),
               passo1: t("step1"),
               passo2: t("step2"),
               continuar: t("next"),
