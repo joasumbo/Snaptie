@@ -70,6 +70,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   });
   if (recentes >= 30) return NextResponse.json({ error: "Demasiados pedidos" }, { status: 429 });
 
+  // Com um QR demo escolhido no elemento, quem paga recebe uma cópia dele.
+  // Só vale um QR da mesma empresa da página.
+  const modelo = conf.copiaQrId
+    ? await prisma.qrCode.findFirst({ where: { id: conf.copiaQrId, companyId: qr.companyId }, select: { id: true } })
+    : null;
+
   try {
     const id = await criarPagamentoAvulso({
       tipo: "botao",
@@ -77,6 +83,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       descricao: block.titulo || "Pagamento",
       companyId: qr.companyId,
       qrId: qr.id,
+      qrModeloId: modelo?.id ?? null,
       blockId: blockId,
       retorno: `/${qr.company.slug}/${qr.codigo}`,
     });

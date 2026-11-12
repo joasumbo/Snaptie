@@ -11,13 +11,14 @@ import { emailPedidoPagamento } from "@/lib/email-pagamentos";
 import { euros } from "@/lib/pagamentos";
 import { prisma as db } from "@/lib/prisma";
 import { INTERVALOS } from "@/lib/pagamentos";
+import { ORDEM_PLANOS } from "@/lib/planos";
 import { arquivarProduto, criarPagamentoAvulso, iniciarPacote, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
 import { appUrl } from "@/lib/stripe";
 import { entregarQr, precoNaLoja } from "@/lib/loja";
 
 export type Resultado = { ok: true } | { ok: false; message: string };
 
-const PLANOS_VALIDOS: Plano[] = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
+const PLANOS_VALIDOS: Plano[] = ORDEM_PLANOS;
 
 async function soAdmin() {
   const u = await getCurrentUser();

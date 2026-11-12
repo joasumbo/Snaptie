@@ -39,6 +39,8 @@ export type ConteudoPagamento = {
   valorCentimos: number;
   valorLivre: boolean;
   textoBotao: string;
+  // QR demo da mesma empresa: quem paga recebe por email uma cópia dele.
+  copiaQrId: string;
 };
 
 export function lerPagamento(c: Record<string, unknown>): ConteudoPagamento {
@@ -47,5 +49,6 @@ export function lerPagamento(c: Record<string, unknown>): ConteudoPagamento {
     valorCentimos: Number.isInteger(v) && v > 0 ? v : 0,
     valorLivre: c.valorLivre === true,
     textoBotao: typeof c.textoBotao === "string" ? c.textoBotao : "",
+    copiaQrId: typeof c.copiaQrId === "string" ? c.copiaQrId : "",
   };
 }

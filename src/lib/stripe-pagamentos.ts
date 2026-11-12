@@ -149,6 +149,7 @@ export async function criarPagamentoAvulso(opcoes: {
   descricao: string;
   companyId?: string | null;
   qrId?: string | null;
+  qrModeloId?: string | null;
   blockId?: string | null;
   email?: string | null;
   retorno?: string | null;
@@ -161,6 +162,7 @@ export async function criarPagamentoAvulso(opcoes: {
       email: opcoes.email || null,
       companyId: opcoes.companyId ?? null,
       qrId: opcoes.qrId ?? null,
+      qrModeloId: opcoes.qrModeloId ?? null,
       blockId: opcoes.blockId ?? null,
       retorno: opcoes.retorno ?? null,
     },
@@ -340,6 +342,8 @@ export type DadosPagamento = {
   intervalo: string | null;
   clientSecret: string | null;
   fatura: boolean;
+  // Quem paga recebe a cópia de um QR por email.
+  entregaQr: boolean;
 };
 
 export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento | null> {
@@ -384,6 +388,7 @@ export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento 
     intervalo: p.pacote?.intervalo ?? null,
     clientSecret,
     fatura: Boolean(p.moloniFaturaPdf),
+    entregaQr: Boolean(p.qrModeloId),
   };
 }
 

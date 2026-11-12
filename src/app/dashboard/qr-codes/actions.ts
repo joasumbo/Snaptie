@@ -626,3 +626,24 @@ export async function saveCartaz(input: {
     return fail("saveCartaz", e);
   }
 }
+
+// Os QRs da mesma empresa que podem servir de demo no elemento Pagamento:
+// quem paga recebe uma cópia do escolhido. Ficam de fora a própria página,
+// as cópias em série e as cópias já entregues a clientes.
+export async function qrsParaCopia(qrId: string): Promise<{ id: string; nome: string }[]> {
+  const actor = await requireQrManager();
+  if (!actor) return [];
+  const qr = await ownedQr(actor.id, actor.role === "ADMIN", actor.companyId, qrId);
+  if (!qr) return [];
+  const entregues = await prisma.pagamento.findMany({
+    where: { qrCompradoId: { not: null }, qrModeloId: { not: null } },
+    select: { qrCompradoId: true },
+  });
+  const fora = new Set(entregues.map((e) => e.qrCompradoId));
+  const lista = await prisma.qrCode.findMany({
+    where: { companyId: qr.companyId, lote: null, id: { not: qr.id } },
+    select: { id: true, nome: true },
+    orderBy: { nome: "asc" },
+  });
+  return lista.filter((q) => !fora.has(q.id));
+}

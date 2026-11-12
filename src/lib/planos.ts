@@ -1,56 +1,82 @@
 import type { Plano } from "@prisma/client";
 
-// Os planos comerciais do Snaptie: Free, Base, Pro e Business.
+// Os planos comerciais do Snaptie, como estão na tabela de preços:
 //
-// Na base de dados os valores continuam a ser STARTER e ENTERPRISE. Mudar o
-// nome do enum obrigava a uma migração na base Neon, que é partilhada com a
-// versão que ainda corre na Vercel — e essa, ao ler um valor que não conhece,
-// rebentava. O nome comercial vive aqui; o valor guardado não precisa de mudar.
+//   Free        0 €        1 QR      100 MB
+//   Base        4,90 €     5 QR      1 GB
+//   Pro         19,90 €    100 QR    10 GB
+//   Business    39,90 €    300 QR    30 GB
+//   Enterprise  negociado  personalizado
 //
-// Os limites e as funcionalidades são uma proposta a confirmar com o cliente.
-// Estão todos neste ficheiro para que acertá-los seja mudar números, e não
-// procurar condições espalhadas pelo código.
+// Na base de dados o Base continua a chamar-se STARTER. Os limites, os preços
+// e as funcionalidades estão todos aqui: acertá-los é mudar números neste
+// ficheiro, e não procurar condições espalhadas pelo código.
 
 export type Funcionalidade = "serie" | "exportacao" | "idiomaFixo";
 
 export type DefinicaoPlano = {
   nome: string;
-  // Máximo de QR codes por empresa. null = sem limite.
+  // Preço de tabela por mês, em cêntimos. null = negociado.
+  precoMensalCentimos: number | null;
+  // Máximo de QR codes por empresa. null = sem limite (ou acertado à parte).
   limiteQrs: number | null;
+  // Espaço para fotografias, vídeos e PDFs, em MB. null = sem limite.
+  armazenamentoMb: number | null;
   funcionalidades: readonly Funcionalidade[];
-  // O Business não tem tabela de preços: o preço e o limite de QRs acertam-se
+  // O Enterprise não tem tabela de preços: o preço e o limite de QRs acertam-se
   // com cada cliente e ficam guardados na subscrição da empresa.
   precoPersonalizado: boolean;
 };
 
+const GB = 1024;
+
 export const PLANOS: Record<Plano, DefinicaoPlano> = {
   FREE: {
     nome: "Free",
-    limiteQrs: 3,
+    precoMensalCentimos: 0,
+    limiteQrs: 1,
+    armazenamentoMb: 100,
     funcionalidades: [],
     precoPersonalizado: false,
   },
   STARTER: {
     nome: "Base",
-    limiteQrs: 20,
+    precoMensalCentimos: 490,
+    limiteQrs: 5,
+    armazenamentoMb: 1 * GB,
     funcionalidades: ["idiomaFixo"],
     precoPersonalizado: false,
   },
   PRO: {
     nome: "Pro",
+    precoMensalCentimos: 1990,
     limiteQrs: 100,
+    armazenamentoMb: 10 * GB,
+    funcionalidades: ["idiomaFixo", "serie", "exportacao"],
+    precoPersonalizado: false,
+  },
+  BUSINESS: {
+    nome: "Business",
+    precoMensalCentimos: 3990,
+    limiteQrs: 300,
+    armazenamentoMb: 30 * GB,
     funcionalidades: ["idiomaFixo", "serie", "exportacao"],
     precoPersonalizado: false,
   },
   ENTERPRISE: {
-    nome: "Business",
+    nome: "Enterprise",
+    precoMensalCentimos: null,
     limiteQrs: null,
+    armazenamentoMb: null,
     funcionalidades: ["idiomaFixo", "serie", "exportacao"],
     precoPersonalizado: true,
   },
 };
 
-export const ORDEM_PLANOS: Plano[] = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
+export const ORDEM_PLANOS: Plano[] = ["FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"];
+
+// Os planos que um pacote pago pode dar.
+export const PLANOS_PAGOS: Plano[] = ["STARTER", "PRO", "BUSINESS", "ENTERPRISE"];
 
 export const NOMES_FUNCIONALIDADES: Record<Funcionalidade, string> = {
   serie: "Criação em série",
@@ -71,4 +97,24 @@ export function planoMinimo(f: Funcionalidade): string {
 
 export function mensagemSemFuncionalidade(f: Funcionalidade): string {
   return `${NOMES_FUNCIONALIDADES[f]} está disponível a partir do plano ${planoMinimo(f)}.`;
+}
+
+// 100 MB, 1 GB, 30 GB...
+export function textoEspaco(mb: number | null): string {
+  if (mb == null) return "Personalizado";
+  if (mb >= GB) return `${Number((mb / GB).toFixed(1)).toLocaleString("pt-PT")} GB`;
+  return `${Math.round(mb).toLocaleString("pt-PT")} MB`;
+}
+
+export function textoPreco(p: DefinicaoPlano): string {
+  if (p.precoMensalCentimos == null) return "Negociado";
+  if (p.precoMensalCentimos === 0) return "0 €";
+  return `${(p.precoMensalCentimos / 100).toFixed(2).replace(".", ",")} €/mês`;
+}
+
+// Resumo de uma linha, para formulários e listas.
+export function resumoPlano(plano: Plano): string {
+  const p = PLANOS[plano];
+  if (p.precoPersonalizado) return "Preço, QR codes e espaço acertados com o cliente.";
+  return `${textoPreco(p)} · até ${p.limiteQrs} QR ${p.limiteQrs === 1 ? "code" : "codes"} · ${textoEspaco(p.armazenamentoMb)} de espaço`;
 }

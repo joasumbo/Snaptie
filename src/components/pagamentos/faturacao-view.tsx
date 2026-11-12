@@ -66,6 +66,7 @@ type Linha = {
   faturaEnviada: string | null;
   qrPagina: string | null;
   qrEntregue: string | null;
+  entregaQr: boolean;
 };
 type Filtros = { de: string; ate: string; tipo: string; estado: string; q: string; pagina: number };
 type PacoteLinkProps = Parameters<typeof LinkPagamento>[0]["pacotes"];
@@ -356,7 +357,7 @@ function Ficha({ p, moloni, onClose }: { p: Linha; moloni: boolean; onClose: () 
               </a>
             ) : null,
           )}
-          {linha("QR enviado", p.qrEntregue ? dataHora(p.qrEntregue) : p.tipo === "qr" && pago ? "Ainda não" : null)}
+          {linha("QR enviado", p.qrEntregue ? dataHora(p.qrEntregue) : p.entregaQr && pago ? "Ainda não" : null)}
           {linha("Referência", p.id.slice(-10).toUpperCase())}
         </div>
 
@@ -401,7 +402,7 @@ function Ficha({ p, moloni, onClose }: { p: Linha; moloni: boolean; onClose: () 
               {aEmitir ? <Loader2 className="animate-spin" /> : <RefreshCw />} Emitir fatura agora
             </Button>
           ) : null}
-          {pago && p.tipo === "qr" ? (
+          {pago && p.entregaQr ? (
             <Button
               variant="outline"
               disabled={aReenviarQr}

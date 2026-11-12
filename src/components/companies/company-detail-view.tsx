@@ -11,7 +11,7 @@ import {
   PLANO_LABELS,
 } from "@/lib/companies";
 import { ROLE_LABELS, STATUS_LABELS, STATUS_TONE } from "@/lib/roles";
-import { PLANOS } from "@/lib/planos";
+import { PLANOS, resumoPlano, textoEspaco } from "@/lib/planos";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { deleteCompany, setCompanyStatus } from "@/app/dashboard/companies/actio
 
 type Company = EditableCompany & {
   slug: string;
+  espaco: { usado: number; limite: number | null };
   estado: CompanyStatus;
   createdAt: string;
 };
@@ -181,7 +182,11 @@ export default function CompanyDetailView({
               }
             />
             <Detail label="Identificador" value={company.slug} />
-            <Detail label="Plano" value={PLANO_LABELS[company.plano]} />
+            <Detail label="Plano" value={`${PLANO_LABELS[company.plano]} (${resumoPlano(company.plano)})`} />
+            <Detail
+              label="Espaço usado"
+              value={`${textoEspaco(company.espaco.usado / 1048576)}${company.espaco.limite != null ? ` de ${textoEspaco(company.espaco.limite / 1048576)}` : ""}`}
+            />
             {PLANOS[company.plano].precoPersonalizado ? (
               <Detail
                 label="Preço acordado"

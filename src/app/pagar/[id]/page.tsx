@@ -52,7 +52,7 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
             locale={locale}
             retorno={dados.retorno}
             pedeDados={dados.tipo === "botao" || dados.tipo === "link" || dados.tipo === "qr"}
-            qr={dados.tipo === "qr"}
+            qr={dados.entregaQr}
             fatura={dados.fatura}
             dados={{
               email: dados.email ?? "",

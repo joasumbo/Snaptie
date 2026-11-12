@@ -56,6 +56,7 @@ export async function comprarModelo(modeloId: string): Promise<string> {
     valorCentimos: modelo.precoVenda,
     descricao: `Snaptie ${modelo.nome}`,
     qrId: modelo.id,
+    qrModeloId: modelo.id,
     retorno: "/loja",
   });
 }
@@ -121,7 +122,9 @@ async function criarCopia(modeloId: string, dono: string, pinHash: string): Prom
 // outra vez, para o email da compra ou para outro.
 export async function entregarQr(pagamentoId: string, opcoes: { reenviar?: boolean; para?: string } = {}): Promise<boolean> {
   const p = await prisma.pagamento.findUnique({ where: { id: pagamentoId } });
-  if (!p || p.tipo !== "qr" || p.estado !== "pago" || !p.qrId) return false;
+  // O modelo: o produto da loja, ou o QR demo escolhido no elemento Pagamento.
+  const modeloId = p?.qrModeloId ?? (p?.tipo === "qr" ? p.qrId : null);
+  if (!p || p.estado !== "pago" || !modeloId) return false;
   if (p.qrEntregueEm && !opcoes.reenviar) return false;
   const para = opcoes.para || p.email;
   if (!para) return false;
@@ -130,7 +133,7 @@ export async function entregarQr(pagamentoId: string, opcoes: { reenviar?: boole
   const pinHash = await hashPassword(pin);
   let qrId = p.qrCompradoId;
   if (!qrId) {
-    const criado = await criarCopia(p.qrId, p.nomeCliente || para, pinHash);
+    const criado = await criarCopia(modeloId, p.nomeCliente || para, pinHash);
     // Dois avisos ao mesmo tempo (webhook e página) não criam duas cópias.
     const r = await prisma.pagamento.updateMany({ where: { id: p.id, qrCompradoId: null }, data: { qrCompradoId: criado } });
     if (r.count === 0) {
@@ -168,7 +171,7 @@ export async function entregarQr(pagamentoId: string, opcoes: { reenviar?: boole
 // a sair (uma falha do email, por exemplo).
 export async function entregasEmAtraso(): Promise<number> {
   const l = await prisma.pagamento.findMany({
-    where: { tipo: "qr", estado: "pago", qrEntregueEm: null, pagoEm: { lt: new Date(Date.now() - 5 * 60_000) } },
+    where: { qrModeloId: { not: null }, estado: "pago", qrEntregueEm: null, pagoEm: { lt: new Date(Date.now() - 5 * 60_000) } },
     select: { id: true },
     take: 20,
   });

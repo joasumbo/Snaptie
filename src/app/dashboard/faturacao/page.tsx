@@ -112,6 +112,7 @@ export default async function FaturacaoPage({
           faturaEnviada: p.faturaEnviadaEm?.toISOString() ?? null,
           qrPagina: p.qrCompradoId ? (paginas.get(p.qrCompradoId) ?? null) : null,
           qrEntregue: p.qrEntregueEm?.toISOString() ?? null,
+          entregaQr: Boolean(p.qrModeloId),
         }))}
       />
     </div>

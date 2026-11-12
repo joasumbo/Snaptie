@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { isReservedSlug, slugify } from "@/lib/slug";
 import { uniqueQrCode, uniqueQrSlug } from "@/lib/qr-identity";
-import { PLANOS } from "@/lib/planos";
+import { ORDEM_PLANOS, PLANOS } from "@/lib/planos";
 import { guardarSubscricao } from "@/lib/planos-server";
 
 export type ActionResult =
@@ -15,7 +15,7 @@ export type ActionResult =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STATUSES: CompanyStatus[] = ["ATIVA", "SUSPENSA", "INATIVA"];
-const PLANOS_VALIDOS: Plano[] = ["FREE", "STARTER", "PRO", "ENTERPRISE"];
+const PLANOS_VALIDOS: Plano[] = ORDEM_PLANOS;
 
 // Companies are clients of the platform, managed by Snaptie administrators.
 async function requireAdmin() {

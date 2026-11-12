@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { registarFicheiro, verificarEspaco } from "@/lib/armazenamento";
 import { visitorIp } from "@/lib/rate-limit";
 import {
   prepareUpload,
@@ -47,7 +48,7 @@ async function muralVivo(codigo: string, blockId: string) {
       tipo: true,
       titulo: true,
       conteudo: true,
-      qr: { select: { nome: true, company: { select: { slug: true, email: true } } } },
+      qr: { select: { nome: true, companyId: true, company: { select: { slug: true, email: true } } } },
     },
   });
 }
@@ -178,6 +179,9 @@ export async function requestWallUpload(input: {
 
   const prepared = prepareUpload("image", input.contentType, input.size);
   if (!prepared.ok) return prepared;
+  const cheio = await verificarEspaco(block.qr.companyId, input.size);
+  if (cheio) return { ok: false, message: "Este mural não aceita mais imagens de momento." };
+  await registarFicheiro(block.qr.companyId, prepared.key, input.size);
 
   const uploadUrl = await createUploadUrl({
     key: prepared.key,

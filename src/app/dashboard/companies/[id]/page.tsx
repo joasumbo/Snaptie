@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import CompanyDetailView from "@/components/companies/company-detail-view";
+import { resumoEspaco } from "@/lib/armazenamento";
 
 export default async function CompanyDetailPage({
   params,
@@ -29,6 +30,8 @@ export default async function CompanyDetailPage({
     _sum: { scansTotal: true },
   });
 
+  const espaco = await resumoEspaco(id);
+
   const users = await prisma.user.findMany({
     where: { companyId: id },
     select: { id: true, nome: true, email: true, role: true, status: true },
@@ -54,6 +57,7 @@ export default async function CompanyDetailPage({
           : null,
         limiteQrs: company.subscriptions[0]?.limiteQrs ?? null,
         estado: company.estado,
+        espaco,
         createdAt: company.createdAt.toISOString(),
       }}
       indicators={{

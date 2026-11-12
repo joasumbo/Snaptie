@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PLANO_LABELS } from "@/lib/companies";
+import { PLANOS_PAGOS } from "@/lib/planos";
 import {
   INTERVALOS,
   NOMES_ESTADO_PAGAMENTO,
@@ -78,7 +79,6 @@ type Subscrita = {
   fim: string | null;
 };
 
-const PLANOS_PAGOS: Plano[] = ["STARTER", "PRO", "ENTERPRISE"];
 const NOMES_TIPO: Record<string, string> = {
   pacote: "Pacote",
   renovacao: "Renovação",

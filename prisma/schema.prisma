@@ -37,8 +37,9 @@ enum CompanyStatus {
 
 enum Plano {
   FREE
-  STARTER
+  STARTER // Base
   PRO
+  BUSINESS
   ENTERPRISE
 }
 
@@ -145,6 +146,7 @@ model Company {
   pacote          Pacote?        @relation("PacoteDaEmpresa", fields: [pacoteId], references: [id], onDelete: SetNull)
   pacotesPrivados Pacote[]       @relation("PacotePrivado")
   pagamentos      Pagamento[]
+  ficheiros       Ficheiro[]
   users           User[]
   qrCodes         QrCode[]
   files           File[]
@@ -415,6 +417,9 @@ model Pagamento {
   // Compra na loja (tipo "qr"): qrId é o modelo, qrCompradoId a cópia criada
   // para quem pagou, entregue por email com o PIN de edição.
   qrCompradoId      String?  @map("qr_comprado_id")
+  // QR modelo a copiar para quem pagou: o da loja, ou o escolhido no elemento
+  // Pagamento de uma página.
+  qrModeloId        String?  @map("qr_modelo_id")
   qrEntregueEm      DateTime? @map("qr_entregue_em")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -434,4 +439,19 @@ model Configuracao {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("configuracoes")
+}
+
+// Cada ficheiro enviado (fotografias, vídeos, PDFs), para contar o espaço que
+// cada empresa usa face ao limite do plano.
+model Ficheiro {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  chave     String   @unique
+  bytes     BigInt
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("ficheiros")
 }

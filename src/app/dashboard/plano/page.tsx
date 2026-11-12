@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/dal";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/page-header";
 import { PLANOS } from "@/lib/planos";
+import { resumoEspaco } from "@/lib/armazenamento";
 import MeuPlano from "@/components/pagamentos/meu-plano";
 import { cartaoAtual } from "@/lib/stripe-pagamentos";
 import { getLocale } from "next-intl/server";
@@ -42,9 +43,10 @@ export default async function PlanoPage() {
   ]);
 
   const limite = company.pacote?.limiteQrs ?? PLANOS[company.plano].limiteQrs;
-  const [cartao, locale] = await Promise.all([
+  const [cartao, locale, espaco] = await Promise.all([
     cartaoAtual(user.companyId).catch(() => null),
     getLocale(),
+    resumoEspaco(user.companyId),
   ]);
 
   return (
@@ -65,6 +67,7 @@ export default async function PlanoPage() {
         locale={locale}
         qrs={qrs}
         limite={limite}
+        espaco={espaco}
         pacotes={pacotes.map((p) => ({
           id: p.id,
           nome: p.nome,

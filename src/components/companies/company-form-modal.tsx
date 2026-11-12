@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import type { Plano } from "@prisma/client";
 import { PLANO_OPTIONS, PLANO_LABELS } from "@/lib/companies";
-import { PLANOS } from "@/lib/planos";
+import { PLANOS, resumoPlano } from "@/lib/planos";
 import { createCompany, updateCompany } from "@/app/dashboard/companies/actions";
 
 export type EditableCompany = {
@@ -35,7 +35,7 @@ export type EditableCompany = {
   corPrimaria: string | null;
   corSecundaria: string | null;
   plano: Plano;
-  // Preço e limite acordados — só existem no plano Business.
+  // Preço e limite acordados: só existem no plano Enterprise.
   precoMensal: number | null;
   limiteQrs: number | null;
 };
@@ -232,9 +232,7 @@ export function CompanyFormModal({ company, onClose, onSaved }: Props) {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              {PLANOS[plano].limiteQrs === null
-                ? "QR codes sem limite."
-                : `Até ${PLANOS[plano].limiteQrs} QR codes.`}
+              {resumoPlano(plano)}
             </p>
           )}
         </div>

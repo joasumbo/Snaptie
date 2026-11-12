@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PLANOS, NOMES_FUNCIONALIDADES } from "@/lib/planos";
+import { PLANOS, NOMES_FUNCIONALIDADES, ORDEM_PLANOS, textoEspaco, textoPreco } from "@/lib/planos";
 import { NOMES_ESTADO_SUBSCRICAO, NOMES_INTERVALO, euros, type Intervalo } from "@/lib/pagamentos";
 import { FormularioCartao } from "@/components/pagamentos/formulario-cartao";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,8 @@ export default function MeuPlano(props: {
   locale: string;
   qrs: number;
   limite: number | null;
+  // Espaço em bytes: usado e limite (null = sem limite).
+  espaco: { usado: number; limite: number | null };
   pacotes: PacoteVenda[];
   pagamentos: {
     id: string;
@@ -139,6 +141,7 @@ export default function MeuPlano(props: {
             QR codes: <strong>{props.qrs}</strong>
             {props.limite != null ? ` de ${props.limite}` : " (sem limite)"}
           </p>
+          <Espaco {...props.espaco} />
           {def.funcionalidades.length ? (
             <ul className="space-y-1">
               {def.funcionalidades.map((f) => (
@@ -175,6 +178,8 @@ export default function MeuPlano(props: {
         </CardContent>
       </Card>
 
+      <TabelaPlanos atual={props.plano} />
+
       {props.pacotes.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {props.pacotes.map((p) => {
@@ -192,7 +197,8 @@ export default function MeuPlano(props: {
                     <span className="text-muted-foreground">{NOMES_INTERVALO[p.intervalo as Intervalo]}</span>
                   </div>
                   <p className="text-muted-foreground">
-                    Plano {PLANOS[p.plano].nome}, {p.limiteQrs != null ? `até ${p.limiteQrs} QR codes` : "QR codes sem limite"}.
+                    Plano {PLANOS[p.plano].nome}: {p.limiteQrs != null ? `até ${p.limiteQrs} QR codes` : "QR codes sem limite"},{" "}
+                    {textoEspaco(PLANOS[p.plano].armazenamentoMb)} de espaço.
                   </p>
                   {atual ? (
                     <Badge>O seu pacote</Badge>
@@ -329,5 +335,59 @@ function DadosFaturacao({ inicial }: { inicial: { nome: string; nif: string; mor
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+const MB = 1024 * 1024;
+
+// O espaço ocupado pelas fotografias, vídeos e PDFs das páginas.
+function Espaco({ usado, limite }: { usado: number; limite: number | null }) {
+  const pct = limite ? Math.min(100, (usado / limite) * 100) : 0;
+  return (
+    <div className="space-y-1.5">
+      <p>
+        Espaço: <strong>{textoEspaco(usado / MB)}</strong>
+        {limite != null ? ` de ${textoEspaco(limite / MB)}` : " (sem limite)"}
+      </p>
+      {limite != null ? (
+        <div className="h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            className={`h-full rounded-full ${pct >= 90 ? "bg-destructive" : "bg-indigo-600"}`}
+            style={{ width: `${Math.max(pct, usado > 0 ? 2 : 0)}%` }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// A tabela de planos, igual à da tabela de preços.
+export function TabelaPlanos({ atual }: { atual?: string }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/50 text-left text-muted-foreground">
+          <tr>
+            <th className="px-4 py-2.5 font-medium">Plano</th>
+            <th className="px-4 py-2.5 font-medium">Preço</th>
+            <th className="px-4 py-2.5 font-medium">QR codes</th>
+            <th className="px-4 py-2.5 font-medium">Espaço</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ORDEM_PLANOS.map((k) => {
+            const p = PLANOS[k];
+            return (
+              <tr key={k} className={`border-t ${k === atual ? "bg-indigo-50/60 font-medium dark:bg-indigo-500/10" : ""}`}>
+                <td className="px-4 py-2.5">{p.nome}</td>
+                <td className="px-4 py-2.5">{textoPreco(p)}</td>
+                <td className="px-4 py-2.5">{p.limiteQrs ?? "Personalizado"}</td>
+                <td className="px-4 py-2.5">{textoEspaco(p.armazenamentoMb)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

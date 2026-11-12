@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X, Upload, FileText, Film } from "lucide-react";
 import type { BlockType } from "@prisma/client";
@@ -31,7 +31,7 @@ import {
   emailsManutencao,
   type ParBotao,
 } from "@/lib/qr";
-import { addBlock, updateBlock } from "@/app/dashboard/qr-codes/actions";
+import { addBlock, qrsParaCopia, updateBlock } from "@/app/dashboard/qr-codes/actions";
 import { DIAS_SEMANA, lerLembrete, type RegraLembrete } from "@/lib/lembrete";
 import { lerPagamento, PAGAMENTO_MAX_CENTIMOS, PAGAMENTO_MIN_CENTIMOS } from "@/lib/pagamentos";
 import { Segmented } from "@/components/ui/segmented";
@@ -134,6 +134,15 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
   );
   const [valorLivre, setValorLivre] = useState(pagamentoInicial.valorLivre);
   const [textoBotao, setTextoBotao] = useState(pagamentoInicial.textoBotao);
+  // O QR demo a enviar a quem paga ("" = nenhum) e a lista para escolher.
+  const [copiaQrId, setCopiaQrId] = useState(pagamentoInicial.copiaQrId);
+  const [qrsCopia, setQrsCopia] = useState<{ id: string; nome: string }[] | null>(null);
+  useEffect(() => {
+    if (tipo !== "PAGAMENTO" || qrsCopia !== null) return;
+    qrsParaCopia(qrId)
+      .then(setQrsCopia)
+      .catch(() => setQrsCopia([]));
+  }, [tipo, qrId, qrsCopia]);
   // Os dois botões lado a lado. São sempre dois, por isso o estado tem sempre
   // dois lugares — nunca se acrescenta nem se tira nenhum.
   const [par, setPar] = useState<ParBotao[]>(() => parBotoes(c));
@@ -311,6 +320,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
             valorCentimos: Number.isFinite(centimos) && centimos > 0 ? centimos : 0,
             valorLivre,
             textoBotao: textoBotao.trim(),
+            copiaQrId,
           };
           break;
         }
@@ -885,6 +895,29 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                     onChange={(e) => setTextoBotao(e.target.value)}
                   />
                 </Field>
+                <Field label="Ao pagar, enviar ao cliente uma cópia de">
+                  <select
+                    value={copiaQrId}
+                    onChange={(e) => setCopiaQrId(e.target.value)}
+                    className="h-9 w-full rounded-md border bg-transparent px-2 text-sm"
+                  >
+                    <option value="">Nada (só o pagamento)</option>
+                    {(qrsCopia ?? []).map((q) => (
+                      <option key={q.id} value={q.id}>
+                        {q.nome}
+                      </option>
+                    ))}
+                    {copiaQrId && !(qrsCopia ?? []).some((q) => q.id === copiaQrId) ? (
+                      <option value={copiaQrId}>QR escolhido</option>
+                    ) : null}
+                  </select>
+                </Field>
+                {copiaQrId ? (
+                  <p className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">
+                    Quando o pagamento entra, o sistema cria uma cópia desse QR para quem pagou e envia-lhe por email
+                    a imagem do QR, o link da página e o código para editar as fotos e os textos.
+                  </p>
+                ) : null}
               </>
             ) : null}
 

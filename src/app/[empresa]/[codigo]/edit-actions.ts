@@ -2,6 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { registarFicheiro, verificarEspaco } from "@/lib/armazenamento";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { isContentBlock, ESTADOS_MANUTENCAO } from "@/lib/qr";
 import {
@@ -216,6 +217,9 @@ export async function requestPublicUpload(input: {
 
   const prepared = prepareUpload(input.kind, input.contentType, input.size);
   if (!prepared.ok) return prepared;
+  const cheio = await verificarEspaco(auth.qr.companyId, input.size);
+  if (cheio) return { ok: false, message: cheio };
+  await registarFicheiro(auth.qr.companyId, prepared.key, input.size);
 
   const uploadUrl = await createUploadUrl({
     key: prepared.key,
