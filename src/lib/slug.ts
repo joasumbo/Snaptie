@@ -24,6 +24,7 @@ const RESERVED_SLUGS = new Set([
   "s",
   "pagar",
   "loja",
+  "study",
   "api",
   "_next",
   "favicon.ico",

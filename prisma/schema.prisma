@@ -455,3 +455,24 @@ model Ficheiro {
   @@index([companyId])
   @@map("ficheiros")
 }
+
+// Snaptie Study: um estudo feito a partir de fotografias de um manual. Sem
+// conta: quem tem o link (o id) continua o estudo. As fotografias não ficam
+// guardadas, só o texto que a IA leu delas.
+model StudySessao {
+  id        String   @id
+  // a_ler, a_planear, pronto, erro
+  estado    String   @default("a_ler")
+  paginas   Int
+  lidas     Int      @default(0)
+  texto     String?
+  plano     Json?
+  progresso Json?
+  erro      String?
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([ip, createdAt])
+  @@map("study_sessoes")
+}
