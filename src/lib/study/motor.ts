@@ -130,12 +130,15 @@ const ESQUEMA_PLANO = {
 async function planear(id: string) {
   const s = await prisma.studySessao.findUniqueOrThrow({ where: { id } });
   const ilegiveis = ((s.plano as { ilegiveis?: number[] } | null)?.ilegiveis ?? []) as number[];
+  // Cerca de três conceitos por página lida, entre 4 e 10.
+  const alvo = Math.min(10, Math.max(4, (s.paginas - ilegiveis.length) * 3));
   const r = await gerar<{ disciplina: string; ano: string; tema: string; resumo: string; conceitos: { nome: string; ideia: string }[] }>(
     "Analisas páginas de manuais escolares portugueses para preparar um plano de estudo. Respondes em português de Portugal e só com base no texto dado.",
     `Estas são as páginas que o aluno fotografou:\n\n${s.texto}\n\n` +
       "Identifica a disciplina, o ano de escolaridade (por exemplo \"6.º ano\"; deixa vazio se não se perceber) e o tema. " +
       "Escreve um resumo de duas frases. " +
-      "Depois faz a lista de TODOS os conceitos que o aluno tem de aprender nestas páginas, pela ordem em que aparecem: entre 4 e 10 conceitos, sem deixar nenhum subtema de fora e sem repetir. " +
+      `Depois faz a lista de TODOS os conceitos que o aluno tem de aprender nestas páginas, pela ordem em que aparecem, sem deixar nenhum subtema de fora: cerca de ${alvo} conceitos (nunca mais de 10). ` +
+      "Junta num só conceito as ideias muito próximas (por exemplo, um grupo social e os seus privilégios) e põe o vocabulário dentro do conceito a que pertence; não repitas a mesma ideia em dois conceitos. " +
       "Para cada conceito, \"nome\" é curto (até 6 palavras) e \"ideia\" diz numa ou duas frases o essencial que o aluno tem de saber, com os factos tal como estão no texto.",
     ESQUEMA_PLANO,
     0.2,
@@ -192,7 +195,8 @@ function sistema(s: { texto: string | null }, plano: Plano): string {
   const ano = plano.ano ? `do ${plano.ano}` : "do ensino básico";
   return (
     `És um explicador paciente de um aluno ${ano} em Portugal. Escreves em português de Portugal, com frases curtas e palavras simples. ` +
-    "Tratas o aluno por tu. Usas só a matéria abaixo, tirada das páginas do manual do aluno: não inventes factos, datas, nomes nem números que não estejam lá.\n\n" +
+    "Tratas o aluno por tu. Usas só a matéria abaixo, tirada das páginas do manual do aluno: não inventes factos, datas, nomes, números, causas nem pormenores que não estejam lá. " +
+    "Os exemplos e comparações podem vir da vida do aluno, mas nunca acrescentam factos sobre a matéria. Usa português de Portugal, nunca do Brasil.\n\n" +
     `MATÉRIA (${[plano.disciplina, plano.tema].filter(Boolean).join(", ")}):\n"""\n${s.texto}\n"""\n\n` +
     `CONCEITOS DO ESTUDO:\n${plano.conceitos.map((c) => `- ${c.nome}: ${c.ideia}`).join("\n")}`
   );
@@ -259,14 +263,15 @@ function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[]): stri
         "\"titulo\" é o nome do conceito. \"explicacao\" tem entre 60 e 120 palavras, em 2 ou 3 parágrafos curtos separados por uma linha em branco. " +
         "\"exemplo\" é uma comparação ou um exemplo do dia a dia, numa ou duas frases. " +
         "Depois faz uma pergunta de escolha múltipla simples sobre o que acabaste de explicar: \"opcoes\" tem 4 opções curtas, só uma certa, " +
-        "\"correta\" é a posição (0 a 3) da opção certa e \"porque\" explica numa frase porque é a certa." +
+        "\"correta\" é a posição (0 a 3) da opção certa e \"porque\" explica numa frase porque é a certa, sem falar em letras nem números de opção." +
         evitar
       );
     case "escolha":
       return (
         `Etapa CONSOLIDAR. Faz uma pergunta de escolha múltipla sobre ${nomes}, um pouco mais exigente do que uma pergunta de definição ` +
-        "(por exemplo comparar, dar um exemplo, relacionar com outro conceito). \"opcoes\" tem 4 opções plausíveis e curtas, só uma certa; " +
-        "as erradas devem ser enganos que um aluno costuma fazer. \"correta\" é a posição (0 a 3) da certa e \"porque\" explica numa frase." +
+        "(por exemplo comparar, dar um exemplo, relacionar com outro conceito). A opção certa tem de se poder confirmar no texto da matéria, sem conclusões que lá não estejam. " +
+        "\"opcoes\" tem 4 opções plausíveis e curtas, só uma certa; " +
+        "as erradas devem ser enganos que um aluno costuma fazer. \"correta\" é a posição (0 a 3) da certa e \"porque\" explica numa frase, sem falar em letras nem números de opção." +
         evitar
       );
     case "completar":
@@ -278,7 +283,7 @@ function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[]): stri
       );
     case "aberta":
       return (
-        `Etapa DOMINAR. Faz uma pergunta aberta sobre ${nomes}, que obrigue o aluno a explicar por palavras suas (por exemplo \"Explica porquê...\", \"Compara...\", \"Descreve...\"). ` +
+        `Etapa DOMINAR. Faz uma pergunta aberta sobre ${nomes}, que obrigue o aluno a explicar por palavras suas (por exemplo \"Explica porquê...\", \"Compara...\", \"Descreve...\").A pergunta é sobre a matéria, não sobre a vida ou os sentimentos do aluno, e a resposta tem de estar no texto. ` +
         "A resposta certa deve caber em 2 a 4 frases. \"pontos\" são as 2 a 4 ideias essenciais que a resposta tem de ter, cada uma numa frase curta. " +
         "\"modelo\" é uma boa resposta de um aluno, em 2 a 4 frases." +
         evitar
@@ -297,8 +302,13 @@ function baralhar<T extends { opcoes: string[]; correta: number }>(d: T): T {
   return { ...d, opcoes, correta: opcoes.indexOf(certa) };
 }
 
+// O ecrã mostra texto simples: tiram-se os asteriscos de negrito que a IA põe.
+function limpar(s: string) {
+  return s.replace(/\*+/g, "").trim();
+}
+
 function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
-  const txt = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const txt = (v: unknown) => (typeof v === "string" ? limpar(v) : "");
   if (tipo === "explicacao" || tipo === "escolha") {
     const opcoes = Array.isArray(d.opcoes) ? (d.opcoes as unknown[]).map(txt).filter(Boolean).slice(0, 4) : [];
     const correta = Number(d.correta);
@@ -389,11 +399,11 @@ async function corrigir(id: string, atividadeId: string) {
         `O aluno tinha de completar esta frase: "${a.dados.frase}". A resposta esperada era "${a.dados.resposta}". ` +
           `O aluno escreveu: "${a.resposta}". ` +
           "Diz se a resposta do aluno está certa: aceita sinónimos, outra forma de dizer o mesmo e pequenos erros de ortografia, mas não aceita uma ideia diferente. " +
-          "\"feedback\" fala com o aluno numa ou duas frases: se errou, diz qual era a resposta e porquê.",
+          "\"feedback\" fala com o aluno numa ou duas frases: se errou, diz qual era a resposta e porquê. Vai direto ao assunto, sem \"Olá\" nem elogios feitos.",
         { type: "object", properties: { certo: { type: "boolean" }, feedback: { type: "string" } }, required: ["certo", "feedback"] },
         0,
       );
-      resultado = { certo: Boolean(r.certo), parcial: false, feedback: r.feedback?.trim() || "" };
+      resultado = { certo: Boolean(r.certo), parcial: false, feedback: limpar(r.feedback ?? "") };
     } else if (a.dados.tipo === "aberta") {
       const r = await gerar<{ presentes: boolean[]; feedback: string }>(
         sistema(s, plano),
@@ -402,7 +412,7 @@ async function corrigir(id: string, atividadeId: string) {
           `Resposta do aluno: "${a.resposta}"\n\n` +
           "Para cada ideia essencial, pela mesma ordem, diz em \"presentes\" se a resposta do aluno a tem (true ou false), mesmo que dita por outras palavras. " +
           "Não contes ideias que estejam erradas. " +
-          "\"feedback\" fala com o aluno em 2 ou 3 frases: diz o que está bem e, se faltar alguma coisa, o que falta, sem dar a resposta toda.",
+          "\"feedback\" fala com o aluno em 2 ou 3 frases: diz o que está bem e, se faltar alguma coisa, o que falta, sem dar a resposta toda. Vai direto ao assunto: sem \"Olá\" e sem elogios feitos como \"És um bom aluno\".",
         {
           type: "object",
           properties: { presentes: { type: "array", items: { type: "boolean" } }, feedback: { type: "string" } },
@@ -414,7 +424,7 @@ async function corrigir(id: string, atividadeId: string) {
       const tem = (r.presentes ?? []).slice(0, total).filter(Boolean).length;
       // Certa com pelo menos 70% das ideias essenciais.
       const certo = tem >= Math.ceil(total * 0.7);
-      resultado = { certo, parcial: !certo && tem > 0, feedback: r.feedback?.trim() || "" };
+      resultado = { certo, parcial: !certo && tem > 0, feedback: limpar(r.feedback ?? "") };
     } else return;
   } catch (e) {
     console.error("[study] corrigir", id, atividadeId, e);
