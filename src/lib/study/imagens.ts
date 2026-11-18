@@ -96,7 +96,8 @@ async function creditos(ficheiro: string): Promise<{ autor: string; licenca: str
 
 // A IA olha para a imagem e diz se serve para explicar o conceito.
 async function serve(c: Candidata, conceito: string, contexto: string): Promise<boolean> {
-  const img = await pedir(c.url.replace(/\/\d+px-/, "/640px-"));
+  // O Wikimedia só serve miniaturas em tamanhos fixos (250, 500, 960...).
+  const img = await pedir(c.url.replace(/\/\d+px-/, "/500px-"));
   const r = await gerar<{ descricao: string; serve: boolean }>(
     "Escolhes imagens para explicações de manuais escolares. Respondes em português de Portugal.",
     `Esta imagem vai aparecer ao lado de uma explicação para um aluno sobre "${conceito}", no tema "${contexto}". ` +
