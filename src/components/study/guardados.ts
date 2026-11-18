@@ -23,3 +23,16 @@ export function guardarEstudo(e: EstudoGuardado) {
     localStorage.setItem(CHAVE, JSON.stringify(l.slice(0, 20)));
   } catch {}
 }
+
+// Reduz a fotografia no próprio telemóvel: a IA lê bem a 1600 px e o envio
+// fica dez vezes mais leve.
+export async function reduzir(f: File): Promise<string> {
+  const bmp = await createImageBitmap(f);
+  const escala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * escala);
+  c.height = Math.round(bmp.height * escala);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close();
+  return c.toDataURL("image/jpeg", 0.82).split(",")[1];
+}

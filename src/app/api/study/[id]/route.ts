@@ -1,9 +1,21 @@
-import { avancar, fecharRelatorio, responder, tentarDeNovo, verEstudo } from "@/lib/study/motor";
+import {
+  avancar,
+  fecharRelatorio,
+  melhorar,
+  novasFotos,
+  reportar,
+  responder,
+  seguirSemFotos,
+  tentarDeNovo,
+  verEstudo,
+} from "@/lib/study/motor";
 
 export const dynamic = "force-dynamic";
 
 // O estado do estudo (o ecrã pergunta de poucos em poucos segundos) e as ações
 // do aluno. O id comprido é a chave: quem tem o link continua o estudo.
+
+const TAMANHO_MAX = 4_000_000; // por fotografia, em base64
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,7 +26,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  let c: { acao?: string; atividadeId?: string; resposta?: string };
+  let c: { acao?: string; atividadeId?: string; resposta?: string; motivo?: string; fotos?: unknown };
   try {
     c = await req.json();
   } catch {
@@ -27,7 +39,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     else if (c.acao === "avancar") await avancar(id, a);
     else if (c.acao === "fechar") await fecharRelatorio(id);
     else if (c.acao === "repetir") await tentarDeNovo(id, a);
-    else return Response.json({ erro: "Ação desconhecida." }, { status: 400 });
+    else if (c.acao === "melhorar") await melhorar(id, a);
+    else if (c.acao === "reportar") await reportar(id, a, String(c.motivo ?? ""));
+    else if (c.acao === "seguir") await seguirSemFotos(id);
+    else if (c.acao === "fotos") {
+      const fotos = (Array.isArray(c.fotos) ? c.fotos : [])
+        .map((f) => ({ pagina: Number((f as { pagina?: unknown })?.pagina), imagem: String((f as { imagem?: unknown })?.imagem ?? "") }))
+        .filter((f) => f.imagem.length > 0 && f.imagem.length <= TAMANHO_MAX && /^[A-Za-z0-9+/=]+$/.test(f.imagem));
+      await novasFotos(id, fotos);
+    } else return Response.json({ erro: "Ação desconhecida." }, { status: 400 });
   } catch (e) {
     return Response.json({ erro: e instanceof Error ? e.message : "Erro." }, { status: 409 });
   }

@@ -52,13 +52,13 @@ export async function ler(imagemBase64: string): Promise<string> {
 
 // Pede uma resposta em JSON com a forma do esquema. O sistema vem primeiro e
 // é igual entre pedidos do mesmo estudo, para a IA reaproveitar o que já leu.
-export async function gerar<T>(sistema: string, pedido: string, esquema: object, temperatura = 0.4): Promise<T> {
+export async function gerar<T>(sistema: string, pedido: string, esquema: object, temperatura = 0.4, imagens?: string[]): Promise<T> {
   let ultimo: unknown;
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     const texto = await conversar(
       [
         { role: "system", content: sistema },
-        { role: "user", content: pedido },
+        { role: "user", content: pedido, ...(imagens?.length ? { images: imagens } : {}) },
       ],
       esquema,
       temperatura,

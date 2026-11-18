@@ -5,22 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BookOpen, Camera, ImagePlus, Loader2, X } from "lucide-react";
 import { DESCRICAO_ETAPAS, ETAPAS } from "@/lib/study/tipos";
-import { lerGuardados, guardarEstudo, type EstudoGuardado } from "@/components/study/guardados";
+import { lerGuardados, guardarEstudo, reduzir, type EstudoGuardado } from "@/components/study/guardados";
 
 const MAX = 5;
-
-// Reduz a fotografia no próprio telemóvel: a IA lê bem a 1600 px e o envio
-// fica dez vezes mais leve.
-async function reduzir(f: File): Promise<string> {
-  const bmp = await createImageBitmap(f);
-  const escala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * escala);
-  c.height = Math.round(bmp.height * escala);
-  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close();
-  return c.toDataURL("image/jpeg", 0.82).split(",")[1];
-}
 
 export function StudyInicio() {
   const router = useRouter();
@@ -126,7 +113,7 @@ export function StudyInicio() {
               <button
                 type="button"
                 onClick={() => camara.current?.click()}
-                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 font-medium text-white transition hover:bg-indigo-500"
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-2 text-sm font-medium text-white transition hover:bg-indigo-500 sm:text-base"
               >
                 <Camera className="size-5" />
                 Tirar fotografia
@@ -134,10 +121,10 @@ export function StudyInicio() {
               <button
                 type="button"
                 onClick={() => galeria.current?.click()}
-                className="flex h-12 items-center justify-center gap-2 rounded-xl border border-foreground/15 font-medium transition hover:bg-muted"
+                className="flex h-12 items-center justify-center gap-2 rounded-xl border border-foreground/15 px-2 text-sm font-medium transition hover:bg-muted sm:text-base"
               >
                 <ImagePlus className="size-5" />
-                Escolher da galeria
+                Da galeria
               </button>
               <input ref={camara} type="file" accept="image/*" capture="environment" hidden onChange={(e) => (juntar(e.target.files), (e.target.value = ""))} />
               <input ref={galeria} type="file" accept="image/*" multiple hidden onChange={(e) => (juntar(e.target.files), (e.target.value = ""))} />

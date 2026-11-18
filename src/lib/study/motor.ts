@@ -4,22 +4,26 @@ import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { gerar, ler } from "@/lib/study/ia";
+import { procurarImagem } from "@/lib/study/imagens";
 import type {
   Atividade,
   AtividadeVista,
   Conceito,
   Etapa,
   Gerada,
+  Nivel,
+  Ocorrencia,
   Plano,
   Progresso,
   TipoAtividade,
   VistaEstudo,
 } from "@/lib/study/tipos";
+import { MELHORIAS } from "@/lib/study/tipos";
 
-// O motor do Study. A IA lê as páginas, faz a lista de conceitos e cria e
-// corrige as atividades; é este código, e não a IA, que decide a ordem, garante
-// que cada conceito passa pelas quatro etapas e que o aluno só avança quando
-// acaba uma.
+// O motor do Study. A IA lê as páginas, faz a lista de conceitos (com o peso
+// de cada um) e cria e corrige as atividades; é este código, e não a IA, que
+// decide quantas atividades há, a ordem, a dificuldade, garante que cada
+// conceito passa pelas quatro etapas e que o aluno só avança quando acaba uma.
 //
 // Todo o trabalho da IA corre em segundo plano (pode levar minutos e o proxy
 // corta pedidos aos 60 segundos). O ecrã pergunta pelo estado de poucos em
@@ -68,38 +72,91 @@ function novoId(bytes = 6) {
   return randomBytes(bytes).toString("base64url");
 }
 
+// O registo de erros: o que o aluno marca como errado e o que a IA falha.
+// Fica no próprio estudo e também no registo do servidor, para melhorar as
+// instruções da IA.
+function registar(p: Progresso, o: Omit<Ocorrencia, "quando">) {
+  const r: Ocorrencia = { quando: new Date().toISOString(), ...o };
+  p.registo = [...(p.registo ?? []), r].slice(-100);
+  console.warn("[study] registo", JSON.stringify(r).slice(0, 2000));
+}
+
 // ---------- Criar e ler as páginas ----------
+
+// Enquanto se lê, o texto de cada página fica no plano (vazio se ilegível),
+// para se poder fotografar de novo só as que falharam.
+type Leitura = { textos: string[] };
+
+function ilegivel(t: string) {
+  return !t || /^ILEG[IÍ]VEL\.?$/i.test(t.trim()) || t.trim().length < 40;
+}
 
 export async function criarEstudo(imagens: string[], ip: string): Promise<string> {
   const id = novoId(12);
-  await prisma.studySessao.create({ data: { id, paginas: imagens.length, ip } });
-  acordar(id, () => analisar(id, imagens));
+  await prisma.studySessao.create({
+    data: { id, paginas: imagens.length, ip, plano: { textos: imagens.map(() => "") } },
+  });
+  acordar(id, () => lerPaginas(id, imagens.map((imagem, i) => ({ pagina: i + 1, imagem }))));
   return id;
 }
 
-async function analisar(id: string, imagens: string[]) {
+async function lerPaginas(id: string, paginas: { pagina: number; imagem: string }[]) {
   try {
-    const textos: string[] = [];
-    const ilegiveis: number[] = [];
-    for (let i = 0; i < imagens.length; i++) {
-      const t = await ler(imagens[i]);
-      if (!t || /^ILEG[IÍ]VEL\.?$/i.test(t.trim()) || t.length < 40) ilegiveis.push(i + 1);
-      else textos.push(`--- Página ${i + 1} ---\n${t}`);
-      await prisma.studySessao.update({ where: { id }, data: { lidas: i + 1 } });
+    const s = await prisma.studySessao.findUniqueOrThrow({ where: { id } });
+    const textos = [...((s.plano as unknown as Leitura | null)?.textos ?? [])];
+    let lidas = s.paginas - paginas.length;
+    for (const { pagina, imagem } of paginas) {
+      const t = await ler(imagem);
+      textos[pagina - 1] = ilegivel(t) ? "" : t;
+      lidas++;
+      await prisma.studySessao.update({ where: { id }, data: { lidas, plano: { textos } } });
     }
-    if (textos.length === 0) {
+    if (textos.every((t) => !t)) {
       await falhar(id, "Não consegui ler nenhuma das fotografias. Tira-as de novo, com boa luz e a página inteira.");
       return;
     }
-    await prisma.studySessao.update({
-      where: { id },
-      data: { texto: textos.join("\n\n"), estado: "a_planear", plano: { ilegiveis } },
-    });
-    await planear(id);
+    // Se alguma página falhou, pede-se ao aluno uma fotografia nova antes do plano.
+    if (textos.some((t) => !t)) {
+      await prisma.studySessao.update({ where: { id }, data: { estado: "fotos" } });
+      return;
+    }
+    await comecarPlano(id);
   } catch (e) {
-    console.error("[study] analisar", id, e);
+    console.error("[study] ler", id, e);
     await falhar(id, "A leitura das fotografias falhou. Tenta de novo daqui a pouco.");
   }
+}
+
+// O aluno manda fotografias novas das páginas ilegíveis.
+export async function novasFotos(id: string, paginas: { pagina: number; imagem: string }[]) {
+  const s = await prisma.studySessao.findUniqueOrThrow({ where: { id } });
+  if (s.estado !== "fotos") throw new Error("Este estudo já não está à espera de fotografias.");
+  const validas = paginas.filter((p) => Number.isInteger(p.pagina) && p.pagina >= 1 && p.pagina <= s.paginas);
+  if (validas.length === 0) throw new Error("Escolhe uma fotografia.");
+  await prisma.studySessao.update({ where: { id }, data: { estado: "a_ler", lidas: s.paginas - validas.length } });
+  acordar(id, () => lerPaginas(id, validas));
+}
+
+// O aluno decide seguir sem as páginas que não se leram.
+export async function seguirSemFotos(id: string) {
+  const s = await prisma.studySessao.findUniqueOrThrow({ where: { id } });
+  if (s.estado !== "fotos") return;
+  acordar(id, () => comecarPlano(id));
+}
+
+async function comecarPlano(id: string) {
+  const s = await prisma.studySessao.findUniqueOrThrow({ where: { id } });
+  const textos = (s.plano as unknown as Leitura | null)?.textos ?? [];
+  const ilegiveis = textos.map((t, i) => (t ? 0 : i + 1)).filter(Boolean);
+  await prisma.studySessao.update({
+    where: { id },
+    data: {
+      texto: textos.map((t, i) => (t ? `--- Página ${i + 1} ---\n${t}` : "")).filter(Boolean).join("\n\n"),
+      estado: "a_planear",
+      plano: { ilegiveis },
+    },
+  });
+  await planear(id);
 }
 
 async function falhar(id: string, erro: string) {
@@ -119,8 +176,13 @@ const ESQUEMA_PLANO = {
       type: "array",
       items: {
         type: "object",
-        properties: { nome: { type: "string" }, ideia: { type: "string" } },
-        required: ["nome", "ideia"],
+        properties: {
+          nome: { type: "string" },
+          ideia: { type: "string" },
+          peso: { type: "integer" },
+          imagem: { type: "string" },
+        },
+        required: ["nome", "ideia", "peso", "imagem"],
       },
     },
   },
@@ -132,21 +194,36 @@ async function planear(id: string) {
   const ilegiveis = ((s.plano as { ilegiveis?: number[] } | null)?.ilegiveis ?? []) as number[];
   // Cerca de três conceitos por página lida, entre 4 e 10.
   const alvo = Math.min(10, Math.max(4, (s.paginas - ilegiveis.length) * 3));
-  const r = await gerar<{ disciplina: string; ano: string; tema: string; resumo: string; conceitos: { nome: string; ideia: string }[] }>(
+  const r = await gerar<{
+    disciplina: string;
+    ano: string;
+    tema: string;
+    resumo: string;
+    conceitos: { nome: string; ideia: string; peso: number; imagem: string }[];
+  }>(
     "Analisas páginas de manuais escolares portugueses para preparar um plano de estudo. Respondes em português de Portugal e só com base no texto dado.",
     `Estas são as páginas que o aluno fotografou:\n\n${s.texto}\n\n` +
       "Identifica a disciplina, o ano de escolaridade (por exemplo \"6.º ano\"; deixa vazio se não se perceber) e o tema. " +
       "Escreve um resumo de duas frases. " +
       `Depois faz a lista de TODOS os conceitos que o aluno tem de aprender nestas páginas, pela ordem em que aparecem, sem deixar nenhum subtema de fora: cerca de ${alvo} conceitos (nunca mais de 10). ` +
       "Junta num só conceito as ideias muito próximas (por exemplo, um grupo social e os seus privilégios) e põe o vocabulário dentro do conceito a que pertence; não repitas a mesma ideia em dois conceitos. " +
-      "Para cada conceito, \"nome\" é curto (até 6 palavras) e \"ideia\" diz numa ou duas frases o essencial que o aluno tem de saber, com os factos tal como estão no texto.",
+      "Para cada conceito: \"nome\" é curto (até 6 palavras); \"ideia\" diz numa ou duas frases o essencial que o aluno tem de saber, com os factos tal como estão no texto; " +
+      "\"peso\" é 1 se é uma ideia simples, 2 se tem várias informações, 3 se é complexo ou tem muita informação para memorizar; " +
+      "\"imagem\" é o que procurar na Wikipédia em português para encontrar uma gravura, pintura, fotografia, mapa ou esquema que ajude a perceber o conceito: " +
+      "o título provável de um artigo, com a época ou o contexto (por exemplo \"Nobreza medieval\", \"Clero na Idade Média\" ou \"Ciclo hidrológico\"), ou vazio se uma imagem não ajudar.",
     ESQUEMA_PLANO,
     0.2,
   );
   const conceitos: Conceito[] = (r.conceitos ?? [])
     .filter((c) => c?.nome?.trim() && c?.ideia?.trim())
     .slice(0, 10)
-    .map((c, i) => ({ id: `c${i + 1}`, nome: c.nome.trim(), ideia: c.ideia.trim() }));
+    .map((c, i) => ({
+      id: `c${i + 1}`,
+      nome: c.nome.trim(),
+      ideia: c.ideia.trim(),
+      peso: (Math.min(3, Math.max(1, Math.round(Number(c.peso) || 2))) as Nivel),
+      imagem: c.imagem?.trim().slice(0, 80) || undefined,
+    }));
   if (conceitos.length < 2) {
     await falhar(id, "Não encontrei matéria suficiente nestas páginas. Experimenta fotografar mais páginas do mesmo tema.");
     return;
@@ -159,7 +236,15 @@ async function planear(id: string) {
     conceitos,
     ilegiveis,
   };
-  const progresso: Progresso = { atividades: percurso(conceitos), atual: 0, pausa: null };
+  const atividades = percurso(conceitos);
+  const progresso: Progresso = {
+    atividades,
+    atual: 0,
+    previstas: [0, 1, 2, 3].map((e) => atividades.filter((a) => a.etapa === e).length),
+    pausa: null,
+    seguidas: 0,
+    registo: [],
+  };
   await prisma.studySessao.update({
     where: { id },
     data: {
@@ -171,21 +256,42 @@ async function planear(id: string) {
   acordarAtividades(id);
 }
 
-// O percurso inteiro: cada conceito passa pelas quatro etapas. Na última, as
-// perguntas abertas juntam dois conceitos de cada vez.
+// O percurso inteiro. Quantas atividades cada conceito tem em cada etapa
+// depende do peso que a IA lhe deu; dentro de cada etapa as atividades vão por
+// rondas, e cada ronda é mais difícil do que a anterior.
+//
+//   peso        1   2   3
+//   Aprender    1   1   2   (a segunda aprofunda)
+//   Consolidar  2   3   4
+//   Completar   1   2   2
+//   Dominar     um por cada conceito de peso 3; os outros dois a dois
 function percurso(conceitos: Conceito[]): Atividade[] {
   const l: Atividade[] = [];
-  const nova = (etapa: Etapa, tipo: TipoAtividade, ids: string[]): Atividade => ({
+  const nova = (etapa: Etapa, tipo: TipoAtividade, ids: string[], nivel: number): Atividade => ({
     id: novoId(),
     etapa,
     tipo,
     conceitos: ids,
+    nivel: Math.min(3, Math.max(1, nivel)) as Nivel,
     estado: "por_gerar",
   });
-  for (const c of conceitos) l.push(nova(0, "explicacao", [c.id]));
-  for (const c of conceitos) l.push(nova(1, "escolha", [c.id]));
-  for (const c of conceitos) l.push(nova(2, "completar", [c.id]));
-  for (let i = 0; i < conceitos.length; i += 2) l.push(nova(3, "aberta", conceitos.slice(i, i + 2).map((c) => c.id)));
+  const porRondas = (etapa: Etapa, tipo: TipoAtividade, quantas: (c: Conceito) => number) => {
+    const max = Math.max(...conceitos.map(quantas));
+    for (let ronda = 1; ronda <= max; ronda++)
+      for (const c of conceitos) if (quantas(c) >= ronda) l.push(nova(etapa, tipo, [c.id], ronda));
+  };
+  porRondas(0, "explicacao", (c) => (c.peso === 3 ? 2 : 1));
+  porRondas(1, "escolha", (c) => c.peso + 1);
+  porRondas(2, "completar", (c) => (c.peso >= 2 ? 2 : 1));
+  let par: string[] = [];
+  for (const c of conceitos) {
+    if (c.peso === 3) l.push(nova(3, "aberta", [c.id], 2));
+    else {
+      par.push(c.id);
+      if (par.length === 2) (l.push(nova(3, "aberta", par, 2)), (par = []));
+    }
+  }
+  if (par.length) l.push(nova(3, "aberta", par, 2));
   return l;
 }
 
@@ -194,7 +300,7 @@ function percurso(conceitos: Conceito[]): Atividade[] {
 function sistema(s: { texto: string | null }, plano: Plano): string {
   const ano = plano.ano ? `do ${plano.ano}` : "do ensino básico";
   return (
-    `És um explicador paciente de um aluno ${ano} em Portugal. Escreves em português de Portugal, com frases curtas e palavras simples. ` +
+    `És um explicador paciente de um aluno ${ano} em Portugal. Escreves em português de Portugal, com frases curtas e palavras simples, sem linguagem infantilizada. ` +
     "Tratas o aluno por tu. Usas só a matéria abaixo, tirada das páginas do manual do aluno: não inventes factos, datas, nomes, números, causas nem pormenores que não estejam lá. " +
     "Os exemplos e comparações podem vir da vida do aluno, mas nunca acrescentam factos sobre a matéria. Usa português de Portugal, nunca do Brasil.\n\n" +
     `MATÉRIA (${[plano.disciplina, plano.tema].filter(Boolean).join(", ")}):\n"""\n${s.texto}\n"""\n\n` +
@@ -248,42 +354,56 @@ const ESQUEMAS: Record<TipoAtividade, object> = {
   },
 };
 
-function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[]): string {
+const NIVEIS: Record<Nivel, string> = {
+  1: "Nível fácil: reconhecer uma definição ou um facto que está diretamente no texto.",
+  2: "Nível médio: compreender, comparar ou reconhecer um exemplo.",
+  3: "Nível difícil: aplicar, relacionar dois conceitos ou tirar uma conclusão que o texto permite.",
+};
+
+function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[], segunda: boolean): string {
   const nomes = conceitos.map((c) => `"${c.nome}" (${c.ideia})`).join(" e ");
   const evitar = anteriores.length
-    ? `\nNão repitas estas perguntas, que o aluno já viu:\n${anteriores.map((x) => `- ${x}`).join("\n")}`
+    ? `\nNão repitas estas perguntas, que o aluno já viu, nem perguntes a mesma coisa por outras palavras:\n${anteriores.map((x) => `- ${x}`).join("\n")}`
     : "";
+  const nivel = ` ${NIVEIS[a.nivel]} `;
   switch (a.tipo) {
     case "explicacao":
       return (
         `Etapa APRENDER. Ensina o conceito ${nomes}. ` +
         (a.extra
           ? "O aluno errou a pergunta sobre este conceito: explica de outra maneira, ainda mais simples, com outro exemplo. "
-          : "") +
+          : segunda
+            ? "O aluno já teve uma primeira explicação deste conceito: agora aprofunda a parte que ficou por explicar, sem repetir a anterior. "
+            : "") +
         "\"titulo\" é o nome do conceito. \"explicacao\" tem entre 60 e 120 palavras, em 2 ou 3 parágrafos curtos separados por uma linha em branco. " +
         "\"exemplo\" é uma comparação ou um exemplo do dia a dia, numa ou duas frases. " +
-        "Depois faz uma pergunta de escolha múltipla simples sobre o que acabaste de explicar: \"opcoes\" tem 4 opções curtas, só uma certa, " +
+        "Depois faz uma pergunta de escolha múltipla simples sobre o que acabaste de explicar: \"opcoes\" tem 4 opções curtas, só uma certa e sem dúvida possível, " +
         "\"correta\" é a posição (0 a 3) da opção certa e \"porque\" explica numa frase porque é a certa, sem falar em letras nem números de opção." +
         evitar
       );
     case "escolha":
       return (
-        `Etapa CONSOLIDAR. Faz uma pergunta de escolha múltipla sobre ${nomes}, um pouco mais exigente do que uma pergunta de definição ` +
-        "(por exemplo comparar, dar um exemplo, relacionar com outro conceito). A opção certa tem de se poder confirmar no texto da matéria, sem conclusões que lá não estejam. " +
-        "\"opcoes\" tem 4 opções plausíveis e curtas, só uma certa; " +
-        "as erradas devem ser enganos que um aluno costuma fazer. \"correta\" é a posição (0 a 3) da certa e \"porque\" explica numa frase, sem falar em letras nem números de opção." +
+        `Etapa CONSOLIDAR. Faz uma pergunta de escolha múltipla sobre ${nomes}, sem explicação antes.` +
+        nivel +
+        "A opção certa tem de se poder confirmar no texto da matéria, sem conclusões que lá não estejam, e só uma opção pode estar certa. " +
+        "\"opcoes\" tem 4 opções plausíveis e curtas; as erradas devem ser enganos que um aluno costuma fazer. " +
+        "\"correta\" é a posição (0 a 3) da certa e \"porque\" explica numa frase, sem falar em letras nem números de opção." +
         evitar
       );
     case "completar":
       return (
-        `Etapa COMPLETAR. Escreve uma frase sobre ${nomes}, baseada na matéria, em que falte uma palavra ou expressão curta (no máximo 3 palavras) que seja importante. ` +
+        `Etapa COMPLETAR. Escreve uma frase sobre ${nomes}, baseada na matéria, em que falte uma palavra ou expressão curta (no máximo 3 palavras) que seja importante.` +
+        (a.nivel >= 2
+          ? " Como é a segunda vez, a frase é mais exigente: em vez de copiar o manual, junta duas ideias ou pede o termo exato. "
+          : " ") +
         "Na frase, põe ____ no lugar do que falta (só um espaço). \"resposta\" é o que falta. \"aceites\" são outras formas certas de o escrever (sinónimos, singular ou plural); pode ficar vazia. " +
         "\"dica\" ajuda sem dar a resposta. \"porque\" explica numa frase." +
         evitar
       );
     case "aberta":
       return (
-        `Etapa DOMINAR. Faz uma pergunta aberta sobre ${nomes}, que obrigue o aluno a explicar por palavras suas (por exemplo \"Explica porquê...\", \"Compara...\", \"Descreve...\").A pergunta é sobre a matéria, não sobre a vida ou os sentimentos do aluno, e a resposta tem de estar no texto. ` +
+        `Etapa DOMINAR. Faz uma pergunta aberta sobre ${nomes}, que obrigue o aluno a explicar por palavras suas (por exemplo "Explica porquê...", "Compara...", "Descreve..."). ` +
+        "A pergunta é sobre a matéria, não sobre a vida ou os sentimentos do aluno, e a resposta tem de estar no texto. " +
         "A resposta certa deve caber em 2 a 4 frases. \"pontos\" são as 2 a 4 ideias essenciais que a resposta tem de ter, cada uma numa frase curta. " +
         "\"modelo\" é uma boa resposta de um aluno, em 2 a 4 frases." +
         evitar
@@ -314,6 +434,8 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
     const correta = Number(d.correta);
     if (opcoes.length < 3 || !Number.isInteger(correta) || correta < 0 || correta >= opcoes.length || !txt(d.pergunta))
       throw new Error("pergunta de escolha múltipla incompleta");
+    // Opções repetidas dão perguntas com duas respostas possíveis.
+    if (new Set(opcoes.map((o) => normalizar(o))).size !== opcoes.length) throw new Error("opções repetidas");
     const base = { pergunta: txt(d.pergunta), opcoes, correta, porque: txt(d.porque) };
     if (tipo === "escolha") return baralhar({ tipo, ...base });
     if (!txt(d.explicacao)) throw new Error("explicação vazia");
@@ -330,6 +452,7 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
       frase = frase.slice(0, i) + "____" + frase.slice(i + resposta.length);
     }
     frase = frase.replace(/_{2,}/g, "____");
+    if (frase.split("____").length !== 2) throw new Error("frase com mais de um espaço");
     const aceites = Array.isArray(d.aceites) ? (d.aceites as unknown[]).map(txt).filter(Boolean).slice(0, 6) : [];
     return { tipo, frase, resposta, aceites, dica: txt(d.dica), porque: txt(d.porque) };
   }
@@ -354,9 +477,16 @@ async function criarAtividade(id: string, atividadeId: string) {
     .filter((x) => x.id !== a.id && x.dados && x.conceitos.some((c) => a.conceitos.includes(c)))
     .map((x) => textoPergunta(x.dados))
     .filter((x): x is string => Boolean(x));
+  // Explicações anteriores do mesmo conceito (para a segunda aprofundar e
+  // para a imagem não ser a mesma).
+  const jaExplicado = p.atividades.filter((x) => x.id !== a.id && x.tipo === "explicacao" && x.dados && x.conceitos.join() === a.conceitos.join()).length;
   try {
-    const bruto = await gerar<Record<string, unknown>>(sistema(s, plano), pedido(a, conceitos, anteriores), ESQUEMAS[a.tipo]);
+    const bruto = await gerar<Record<string, unknown>>(sistema(s, plano), pedido(a, conceitos, anteriores, jaExplicado > 0), ESQUEMAS[a.tipo]);
     const dados = validar(a.tipo, bruto);
+    if (dados.tipo === "explicacao" && conceitos[0]?.imagem) {
+      const usadas = p.atividades.flatMap((x) => (x.dados?.tipo === "explicacao" && x.dados.imagem ? [x.dados.imagem.url] : []));
+      dados.imagem = await procurarImagem(conceitos[0].imagem, `${conceitos[0].nome}: ${conceitos[0].ideia}`, plano.tema, usadas).catch(() => null);
+    }
     await mudarProgresso(id, (q) => {
       const x = q.atividades.find((y) => y.id === atividadeId);
       if (x && x.estado === "por_gerar") Object.assign(x, { dados, estado: "pronta" });
@@ -367,6 +497,7 @@ async function criarAtividade(id: string, atividadeId: string) {
       const x = q.atividades.find((y) => y.id === atividadeId);
       if (!x) return;
       x.tentativas = (x.tentativas ?? 0) + 1;
+      registar(q, { tipo: "falha", atividadeId, motivo: `criar ${x.tipo}: ${e instanceof Error ? e.message : String(e)}` });
       if (x.tentativas >= 3) x.estado = "erro";
     });
   }
@@ -398,7 +529,7 @@ async function corrigir(id: string, atividadeId: string) {
         sistema(s, plano),
         `O aluno tinha de completar esta frase: "${a.dados.frase}". A resposta esperada era "${a.dados.resposta}". ` +
           `O aluno escreveu: "${a.resposta}". ` +
-          "Diz se a resposta do aluno está certa: aceita sinónimos, outra forma de dizer o mesmo e pequenos erros de ortografia, mas não aceita uma ideia diferente. " +
+          "Diz se a resposta do aluno está certa pelo significado: aceita sinónimos, outra forma de dizer o mesmo e pequenos erros de ortografia, mas não aceita uma ideia diferente nem incompleta. " +
           "\"feedback\" fala com o aluno numa ou duas frases: se errou, diz qual era a resposta e porquê. Vai direto ao assunto, sem \"Olá\" nem elogios feitos.",
         { type: "object", properties: { certo: { type: "boolean" }, feedback: { type: "string" } }, required: ["certo", "feedback"] },
         0,
@@ -411,8 +542,9 @@ async function corrigir(id: string, atividadeId: string) {
           `Ideias essenciais que a resposta tem de ter:\n${a.dados.pontos.map((x, i) => `${i + 1}. ${x}`).join("\n")}\n` +
           `Resposta do aluno: "${a.resposta}"\n\n` +
           "Para cada ideia essencial, pela mesma ordem, diz em \"presentes\" se a resposta do aluno a tem (true ou false), mesmo que dita por outras palavras. " +
-          "Não contes ideias que estejam erradas. " +
-          "\"feedback\" fala com o aluno em 2 ou 3 frases: diz o que está bem e, se faltar alguma coisa, o que falta, sem dar a resposta toda. Vai direto ao assunto: sem \"Olá\" e sem elogios feitos como \"És um bom aluno\".",
+          "Não contes ideias que estejam erradas. Não exijas as palavras do manual. " +
+          "\"feedback\" fala com o aluno em 2 ou 3 frases: diz se os conteúdos estão certos, o que falta, e se a explicação está clara e organizada e usa o vocabulário da matéria, sem dar a resposta toda. " +
+          "Vai direto ao assunto: sem \"Olá\" e sem elogios feitos como \"És um bom aluno\".",
         {
           type: "object",
           properties: { presentes: { type: "array", items: { type: "boolean" } }, feedback: { type: "string" } },
@@ -422,8 +554,9 @@ async function corrigir(id: string, atividadeId: string) {
       );
       const total = a.dados.pontos.length;
       const tem = (r.presentes ?? []).slice(0, total).filter(Boolean).length;
-      // Certa com pelo menos 70% das ideias essenciais.
-      const certo = tem >= Math.ceil(total * 0.7);
+      // Certa só com todas as ideias essenciais (com 4, aceita-se uma em falta):
+      // uma resposta incompleta não conta como totalmente certa.
+      const certo = tem >= (total >= 4 ? total - 1 : total);
       resultado = { certo, parcial: !certo && tem > 0, feedback: limpar(r.feedback ?? "") };
     } else return;
   } catch (e) {
@@ -432,7 +565,9 @@ async function corrigir(id: string, atividadeId: string) {
       const x = q.atividades.find((y) => y.id === atividadeId);
       if (!x) return;
       x.tentativas = (x.tentativas ?? 0) + 1;
-      if (x.tentativas >= 3) Object.assign(x, { estado: "corrigida", certo: false, feedback: "Não consegui corrigir esta resposta. Compara com a resposta modelo." });
+      registar(q, { tipo: "falha", atividadeId, motivo: `corrigir: ${e instanceof Error ? e.message : String(e)}` });
+      if (x.tentativas >= 3)
+        Object.assign(x, { estado: "corrigida", certo: false, feedback: "Não consegui corrigir esta resposta. Compara com a resposta modelo." });
     });
     return;
   }
@@ -440,17 +575,37 @@ async function corrigir(id: string, atividadeId: string) {
     const x = q.atividades.find((y) => y.id === atividadeId);
     if (x && x.estado === "a_corrigir") {
       Object.assign(x, { estado: "corrigida", ...resultado });
-      reforcar(q, x);
+      // Na Dominar o aluno ainda pode melhorar a resposta: o reforço só entra
+      // quando ele decide continuar.
+      if (x.tipo !== "aberta") depoisDeCorrigir(q, x);
     }
   });
 }
 
+// Depois de cada correção: sobe a dificuldade a quem está a acertar e reforça
+// o conceito a quem errou.
+function depoisDeCorrigir(p: Progresso, a: Atividade) {
+  if (a.certo) {
+    p.seguidas = (p.seguidas ?? 0) + 1;
+    // Três certas seguidas: as próximas desta etapa ficam um nível acima.
+    if (p.seguidas >= 3) {
+      for (const x of p.atividades)
+        if (x.etapa === a.etapa && x.estado === "por_gerar" && x.tipo !== "aberta" && x.nivel < 3) x.nivel = (x.nivel + 1) as Nivel;
+      p.seguidas = 0;
+    }
+    return;
+  }
+  p.seguidas = 0;
+  reforcar(p, a);
+}
+
 // Quando o aluno erra, entra uma atividade a mais sobre o mesmo conceito no
-// fim da mesma etapa (só uma por conceito e etapa, para não ficar preso).
+// fim da mesma etapa (no máximo duas por conceito e etapa, para não ficar
+// preso), um nível abaixo.
 function reforcar(p: Progresso, a: Atividade) {
-  if (a.certo || a.extra) return;
-  const ja = p.atividades.some((x) => x.extra && x.etapa === a.etapa && x.conceitos.join() === a.conceitos.join());
-  if (ja) return;
+  if (a.certo) return;
+  const ja = p.atividades.filter((x) => x.extra && x.etapa === a.etapa && x.conceitos.join() === a.conceitos.join()).length;
+  if (ja >= 2) return;
   let fim = p.atividades.length - 1;
   while (fim >= 0 && p.atividades[fim].etapa !== a.etapa) fim--;
   p.atividades.splice(fim + 1, 0, {
@@ -458,6 +613,7 @@ function reforcar(p: Progresso, a: Atividade) {
     etapa: a.etapa,
     tipo: a.tipo,
     conceitos: a.conceitos,
+    nivel: Math.max(1, a.nivel - 1) as Nivel,
     extra: true,
     estado: "por_gerar",
   });
@@ -503,22 +659,26 @@ export async function verEstudo(id: string): Promise<VistaEstudo | null> {
   }
 
   const plano = s.estado === "pronto" ? (s.plano as unknown as Plano) : null;
-  const p = s.progresso as unknown as Progresso | null;
+  const textos = (s.plano as unknown as Leitura | null)?.textos;
+  const p = s.estado === "pronto" ? (s.progresso as unknown as Progresso | null) : null;
   const atual = p?.atividades[p.atual] ?? null;
   return {
     id: s.id,
     estado: s.estado as VistaEstudo["estado"],
     paginas: s.paginas,
     lidas: s.lidas,
+    ilegiveis: s.estado === "fotos" && textos ? textos.map((t, i) => (t ? 0 : i + 1)).filter(Boolean) : (plano?.ilegiveis ?? []),
     erro: s.erro,
     plano,
     atual: p?.atual ?? 0,
     total: p?.atividades.length ?? 0,
+    previstas: p?.previstas ?? [0, 0, 0, 0],
     pausa: p?.pausa ?? null,
     atividade: atual ? esconder(atual) : null,
     resumo: (p?.atividades ?? []).map((a) => ({
       etapa: a.etapa,
       conceitos: a.conceitos,
+      nivel: a.nivel,
       certo: a.certo,
       parcial: a.parcial,
       respondida: a.estado === "corrigida",
@@ -552,11 +712,12 @@ export async function responder(id: string, atividadeId: string, resposta: strin
       a.certo = Number(texto) === d.correta;
       a.estado = "corrigida";
       a.feedback = d.porque;
-      reforcar(p, a);
+      depoisDeCorrigir(p, a);
     } else if (d.tipo === "completar" && [d.resposta, ...d.aceites].some((x) => normalizar(x) === normalizar(texto))) {
       a.certo = true;
       a.estado = "corrigida";
       a.feedback = d.porque;
+      depoisDeCorrigir(p, a);
     } else {
       // Respostas escritas que não batem certo à letra vão à IA.
       a.estado = "a_corrigir";
@@ -566,13 +727,28 @@ export async function responder(id: string, atividadeId: string, resposta: strin
   acordarAtividades(id);
 }
 
+// Dominar: o aluno tenta outra vez, depois de ler o que faltava.
+export async function melhorar(id: string, atividadeId: string) {
+  await mudarProgresso(id, (p) => {
+    const a = p.atividades[p.atual];
+    if (!a || a.id !== atividadeId || a.tipo !== "aberta" || a.estado !== "corrigida" || a.certo) return;
+    if ((a.anteriores?.length ?? 0) >= MELHORIAS) return;
+    a.anteriores = [...(a.anteriores ?? []), { resposta: a.resposta ?? "", feedback: a.feedback ?? "" }];
+    Object.assign(a, { estado: "pronta", resposta: undefined, certo: undefined, parcial: undefined, feedback: undefined });
+  });
+}
+
 export async function avancar(id: string, atividadeId: string) {
   await mudarProgresso(id, (p) => {
     const a = p.atividades[p.atual];
     if (!a || a.id !== atividadeId || (a.estado !== "corrigida" && a.estado !== "erro")) return;
+    if (a.tipo === "aberta" && a.estado === "corrigida") depoisDeCorrigir(p, a);
     p.atual++;
     const seguinte = p.atividades[p.atual];
-    if (!seguinte || seguinte.etapa !== a.etapa) p.pausa = a.etapa;
+    if (!seguinte || seguinte.etapa !== a.etapa) {
+      p.pausa = a.etapa;
+      p.seguidas = 0;
+    }
   });
   acordarAtividades(id);
 }
@@ -587,6 +763,19 @@ export async function tentarDeNovo(id: string, atividadeId: string) {
   await mudarProgresso(id, (p) => {
     const a = p.atividades.find((x) => x.id === atividadeId);
     if (a && a.estado === "erro") Object.assign(a, { estado: "por_gerar", tentativas: 0 });
+  });
+  acordarAtividades(id);
+}
+
+// O aluno marca a atividade como errada (pergunta confusa, duas respostas
+// certas, imagem que não tem nada a ver...). Fica no registo e, se ainda não
+// respondeu, é trocada por outra.
+export async function reportar(id: string, atividadeId: string, motivo: string) {
+  await mudarProgresso(id, (p) => {
+    const a = p.atividades.find((x) => x.id === atividadeId);
+    if (!a) return;
+    registar(p, { tipo: "reportada", atividadeId, motivo: motivo.trim().slice(0, 300) || "sem motivo", dados: a.dados });
+    if (a.estado === "pronta") Object.assign(a, { estado: "por_gerar", dados: undefined, tentativas: 0 });
   });
   acordarAtividades(id);
 }
