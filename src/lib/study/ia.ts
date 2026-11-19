@@ -1,5 +1,8 @@
 import "server-only";
 
+import { AsyncLocalStorage } from "node:async_hooks";
+import { prisma } from "@/lib/prisma";
+
 // A IA do Study, num sítio só. Por agora é a JOAs: um Ollama com o gemma3:12b
 // no servidor de GPU, a que o Jserver chega por um túnel SSH (joas.internal).
 // Trocar de IA (por exemplo para a API do Claude) é mudar este ficheiro; o
@@ -13,6 +16,14 @@ const MODELO = process.env.STUDY_IA_MODELO || "joas-gemma";
 const TEMPO_MAXIMO = 300_000;
 
 type Mensagem = { role: "system" | "user"; content: string; images?: string[] };
+
+// Para o registo de consumo: o motor diz a que estudo e a que trabalho
+// pertencem os pedidos que corre dentro de comUso().
+const contexto = new AsyncLocalStorage<{ sessaoId: string; tipo: string }>();
+
+export function comUso<T>(sessaoId: string, tipo: string, fn: () => Promise<T>): Promise<T> {
+  return contexto.run({ sessaoId, tipo }, fn);
+}
 
 async function conversar(mensagens: Mensagem[], formato?: object, temperatura = 0.4): Promise<string> {
   const r = await fetch(`${URL_IA}/api/chat`, {
@@ -28,7 +39,20 @@ async function conversar(mensagens: Mensagem[], formato?: object, temperatura = 
     signal: AbortSignal.timeout(TEMPO_MAXIMO),
   });
   if (!r.ok) throw new Error(`IA respondeu ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const d = (await r.json()) as { message?: { content?: string } };
+  const d = (await r.json()) as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number; total_duration?: number };
+  const c = contexto.getStore();
+  if (c)
+    await prisma.studyUso
+      .create({
+        data: {
+          sessaoId: c.sessaoId,
+          tipo: c.tipo,
+          entrada: d.prompt_eval_count ?? 0,
+          saida: d.eval_count ?? 0,
+          ms: Math.round((d.total_duration ?? 0) / 1e6),
+        },
+      })
+      .catch((e) => console.warn("[study] uso", String(e)));
   return d.message?.content?.trim() ?? "";
 }
 

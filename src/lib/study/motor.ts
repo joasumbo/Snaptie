@@ -3,7 +3,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { gerar, ler } from "@/lib/study/ia";
+import { comUso, gerar, ler } from "@/lib/study/ia";
 import { procurarImagem } from "@/lib/study/imagens";
 import type {
   Atividade,
@@ -106,7 +106,7 @@ async function lerPaginas(id: string, paginas: { pagina: number; imagem: string 
     const textos = [...((s.plano as unknown as Leitura | null)?.textos ?? [])];
     let lidas = s.paginas - paginas.length;
     for (const { pagina, imagem } of paginas) {
-      const t = await ler(imagem);
+      const t = await comUso(id, "ler", () => ler(imagem));
       textos[pagina - 1] = ilegivel(t) ? "" : t;
       lidas++;
       await prisma.studySessao.update({ where: { id }, data: { lidas, plano: { textos } } });
@@ -156,7 +156,7 @@ async function comecarPlano(id: string) {
       plano: { ilegiveis },
     },
   });
-  await planear(id);
+  await comUso(id, "plano", () => planear(id));
 }
 
 async function falhar(id: string, erro: string) {
@@ -650,7 +650,7 @@ function acordarAtividades(id: string) {
       const p = s.progresso as unknown as Progresso;
       const corrigirA = p.atividades.find((a) => a.estado === "a_corrigir");
       if (corrigirA) {
-        await corrigir(id, corrigirA.id);
+        await comUso(id, "corrigir", () => corrigir(id, corrigirA.id));
         continue;
       }
       // Primeiro o texto da atividade atual e da seguinte (o aluno nunca fica
@@ -661,8 +661,8 @@ function acordarAtividades(id: string) {
         p.atividades.slice(p.atual, p.atual + 3).find(semImagem) ??
         p.atividades.slice(p.atual + 2, p.atual + 3).find((a) => a.estado === "por_gerar");
       if (!alvo) return;
-      if (alvo.estado === "por_gerar") await criarAtividade(id, alvo.id);
-      else await juntarImagem(id, alvo.id);
+      if (alvo.estado === "por_gerar") await comUso(id, "atividade", () => criarAtividade(id, alvo.id));
+      else await comUso(id, "imagem", () => juntarImagem(id, alvo.id));
     }
   });
 }
@@ -680,7 +680,7 @@ export async function verEstudo(id: string): Promise<VistaEstudo | null> {
       await falhar(id, "A leitura foi interrompida. Envia as fotografias de novo.");
       return verEstudo(id);
     }
-    if (s.estado === "a_planear") acordar(id, () => planear(id).catch(() => falhar(id, "Não consegui preparar o plano. Tenta de novo.")));
+    if (s.estado === "a_planear") acordar(id, () => comUso(id, "plano", () => planear(id)).catch(() => falhar(id, "Não consegui preparar o plano. Tenta de novo.")));
     if (s.estado === "pronto") acordarAtividades(id);
   }
 

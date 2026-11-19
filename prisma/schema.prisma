@@ -476,3 +476,20 @@ model StudySessao {
   @@index([ip, createdAt])
   @@map("study_sessoes")
 }
+
+// Cada pedido do Study à IA: para saber quanto custa cada estudo (tokens e
+// tempo de placa) e quanto custaria noutra IA.
+model StudyUso {
+  id        String   @id @default(cuid())
+  sessaoId  String   @map("sessao_id")
+  // ler, plano, atividade, corrigir, imagem
+  tipo      String
+  entrada   Int
+  saida     Int
+  ms        Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessaoId])
+  @@index([createdAt])
+  @@map("study_uso")
+}

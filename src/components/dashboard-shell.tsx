@@ -16,6 +16,7 @@ import {
   LogOut,
   CircleUserRound,
   ChevronDown,
+  GraduationCap,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
@@ -62,6 +63,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/faturacao",
     key: "billing",
     icon: Wallet,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/dashboard/study",
+    key: "study",
+    icon: GraduationCap,
     roles: ["ADMIN"],
   },
   {
