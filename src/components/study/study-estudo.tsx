@@ -19,7 +19,9 @@ function precisaDeEsperar(v: VistaEstudo | null) {
   if (v.estado === "a_ler" || v.estado === "a_planear") return true;
   if (v.estado !== "pronto" || v.pausa !== null || v.atual >= v.total) return false;
   const a = v.atividade;
-  return !a || a.estado === "por_gerar" || a.estado === "a_corrigir";
+  if (!a || a.estado === "por_gerar" || a.estado === "a_corrigir") return true;
+  // A imagem da explicação chega depois do texto.
+  return a.dados?.tipo === "explicacao" && a.dados.imagem === undefined;
 }
 
 export function StudyEstudo({ id }: { id: string }) {

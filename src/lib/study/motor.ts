@@ -483,10 +483,9 @@ async function criarAtividade(id: string, atividadeId: string) {
   try {
     const bruto = await gerar<Record<string, unknown>>(sistema(s, plano), pedido(a, conceitos, anteriores, jaExplicado > 0), ESQUEMAS[a.tipo]);
     const dados = validar(a.tipo, bruto);
-    if (dados.tipo === "explicacao" && conceitos[0]?.imagem) {
-      const usadas = p.atividades.flatMap((x) => (x.dados?.tipo === "explicacao" && x.dados.imagem ? [x.dados.imagem.url] : []));
-      dados.imagem = await procurarImagem(conceitos[0].imagem, `${conceitos[0].nome}: ${conceitos[0].ideia}`, plano.tema, usadas).catch(() => null);
-    }
+    // A imagem procura-se depois, para a explicação não esperar por ela:
+    // sem a chave "imagem" está por procurar, null é que não há.
+    if (dados.tipo === "explicacao" && !conceitos[0]?.imagem) dados.imagem = null;
     await mudarProgresso(id, (q) => {
       const x = q.atividades.find((y) => y.id === atividadeId);
       if (x && x.estado === "por_gerar") Object.assign(x, { dados, estado: "pronta" });
@@ -501,6 +500,21 @@ async function criarAtividade(id: string, atividadeId: string) {
       if (x.tentativas >= 3) x.estado = "erro";
     });
   }
+}
+
+async function juntarImagem(id: string, atividadeId: string) {
+  const s = await prisma.studySessao.findUniqueOrThrow({ where: { id } });
+  const plano = s.plano as unknown as Plano;
+  const p = s.progresso as unknown as Progresso;
+  const a = p.atividades.find((x) => x.id === atividadeId);
+  const c = plano.conceitos.find((x) => x.id === a?.conceitos[0]);
+  if (!a || a.dados?.tipo !== "explicacao" || a.dados.imagem !== undefined) return;
+  const usadas = p.atividades.flatMap((x) => (x.dados?.tipo === "explicacao" && x.dados.imagem ? [x.dados.imagem.url] : []));
+  const imagem = c?.imagem ? await procurarImagem(c.imagem, `${c.nome}: ${c.ideia}`, plano.tema, usadas).catch(() => null) : null;
+  await mudarProgresso(id, (q) => {
+    const x = q.atividades.find((y) => y.id === atividadeId);
+    if (x?.dados?.tipo === "explicacao" && x.dados.imagem === undefined) x.dados.imagem = imagem;
+  });
 }
 
 // ---------- Corrigir ----------
@@ -634,9 +648,14 @@ function acordarAtividades(id: string) {
         await corrigir(id, corrigirA.id);
         continue;
       }
-      const proxima = p.atividades.slice(p.atual, p.atual + 3).find((a) => a.estado === "por_gerar");
-      if (!proxima) return;
-      await criarAtividade(id, proxima.id);
+      // Atividade a atividade: o texto, depois a imagem (se for explicação),
+      // depois a seguinte.
+      const alvo = p.atividades
+        .slice(p.atual, p.atual + 3)
+        .find((a) => a.estado === "por_gerar" || (a.dados?.tipo === "explicacao" && a.dados.imagem === undefined));
+      if (!alvo) return;
+      if (alvo.estado === "por_gerar") await criarAtividade(id, alvo.id);
+      else await juntarImagem(id, alvo.id);
     }
   });
 }
