@@ -485,7 +485,12 @@ async function criarAtividade(id: string, atividadeId: string) {
     const dados = validar(a.tipo, bruto);
     // A imagem procura-se depois, para a explicação não esperar por ela:
     // sem a chave "imagem" está por procurar, null é que não há.
-    if (dados.tipo === "explicacao" && !conceitos[0]?.imagem) dados.imagem = null;
+    // Os reforços não levam imagem, para chegarem depressa.
+    if (dados.tipo === "explicacao" && (!conceitos[0]?.imagem || a.extra)) dados.imagem = null;
+    // Uma pergunta igual a outra que o aluno já viu não serve: pede-se outra
+    // (à terceira tentativa aceita-se, para o estudo não parar).
+    const nova = normalizar(textoPergunta(dados) ?? "");
+    if ((a.tentativas ?? 0) < 2 && anteriores.some((x) => normalizar(x) === nova)) throw new Error("pergunta repetida");
     await mudarProgresso(id, (q) => {
       const x = q.atividades.find((y) => y.id === atividadeId);
       if (x && x.estado === "por_gerar") Object.assign(x, { dados, estado: "pronta" });
@@ -648,11 +653,13 @@ function acordarAtividades(id: string) {
         await corrigir(id, corrigirA.id);
         continue;
       }
-      // Atividade a atividade: o texto, depois a imagem (se for explicação),
-      // depois a seguinte.
-      const alvo = p.atividades
-        .slice(p.atual, p.atual + 3)
-        .find((a) => a.estado === "por_gerar" || (a.dados?.tipo === "explicacao" && a.dados.imagem === undefined));
+      // Primeiro o texto da atividade atual e da seguinte (o aluno nunca fica
+      // à espera de uma pergunta), depois as imagens, depois a terceira.
+      const semImagem = (a: Atividade) => a.dados?.tipo === "explicacao" && a.dados.imagem === undefined;
+      const alvo =
+        p.atividades.slice(p.atual, p.atual + 2).find((a) => a.estado === "por_gerar") ??
+        p.atividades.slice(p.atual, p.atual + 3).find(semImagem) ??
+        p.atividades.slice(p.atual + 2, p.atual + 3).find((a) => a.estado === "por_gerar");
       if (!alvo) return;
       if (alvo.estado === "por_gerar") await criarAtividade(id, alvo.id);
       else await juntarImagem(id, alvo.id);
