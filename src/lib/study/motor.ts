@@ -241,6 +241,7 @@ async function planear(id: string) {
     atividades,
     atual: 0,
     previstas: [0, 1, 2, 3].map((e) => atividades.filter((a) => a.etapa === e).length),
+    planoEm: new Date().toISOString(),
     pausa: null,
     seguidas: 0,
     registo: [],
@@ -519,7 +520,7 @@ async function criarAtividade(id: string, atividadeId: string) {
     if ((a.tentativas ?? 0) < 2 && anteriores.some((x) => normalizar(x) === nova)) throw new Error("pergunta repetida");
     await mudarProgresso(id, (q) => {
       const x = q.atividades.find((y) => y.id === atividadeId);
-      if (x && x.estado === "por_gerar") Object.assign(x, { dados, estado: "pronta" });
+      if (x && x.estado === "por_gerar") Object.assign(x, { dados, estado: "pronta", prontaEm: new Date().toISOString() });
     });
   } catch (e) {
     console.error("[study] atividade", id, atividadeId, e);
@@ -716,7 +717,18 @@ export async function verEstudo(id: string): Promise<VistaEstudo | null> {
   const plano = s.estado === "pronto" ? (s.plano as unknown as Plano) : null;
   const textos = (s.plano as unknown as Leitura | null)?.textos;
   const p = s.estado === "pronto" ? (s.progresso as unknown as Progresso | null) : null;
-  const atual = p?.atividades[p.atual] ?? null;
+  let atual = p?.atividades[p.atual] ?? null;
+  // A primeira vez que o aluno chega a uma atividade fica registada: com a
+  // hora em que ela ficou pronta, dá a espera real.
+  if (atual && !atual.vistaEm && p && p.pausa == null) {
+    const quando = new Date().toISOString();
+    const idAtual = atual.id;
+    await mudarProgresso(id, (q) => {
+      const x = q.atividades.find((y) => y.id === idAtual);
+      if (x && !x.vistaEm) x.vistaEm = quando;
+    }).catch(() => undefined);
+    atual = { ...atual, vistaEm: quando };
+  }
   return {
     id: s.id,
     estado: s.estado as VistaEstudo["estado"],
@@ -762,6 +774,7 @@ export async function responder(id: string, atividadeId: string, resposta: strin
     const a = p.atividades[p.atual];
     if (!a || a.id !== atividadeId || a.estado !== "pronta" || !a.dados) throw new Error("Esta atividade já não está à espera de resposta.");
     a.resposta = texto;
+    a.respondidaEm ??= new Date().toISOString();
     const d = a.dados;
     if (d.tipo === "explicacao" || d.tipo === "escolha") {
       a.certo = Number(texto) === d.correta;

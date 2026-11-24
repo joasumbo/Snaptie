@@ -61,6 +61,11 @@ export type Atividade = {
   certo?: boolean;
   parcial?: boolean;
   feedback?: string;
+  // Para medir a espera do aluno: quando a atividade ficou pronta, quando
+  // ele chegou a ela e quando respondeu.
+  prontaEm?: string;
+  vistaEm?: string;
+  respondidaEm?: string;
   // Dominar: respostas anteriores, quando o aluno melhora a resposta.
   anteriores?: { resposta: string; feedback: string }[];
 };
@@ -78,6 +83,8 @@ export type Progresso = {
   // Respostas certas seguidas na etapa atual, para subir a dificuldade.
   seguidas?: number;
   registo?: Ocorrencia[];
+  // Quando o plano ficou pronto (o estudo começou antes, ao enviar as fotos).
+  planoEm?: string;
 };
 
 // Quantas vezes o aluno pode melhorar uma resposta da etapa Dominar.

@@ -69,7 +69,14 @@ export default async function StudyConsumoPage() {
     const plano = s.estado === "pronto" ? (s.plano as unknown as Plano) : null;
     const feitas = p?.atividades.filter((a) => a.estado === "corrigida") ?? [];
     const u = uso.get(s.id);
+    // A espera real do aluno: da chegada à atividade até ela ficar pronta.
+    const esperas = (p?.atividades ?? [])
+      .filter((a) => a.vistaEm && a.prontaEm)
+      .map((a) => Math.max(0, Date.parse(a.prontaEm!) - Date.parse(a.vistaEm!)));
     return {
+      planoMs: p?.planoEm ? Date.parse(p.planoEm) - s.createdAt.getTime() : null,
+      esperaMedia: esperas.length ? esperas.reduce((x, y) => x + y, 0) / esperas.length : null,
+      esperaMax: esperas.length ? Math.max(...esperas) : null,
       id: s.id,
       quando: s.createdAt,
       tema: plano?.tema || (s.estado === "erro" ? s.erro : "") || "",
@@ -182,6 +189,8 @@ export default async function StudyConsumoPage() {
                 <th className="px-4 py-2 text-right font-medium">Páginas</th>
                 <th className="px-4 py-2 text-right font-medium">Atividades</th>
                 <th className="px-4 py-2 text-right font-medium">Certas</th>
+                <th className="px-4 py-2 text-right font-medium">Até ao plano</th>
+                <th className="px-4 py-2 text-right font-medium">Espera média / máx.</th>
                 <th className="px-4 py-2 text-right font-medium">Tempo de placa</th>
                 <th className="px-4 py-2 text-right font-medium">Erros</th>
               </tr>
@@ -189,7 +198,7 @@ export default async function StudyConsumoPage() {
             <tbody className="divide-y">
               {linhas.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">
+                  <td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">
                     Ainda não há estudos.
                   </td>
                 </tr>
@@ -209,6 +218,10 @@ export default async function StudyConsumoPage() {
                       {l.feitas} / {l.total}
                     </td>
                     <td className="px-4 py-2 text-right">{l.feitas ? `${Math.round((l.certas / l.feitas) * 100)}%` : ""}</td>
+                    <td className="px-4 py-2 text-right">{l.planoMs != null ? segundos(l.planoMs) : ""}</td>
+                    <td className="px-4 py-2 text-right">
+                      {l.esperaMedia != null ? `${segundos(l.esperaMedia)} / ${segundos(l.esperaMax ?? 0)}` : ""}
+                    </td>
                     <td className="px-4 py-2 text-right">{l.pedidos ? segundos(l.ms) : "sem registo"}</td>
                     <td className="px-4 py-2 text-right">{l.reportados.length + l.falhas || ""}</td>
                   </tr>
