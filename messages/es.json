@@ -108,7 +108,19 @@
     "editExit": "Salir",
     "editStatesHint": "También puede cambiar el estado de las incidencias en la propia página: cierre esta ventana y toque el estado de cada una.",
     "unavailableTitle": "Página temporalmente no disponible",
-    "unavailableText": "Esta página está suspendida por el momento. Inténtelo más tarde."
+    "unavailableText": "Esta página está suspendida por el momento. Inténtelo más tarde.",
+    "reminderRule": "Cuándo",
+    "ruleDate": "En una fecha",
+    "ruleMonth": "Todos los meses",
+    "ruleWeek": "Todas las semanas",
+    "fieldDate": "Fecha",
+    "fieldDayOfMonth": "Día del mes",
+    "fieldWeekday": "Día de la semana",
+    "fieldTime": "Hora",
+    "fieldReminderText": "Texto del recordatorio",
+    "fieldReminderEmails": "Enviar a",
+    "optional": "Opcional",
+    "reminderShow": "Mostrar en la página el próximo recordatorio"
   },
   "Wifi": {
     "pointCamera": "Apunte la cámara del teléfono para conectar",

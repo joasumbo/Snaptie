@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Pencil, Loader2, X } from "lucide-react";
 import type { BlockType } from "@prisma/client";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Segmented } from "@/components/ui/segmented";
 import { TYPE_FIELD, isContentBlock, parBotoes } from "@/lib/qr";
+import { lerLembrete } from "@/lib/lembrete";
 import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
@@ -126,7 +127,8 @@ export default function PublicQrView({
           id: b.id,
           tipo: b.tipo,
           titulo: b.titulo,
-          conteudo: { ...b.conteudo },
+          // Os emails de aviso só chegam depois de o código ser verificado.
+          conteudo: { ...b.conteudo, ...(r.privados?.[b.id] ?? {}) },
         })),
     );
     setLook(lookFrom(data));
@@ -163,7 +165,7 @@ export default function PublicQrView({
             conteudo: b.conteudo,
           });
           if (!r.ok) {
-            toast.error(tc("error"));
+            toast.error(r.message || tc("error"));
             return;
           }
         }
@@ -646,6 +648,7 @@ function BlockFields({
       </>
     );
   }
+  if (field === "lembrete") return <LembreteFields block={block} setField={setField} />;
   if (field === "carrossel") {
     const imgs = Array.isArray(c.imagens) ? (c.imagens as string[]) : [];
     return (
@@ -686,4 +689,110 @@ function BlockFields({
     );
   }
   return null;
+}
+
+// O lembrete: quando é enviado, o texto, para quem vai e se aparece na página.
+// As regras são as mesmas do painel (lib/lembrete) e o servidor volta a
+// validá-las ao guardar.
+function LembreteFields({
+  block,
+  setField,
+}: {
+  block: EditBlock;
+  setField: (id: string, key: string, value: unknown) => void;
+}) {
+  const t = useTranslations("PublicPage");
+  const locale = useLocale();
+  const l = lerLembrete(block.conteudo);
+  const id = block.id;
+  const dias = Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + i))),
+  );
+  const emails = [l.emails[0] ?? "", l.emails[1] ?? ""];
+  const classeSelect =
+    "h-9 w-full rounded-lg border bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
+  return (
+    <>
+      <div className="space-y-1.5">
+        <Label>{t("reminderRule")}</Label>
+        <div>
+          <Segmented
+            value={l.regra}
+            onChange={(v) => setField(id, "regra", v)}
+            options={[
+              { label: t("ruleDate"), value: "data" },
+              { label: t("ruleMonth"), value: "mes" },
+              { label: t("ruleWeek"), value: "semana" },
+            ]}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {l.regra === "data" ? (
+          <div className="space-y-1.5">
+            <Label>{t("fieldDate")}</Label>
+            <Input type="date" value={l.data} onChange={(e) => setField(id, "data", e.target.value)} />
+          </div>
+        ) : l.regra === "mes" ? (
+          <div className="space-y-1.5">
+            <Label>{t("fieldDayOfMonth")}</Label>
+            <select value={l.diaMes} onChange={(e) => setField(id, "diaMes", Number(e.target.value))} className={classeSelect}>
+              {Array.from({ length: 31 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <Label>{t("fieldWeekday")}</Label>
+            <select value={l.diaSemana} onChange={(e) => setField(id, "diaSemana", Number(e.target.value))} className={classeSelect}>
+              {dias.map((d, i) => (
+                <option key={i} value={i}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="space-y-1.5">
+          <Label>{t("fieldTime")}</Label>
+          <Input type="time" value={l.hora} onChange={(e) => setField(id, "hora", e.target.value)} />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label>{t("fieldReminderText")}</Label>
+        <textarea
+          rows={3}
+          value={l.mensagem}
+          onChange={(e) => setField(id, "mensagem", e.target.value)}
+          className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>{t("fieldReminderEmails")}</Label>
+        {emails.map((e, i) => (
+          <Input
+            key={i}
+            type="email"
+            value={e}
+            placeholder={i === 0 ? "email@exemplo.pt" : t("optional")}
+            onChange={(ev) =>
+              setField(
+                id,
+                "emails",
+                emails.map((x, j) => (j === i ? ev.target.value : x)),
+              )
+            }
+          />
+        ))}
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={l.mostrar} onChange={(e) => setField(id, "mostrar", e.target.checked)} className="size-4" />
+        {t("reminderShow")}
+      </label>
+    </>
+  );
 }

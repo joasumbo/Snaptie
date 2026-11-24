@@ -110,7 +110,19 @@
     "editExit": "Beenden",
     "editStatesHint": "Sie können den Status der Meldungen auch direkt auf der Seite ändern: Schließen Sie dieses Fenster und tippen Sie auf den jeweiligen Status.",
     "unavailableTitle": "Seite vorübergehend nicht verfügbar",
-    "unavailableText": "Diese Seite ist derzeit gesperrt. Bitte versuchen Sie es später erneut."
+    "unavailableText": "Diese Seite ist derzeit gesperrt. Bitte versuchen Sie es später erneut.",
+    "reminderRule": "Wann",
+    "ruleDate": "An einem Datum",
+    "ruleMonth": "Jeden Monat",
+    "ruleWeek": "Jede Woche",
+    "fieldDate": "Datum",
+    "fieldDayOfMonth": "Tag des Monats",
+    "fieldWeekday": "Wochentag",
+    "fieldTime": "Uhrzeit",
+    "fieldReminderText": "Text der Erinnerung",
+    "fieldReminderEmails": "Senden an",
+    "optional": "Optional",
+    "reminderShow": "Die nächste Erinnerung auf der Seite anzeigen"
   },
   "Wifi": {
     "pointCamera": "Richten Sie die Kamera Ihres Telefons darauf, um sich zu verbinden",

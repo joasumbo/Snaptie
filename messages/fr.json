@@ -110,7 +110,19 @@
     "editExit": "Quitter",
     "editStatesHint": "Vous pouvez aussi changer le statut des incidents directement sur la page : fermez cette fenêtre et touchez le statut de chacun.",
     "unavailableTitle": "Page temporairement indisponible",
-    "unavailableText": "Cette page est suspendue pour le moment. Réessayez plus tard."
+    "unavailableText": "Cette page est suspendue pour le moment. Réessayez plus tard.",
+    "reminderRule": "Quand",
+    "ruleDate": "À une date",
+    "ruleMonth": "Tous les mois",
+    "ruleWeek": "Toutes les semaines",
+    "fieldDate": "Date",
+    "fieldDayOfMonth": "Jour du mois",
+    "fieldWeekday": "Jour de la semaine",
+    "fieldTime": "Heure",
+    "fieldReminderText": "Texte du rappel",
+    "fieldReminderEmails": "Envoyer à",
+    "optional": "Facultatif",
+    "reminderShow": "Afficher le prochain rappel sur la page"
   },
   "Wifi": {
     "pointCamera": "Pointez la caméra de votre téléphone pour vous connecter",

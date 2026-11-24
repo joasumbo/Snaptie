@@ -375,8 +375,9 @@ function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[], segun
           : segunda
             ? "O aluno já teve uma primeira explicação deste conceito: agora aprofunda a parte que ficou por explicar, sem repetir a anterior. "
             : "") +
-        "\"titulo\" é o nome do conceito. \"explicacao\" tem entre 60 e 120 palavras, em 2 ou 3 parágrafos curtos separados por uma linha em branco. " +
-        "\"exemplo\" é uma comparação ou um exemplo do dia a dia, numa ou duas frases. " +
+        "\"titulo\" é o nome do conceito. \"explicacao\" é curta: entre 30 e 60 palavras, no máximo 2 parágrafos pequenos separados por uma linha em branco, só com o essencial do conceito " +
+        "(é para uma criança ler num telemóvel; os pormenores aparecem depois nas perguntas). " +
+        "\"exemplo\" é uma comparação ou um exemplo do dia a dia numa só frase curta. " +
         "Depois faz uma pergunta de escolha múltipla simples sobre o que acabaste de explicar: \"opcoes\" tem 4 opções curtas, só uma certa e sem dúvida possível, " +
         "\"correta\" é a posição (0 a 3) da opção certa e \"porque\" explica numa frase porque é a certa, sem falar em letras nem números de opção." +
         evitar

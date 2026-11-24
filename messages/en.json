@@ -108,7 +108,19 @@
     "editExit": "Exit",
     "editStatesHint": "You can also change the status of issues right on the page: close this window and tap each one's status.",
     "unavailableTitle": "Page temporarily unavailable",
-    "unavailableText": "This page is currently suspended. Please try again later."
+    "unavailableText": "This page is currently suspended. Please try again later.",
+    "reminderRule": "When",
+    "ruleDate": "On a date",
+    "ruleMonth": "Every month",
+    "ruleWeek": "Every week",
+    "fieldDate": "Date",
+    "fieldDayOfMonth": "Day of the month",
+    "fieldWeekday": "Day of the week",
+    "fieldTime": "Time",
+    "fieldReminderText": "Reminder text",
+    "fieldReminderEmails": "Send to",
+    "optional": "Optional",
+    "reminderShow": "Show the next reminder on the page"
   },
   "Wifi": {
     "pointCamera": "Point your phone's camera to connect",

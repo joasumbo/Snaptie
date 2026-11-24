@@ -36,6 +36,16 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+// Os emails para onde vão os avisos (lembrete, opiniões, manutenção) são do
+// dono e nunca vão para o browser: tudo o que segue para a página, qualquer
+// visitante consegue ler. Quem edita com o código recebe-os à parte, depois de
+// o código ser verificado.
+function semPrivados(conteudo: Record<string, unknown>): Record<string, unknown> {
+  if (!("emails" in conteudo)) return conteudo;
+  const { emails: _emails, ...resto } = conteudo;
+  return resto;
+}
+
 // O que acontece quando alguém abre uma página de QR: barreira de acesso,
 // registo do scan e render. Vive aqui, e não numa rota, porque duas rotas
 // mostram a mesma página — /{empresa}/{codigo} e /{empresa}, esta última
@@ -105,7 +115,7 @@ export default async function QrScanPage({ qr }: { qr: QrComRelacoes }) {
     titulo: b.titulo,
     cor: b.cor,
     descricao: b.descricao,
-    conteudo: asRecord(b.conteudo),
+    conteudo: semPrivados(asRecord(b.conteudo)),
     editavelPublico: b.editavelPublico,
     // Opiniões privadas e envios de lembretes ficam fora da página pública.
     mensagens: (MENSAGENS_PRIVADAS.includes(b.tipo) ? [] : b.mensagens).map((m) => ({

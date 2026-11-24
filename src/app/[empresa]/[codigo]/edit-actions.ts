@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { registarFicheiro, verificarEspaco } from "@/lib/armazenamento";
 import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { isContentBlock, ESTADOS_MANUTENCAO } from "@/lib/qr";
+import { lerLembrete } from "@/lib/lembrete";
 import {
   visitorIp,
   checkPinRate,
@@ -72,6 +73,8 @@ export async function verifyEditPin(
   podeConteudo: boolean;
   podePersonalizar: boolean;
   espera?: number;
+  // Os emails de aviso dos elementos editáveis (não vão na página pública).
+  privados?: Record<string, { emails: string[] }>;
 }> {
   const auth = await authorize(codigo, pin);
   if (!auth.ok) {
@@ -82,10 +85,22 @@ export async function verifyEditPin(
       espera: auth.espera,
     };
   }
+  const privados: Record<string, { emails: string[] }> = {};
+  if (auth.qr.edicaoPublica) {
+    const blocos = await prisma.qrBlock.findMany({
+      where: { qrId: auth.qr.id, editavelPublico: true },
+      select: { id: true, conteudo: true },
+    });
+    for (const b of blocos) {
+      const c = (b.conteudo ?? {}) as Record<string, unknown>;
+      if (Array.isArray(c.emails)) privados[b.id] = { emails: c.emails.filter((e): e is string => typeof e === "string") };
+    }
+  }
   return {
     ok: true,
     podeConteudo: auth.qr.edicaoPublica,
     podePersonalizar: auth.qr.edicaoPersonalizacao,
+    privados,
   };
 }
 
@@ -114,13 +129,24 @@ export async function saveBlockContent(input: {
     return { ok: false, message: "O título é obrigatório." };
   }
 
+  // O que a página não mandou (por exemplo os emails, que não vão para o
+  // browser antes do código) fica como estava.
+  let conteudo: Record<string, unknown> = { ...((block.conteudo ?? {}) as Record<string, unknown>), ...(input.conteudo ?? {}) };
+  if (block.tipo === "LEMBRETE") {
+    const l = lerLembrete(conteudo);
+    if (l.emails.length === 0 || l.emails.some((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)))
+      return { ok: false, message: "Indique um email válido para receber o lembrete." };
+    if (l.regra === "data" && !l.data) return { ok: false, message: "Escolha a data do lembrete." };
+    conteudo = { ...conteudo, ...l };
+  }
+
   // Only the content is editable here — never the type, order or existence.
   try {
     await prisma.qrBlock.update({
       where: { id: block.id },
       data: {
         titulo: input.titulo.trim(),
-        conteudo: (input.conteudo ?? {}) as Prisma.InputJsonValue,
+        conteudo: conteudo as Prisma.InputJsonValue,
       },
     });
   } catch (e) {
