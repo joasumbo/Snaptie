@@ -19,7 +19,7 @@ import { prisma } from "@/lib/prisma";
 const URL_IA = process.env.STUDY_IA_URL || "http://joas.internal:11500";
 const MODELO_FORTE = process.env.STUDY_IA_MODELO || "joas-gemma";
 const MODELO_RAPIDO = process.env.STUDY_IA_MODELO_RAPIDO || "gemma3:4b";
-const TRABALHO_FORTE = new Set(["ler", "plano"]);
+const TRABALHO_FORTE = new Set(["ler", "plano", "atividade_forte"]);
 
 function modeloPara(tipo: string | undefined): { model: string; options: Record<string, number> } {
   if (tipo && !TRABALHO_FORTE.has(tipo) && MODELO_RAPIDO) return { model: MODELO_RAPIDO, options: { num_gpu: 99 } };

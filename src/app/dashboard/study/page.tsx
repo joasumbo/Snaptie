@@ -13,6 +13,7 @@ const TIPOS: Record<string, string> = {
   ler: "Ler páginas",
   plano: "Plano",
   atividade: "Criar atividades",
+  atividade_forte: "Criar atividades (modelo forte)",
   corrigir: "Corrigir respostas",
   imagem: "Escolher imagens",
 };

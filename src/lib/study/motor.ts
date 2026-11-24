@@ -497,8 +497,9 @@ async function criarAtividade(id: string, atividadeId: string) {
   // Explicações anteriores do mesmo conceito (para a segunda aprofundar e
   // para a imagem não ser a mesma).
   const jaExplicado = p.atividades.filter((x) => x.id !== a.id && x.tipo === "explicacao" && x.dados && x.conceitos.join() === a.conceitos.join()).length;
+  let bruto: Record<string, unknown> | null = null;
   try {
-    const bruto = await gerar<Record<string, unknown>>(sistema(s, plano), pedido(a, conceitos, anteriores, jaExplicado > 0), ESQUEMAS[a.tipo]);
+    bruto = await gerar<Record<string, unknown>>(sistema(s, plano), pedido(a, conceitos, anteriores, jaExplicado > 0), ESQUEMAS[a.tipo]);
     const dados = validar(a.tipo, bruto);
     // A imagem procura-se depois, para a explicação não esperar por ela:
     // sem a chave "imagem" está por procurar, null é que não há.
@@ -518,7 +519,7 @@ async function criarAtividade(id: string, atividadeId: string) {
       const x = q.atividades.find((y) => y.id === atividadeId);
       if (!x) return;
       x.tentativas = (x.tentativas ?? 0) + 1;
-      registar(q, { tipo: "falha", atividadeId, motivo: `criar ${x.tipo}: ${e instanceof Error ? e.message : String(e)}` });
+      registar(q, { tipo: "falha", atividadeId, motivo: `criar ${x.tipo}: ${e instanceof Error ? e.message : String(e)}`, dados: bruto ?? undefined });
       if (x.tentativas >= 3) x.estado = "erro";
     });
   }
@@ -678,7 +679,10 @@ function acordarAtividades(id: string) {
         p.atividades.slice(p.atual, p.atual + 3).find(semImagem) ??
         p.atividades.slice(p.atual + 2, p.atual + 3).find((a) => a.estado === "por_gerar");
       if (!alvo) return;
-      if (alvo.estado === "por_gerar") await comUso(id, "atividade", () => criarAtividade(id, alvo.id));
+      // Duas falhas do modelo rápido na mesma atividade: a última tentativa
+      // vai para o modelo forte, para a atividade não ficar em erro.
+      if (alvo.estado === "por_gerar")
+        await comUso(id, (alvo.tentativas ?? 0) >= 2 ? "atividade_forte" : "atividade", () => criarAtividade(id, alvo.id));
       else await comUso(id, "imagem", () => juntarImagem(id, alvo.id));
     }
   });
