@@ -270,6 +270,12 @@
     "nifHint": "Sin NIF, la factura se emite como consumidor final.",
     "invoice": "Descargar factura-recibo",
     "sentInvoice": "La confirmación y la factura-recibo se envían a {email}.",
-    "sentQr": "Tu código QR y el código para editar la página se envían a {email}."
+    "sentQr": "Tu código QR y el código para editar la página se envían a {email}.",
+    "phone": "Teléfono",
+    "shippingAddress": "Dirección de entrega",
+    "shipTo": "Entrega en",
+    "addressRequired": "Indique la dirección de entrega.",
+    "cityRequired": "Indique la localidad.",
+    "phoneInvalid": "Indique un teléfono para la entrega."
   }
 }

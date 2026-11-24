@@ -22,6 +22,9 @@ type TextosPagina = Textos & {
   morada: string;
   codigoPostal: string;
   cidade: string;
+  telefone: string;
+  moradaEntrega: string;
+  entregaEm: string;
   opcional: string;
   comprovativo: string;
   fatura: string;
@@ -36,7 +39,7 @@ type TextosPagina = Textos & {
   erros: Record<Campo, string>;
 };
 
-type Dados = { email: string; nome: string; nif: string; morada: string; codigoPostal: string; cidade: string };
+type Dados = { email: string; nome: string; nif: string; morada: string; codigoPostal: string; cidade: string; telefone: string };
 
 export default function PaginaPagar(props: {
   id: string;
@@ -46,6 +49,8 @@ export default function PaginaPagar(props: {
   locale: string;
   retorno: string | null;
   pedeDados: boolean;
+  // Encomenda por correio: morada de entrega e telefone obrigatórios.
+  envio?: boolean;
   qr?: boolean;
   fatura: boolean;
   dados: Dados;
@@ -57,7 +62,9 @@ export default function PaginaPagar(props: {
   const [dados, setDados] = useState(props.dados);
   // Primeiro os dados para a fatura, depois o pagamento. Quem já os deu (ou
   // paga como empresa) vai direto ao pagamento.
-  const [passo, setPasso] = useState<1 | 2>(props.pedeDados && !(props.dados.nome && props.dados.email) ? 1 : 2);
+  const [passo, setPasso] = useState<1 | 2>(
+    props.pedeDados && !(props.dados.nome && props.dados.email && (!props.envio || (props.dados.morada && props.dados.telefone))) ? 1 : 2,
+  );
   const [erro, setErro] = useState<Campo | null>(null);
   const [aGuardar, setAGuardar] = useState(false);
   const campo = (k: keyof Dados) => (e: React.ChangeEvent<HTMLInputElement>) => setDados((d) => ({ ...d, [k]: e.target.value }));
@@ -170,10 +177,17 @@ export default function PaginaPagar(props: {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pg-morada">
-            {t.morada}
-            {opcional}
+            {props.envio ? t.moradaEntrega : t.morada}
+            {props.envio ? null : opcional}
           </Label>
-          <Input id="pg-morada" autoComplete="street-address" value={dados.morada} onChange={campo("morada")} />
+          <Input
+            id="pg-morada"
+            autoComplete="street-address"
+            required={props.envio}
+            className={invalido("morada")}
+            value={dados.morada}
+            onChange={campo("morada")}
+          />
         </div>
         <div className="grid grid-cols-[1fr_1.4fr] gap-3">
           <div className="space-y-1.5">
@@ -181,6 +195,7 @@ export default function PaginaPagar(props: {
             <Input
               id="pg-cp"
               autoComplete="postal-code"
+              required={props.envio}
               placeholder="1000-001"
               className={invalido("codigoPostal")}
               value={dados.codigoPostal}
@@ -189,9 +204,30 @@ export default function PaginaPagar(props: {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pg-cidade">{t.cidade}</Label>
-            <Input id="pg-cidade" autoComplete="address-level2" value={dados.cidade} onChange={campo("cidade")} />
+            <Input
+              id="pg-cidade"
+              autoComplete="address-level2"
+              required={props.envio}
+              className={invalido("cidade")}
+              value={dados.cidade}
+              onChange={campo("cidade")}
+            />
           </div>
         </div>
+        {props.envio ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="pg-telefone">{t.telefone}</Label>
+            <Input
+              id="pg-telefone"
+              type="tel"
+              autoComplete="tel"
+              required
+              className={invalido("telefone")}
+              value={dados.telefone}
+              onChange={campo("telefone")}
+            />
+          </div>
+        ) : null}
         {erro ? (
           <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
             {t.erros[erro]}
@@ -217,6 +253,11 @@ export default function PaginaPagar(props: {
               {dados.nif ? ` · NIF ${dados.nif}` : ""}
             </div>
             <div className="text-zinc-500">{dados.email}</div>
+            {props.envio ? (
+              <div className="mt-1.5 text-zinc-500">
+                {t.entregaEm}: {dados.morada}, {dados.codigoPostal} {dados.cidade} · {dados.telefone}
+              </div>
+            ) : null}
           </div>
           <button type="button" className="text-sm font-medium text-indigo-600 hover:underline" onClick={() => setPasso(1)}>
             {t.alterar}

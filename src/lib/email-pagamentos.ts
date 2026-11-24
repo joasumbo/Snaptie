@@ -492,3 +492,86 @@ export async function emailQrEntregue(opts: {
     throw new Error(`Email não enviado: ${(r.error as { message?: string }).message ?? "erro do Resend"}`);
   }
 }
+
+// Encomenda nova com envio por correio, para quem a prepara na Inpulse.
+export async function emailEncomendaNova(opts: {
+  para: string;
+  produto: string;
+  quantidade: number;
+  nome: string;
+  morada: string;
+  telefone: string;
+  email: string;
+  link: string;
+}) {
+  const r = await enviarEmail({
+    to: opts.para,
+    subject: `Encomenda nova para enviar · ${opts.produto}`,
+    html: carta({
+      titulo: "Encomenda nova para enviar",
+      ilustracao: "pago",
+      saudacao: "Olá,",
+      paragrafos: ["Entrou uma encomenda paga com envio por correio. Os dados da entrega estão abaixo e no painel, em Pagamentos."],
+      detalhes: [
+        { rotulo: "Produto", valor: opts.produto },
+        { rotulo: "Quantidade", valor: String(opts.quantidade) },
+        { rotulo: "Nome", valor: opts.nome },
+        { rotulo: "Morada", valor: opts.morada },
+        { rotulo: "Telefone", valor: opts.telefone },
+        { rotulo: "Email", valor: opts.email },
+      ],
+      botao: { texto: "Ver encomendas", url: opts.link },
+    }),
+    text: texto({
+      saudacao: "Olá,",
+      linhas: [
+        "Entrou uma encomenda paga com envio por correio.",
+        `Produto: ${opts.produto} (${opts.quantidade})`,
+        `Nome: ${opts.nome}`,
+        `Morada: ${opts.morada}`,
+        `Telefone: ${opts.telefone}`,
+        `Email: ${opts.email}`,
+        `Encomendas: ${opts.link}`,
+      ],
+    }),
+  });
+  if (r && typeof r === "object" && "error" in r && r.error) {
+    throw new Error(`Email não enviado: ${(r.error as { message?: string }).message ?? "erro do Resend"}`);
+  }
+}
+
+// A encomenda saiu: o cliente recebe o código para a seguir nos CTT.
+export async function emailEncomendaEnviada(opts: {
+  para: string;
+  nome: string | null;
+  produto: string;
+  codigo: string | null;
+  link: string | null;
+}) {
+  const ola = saudacao(opts.nome);
+  const r = await enviarEmail({
+    to: opts.para,
+    subject: `A sua encomenda foi enviada · ${opts.produto}`,
+    html: carta({
+      titulo: "A sua encomenda foi enviada",
+      ilustracao: "pago",
+      saudacao: ola,
+      paragrafos: [
+        `A sua encomenda <strong>${esc(opts.produto)}</strong> já seguiu pelo correio.`,
+        opts.codigo ? "Pode acompanhar a entrega com o código de seguimento abaixo." : "Deve chegar nos próximos dias úteis.",
+      ],
+      detalhes: opts.codigo ? [{ rotulo: "Código de seguimento", valor: opts.codigo }] : undefined,
+      botao: opts.link ? { texto: "Seguir a encomenda", url: opts.link } : undefined,
+    }),
+    text: texto({
+      saudacao: ola,
+      linhas: [
+        `A sua encomenda ${opts.produto} já seguiu pelo correio.`,
+        ...(opts.codigo ? [`Código de seguimento: ${opts.codigo}`, `Seguir: ${opts.link}`] : []),
+      ],
+    }),
+  });
+  if (r && typeof r === "object" && "error" in r && r.error) {
+    throw new Error(`Email não enviado: ${(r.error as { message?: string }).message ?? "erro do Resend"}`);
+  }
+}

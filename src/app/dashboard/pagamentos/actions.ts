@@ -15,6 +15,7 @@ import { ORDEM_PLANOS } from "@/lib/planos";
 import { arquivarProduto, criarPagamentoAvulso, iniciarPacote, ligarWebhook, sincronizarPacote } from "@/lib/stripe-pagamentos";
 import { appUrl } from "@/lib/stripe";
 import { entregarQr, precoNaLoja } from "@/lib/loja";
+import { marcarEnviada } from "@/lib/envios";
 
 export type Resultado = { ok: true } | { ok: false; message: string };
 
@@ -292,5 +293,72 @@ export async function reenviarQrComprado(id: string, para: string): Promise<Resu
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
   }
   revalidatePath("/dashboard/faturacao");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------- envios
+
+export type ProdutoEnvioInput = {
+  id?: string;
+  nome: string;
+  descricao: string;
+  imagem: string;
+  precoEuros: number;
+  portesEuros: number;
+  qrModeloId: string;
+  stock: number | null;
+  ativo: boolean;
+};
+
+// Cria ou altera um produto enviado por correio.
+export async function guardarProdutoEnvio(input: ProdutoEnvioInput): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  const nome = input.nome.trim().slice(0, 120);
+  if (!nome) return { ok: false, message: "Dê um nome ao produto." };
+  if (!Number.isFinite(input.precoEuros) || input.precoEuros < 0.5) return { ok: false, message: "O preço mínimo é 0,50 €." };
+  if (input.precoEuros > 10000) return { ok: false, message: "Preço demasiado alto." };
+  if (!Number.isFinite(input.portesEuros) || input.portesEuros < 0 || input.portesEuros > 100)
+    return { ok: false, message: "Os portes têm de estar entre 0 e 100 €." };
+  if (input.stock != null && (!Number.isInteger(input.stock) || input.stock < 0)) return { ok: false, message: "O stock não é válido." };
+  const qrModeloId = input.qrModeloId.trim() || null;
+  if (qrModeloId && !(await db.qrCode.findUnique({ where: { id: qrModeloId }, select: { id: true } })))
+    return { ok: false, message: "O QR modelo não existe." };
+  const imagem = input.imagem.trim();
+  if (imagem && !/^https:\/\//.test(imagem)) return { ok: false, message: "A imagem não é válida." };
+  const data = {
+    nome,
+    descricao: input.descricao.trim().slice(0, 600) || null,
+    imagem: imagem || null,
+    precoCentimos: Math.round(input.precoEuros * 100),
+    portesCentimos: Math.round(input.portesEuros * 100),
+    qrModeloId,
+    stock: input.stock,
+    ativo: input.ativo,
+  };
+  if (input.id) await db.produtoEnvio.update({ where: { id: input.id }, data });
+  else await db.produtoEnvio.create({ data });
+  revalidatePath("/dashboard/pagamentos");
+  revalidatePath("/loja");
+  return { ok: true };
+}
+
+// Apaga um produto. As encomendas já pagas ficam, com a descrição que tinham.
+export async function apagarProdutoEnvio(id: string): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  await db.produtoEnvio.deleteMany({ where: { id } });
+  revalidatePath("/dashboard/pagamentos");
+  revalidatePath("/loja");
+  return { ok: true };
+}
+
+// Marca a encomenda como enviada; o cliente recebe o código de seguimento.
+export async function marcarEncomendaEnviada(id: string, codigo: string): Promise<Resultado> {
+  if (!(await soAdmin())) return { ok: false, message: "Sem permissão." };
+  try {
+    await marcarEnviada(id, codigo);
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+  revalidatePath("/dashboard/pagamentos");
   return { ok: true };
 }

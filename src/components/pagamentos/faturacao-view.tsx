@@ -77,6 +77,7 @@ const TIPOS: Record<string, string> = {
   link: "Link de pagamento",
   botao: "Botão na página",
   qr: "Loja (QR)",
+  envio: "Loja (correio)",
 };
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 

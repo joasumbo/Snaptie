@@ -144,7 +144,7 @@ async function clienteDaEmpresa(companyId: string): Promise<string> {
 
 // Um pagamento avulso: botão numa página ou link criado no admin.
 export async function criarPagamentoAvulso(opcoes: {
-  tipo: "botao" | "link" | "qr";
+  tipo: "botao" | "link" | "qr" | "envio";
   valorCentimos: number;
   descricao: string;
   companyId?: string | null;
@@ -294,6 +294,9 @@ export async function depoisDePago(pagamentoId: string): Promise<void> {
   // temporizador tenta de novo. (Importado aqui: a loja usa este ficheiro.)
   const { entregarQr } = await import("@/lib/loja");
   await entregarQr(pagamentoId).catch((e) => console.error("[loja] entrega", pagamentoId, e));
+  // Encomenda por correio: fica por enviar e a Inpulse é avisada.
+  const { registarEncomenda } = await import("@/lib/envios");
+  await registarEncomenda(pagamentoId).catch((e) => console.error("[envios] registar", pagamentoId, e));
 }
 
 // Confirma junto do Stripe se uma referência já está paga e, se estiver,
@@ -344,6 +347,9 @@ export type DadosPagamento = {
   fatura: boolean;
   // Quem paga recebe a cópia de um QR por email.
   entregaQr: boolean;
+  // Encomenda enviada por correio: a morada e o telefone são obrigatórios.
+  envio: boolean;
+  telefoneCliente: string | null;
 };
 
 export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento | null> {
@@ -389,6 +395,8 @@ export async function lerPagamentoParaPagar(id: string): Promise<DadosPagamento 
     clientSecret,
     fatura: Boolean(p.moloniFaturaPdf),
     entregaQr: Boolean(p.qrModeloId),
+    envio: p.tipo === "envio",
+    telefoneCliente: p.telefoneCliente,
   };
 }
 
@@ -489,7 +497,7 @@ export async function cartaoAtual(companyId: string): Promise<string | null> {
 // email. Só antes de pagar; depois disso o comprovativo já não muda.
 export async function guardarDadosCliente(
   pagamentoId: string,
-  dados: { email: string; nome: string; nif: string; morada: string; codigoPostal: string; cidade: string },
+  dados: { email: string; nome: string; nif: string; morada: string; codigoPostal: string; cidade: string; telefone?: string },
 ): Promise<boolean> {
   const r = await prisma.pagamento.updateMany({
     where: { id: pagamentoId, estado: { not: "pago" } },
@@ -500,6 +508,7 @@ export async function guardarDadosCliente(
       moradaCliente: dados.morada || null,
       cpCliente: dados.codigoPostal || null,
       cidadeCliente: dados.cidade || null,
+      telefoneCliente: dados.telefone || null,
     },
   });
   return r.count > 0;

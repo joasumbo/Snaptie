@@ -7,6 +7,8 @@ import { estadoWebhook } from "@/lib/stripe-pagamentos";
 import PagamentosAdmin from "@/components/pagamentos/pagamentos-admin";
 import MoloniAdmin from "@/components/pagamentos/moloni-admin";
 import LojaAdmin from "@/components/pagamentos/loja-admin";
+import EnviosAdmin from "@/components/pagamentos/envios-admin";
+import { encomendas as listaEncomendas } from "@/lib/envios";
 import { estadoMoloni } from "@/lib/moloni";
 import { configuracaoFaturas, seriesMoloni } from "@/lib/moloni-faturas";
 
@@ -78,6 +80,12 @@ export default async function PagamentosPage() {
     }),
   ]);
   const vendidos = new Map(vendas.map((v) => [v.qrId, v._count._all]));
+  const [produtosEnvio, vendasEnvio, encomendas] = await Promise.all([
+    prisma.produtoEnvio.findMany({ orderBy: [{ ordem: "asc" }, { nome: "asc" }] }),
+    prisma.pagamento.groupBy({ by: ["produtoId"], where: { tipo: "envio", estado: "pago" }, _sum: { quantidade: true } }),
+    listaEncomendas(),
+  ]);
+  const vendidosEnvio = new Map(vendasEnvio.map((v) => [v.produtoId, v._sum.quantidade ?? 0]));
   const copias = new Set(comprados.map((c) => c.qrCompradoId));
 
   return (
@@ -100,6 +108,22 @@ export default async function PagamentosPage() {
           publicado: q.publicado,
           vendidos: vendidos.get(q.id) ?? 0,
         }))}
+        qrs={todos.filter((q) => !copias.has(q.id)).map((q) => ({ id: q.id, nome: q.nome, empresa: q.company.nome }))}
+      />
+      <EnviosAdmin
+        produtos={produtosEnvio.map((p) => ({
+          id: p.id,
+          nome: p.nome,
+          descricao: p.descricao,
+          imagem: p.imagem,
+          precoCentimos: p.precoCentimos,
+          portesCentimos: p.portesCentimos,
+          qrModeloId: p.qrModeloId,
+          stock: p.stock,
+          ativo: p.ativo,
+          vendidos: vendidosEnvio.get(p.id) ?? 0,
+        }))}
+        encomendas={encomendas}
         qrs={todos.filter((q) => !copias.has(q.id)).map((q) => ({ id: q.id, nome: q.nome, empresa: q.company.nome }))}
       />
       <PagamentosAdmin

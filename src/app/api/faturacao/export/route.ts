@@ -11,6 +11,7 @@ const TIPOS: Record<string, string> = {
   link: "Link de pagamento",
   botao: "Botão na página",
   qr: "Loja (QR)",
+  envio: "Loja (correio)",
 };
 
 // Os pagamentos do painel de faturação, com os mesmos filtros, em Excel.

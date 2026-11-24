@@ -421,6 +421,14 @@ model Pagamento {
   // Pagamento de uma página.
   qrModeloId        String?  @map("qr_modelo_id")
   qrEntregueEm      DateTime? @map("qr_entregue_em")
+  // Encomenda com envio por correio (tipo "envio"): o produto, a quantidade,
+  // o telefone para a transportadora e o estado do envio.
+  produtoId         String?   @map("produto_id")
+  quantidade        Int?
+  telefoneCliente   String?   @map("telefone_cliente")
+  envioEstado       String?   @map("envio_estado") // por_enviar, enviado
+  envioCodigo       String?   @map("envio_codigo") // código de seguimento dos CTT
+  enviadoEm         DateTime? @map("enviado_em")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -492,4 +500,25 @@ model StudyUso {
   @@index([sessaoId])
   @@index([createdAt])
   @@map("study_uso")
+}
+
+// Produtos físicos vendidos na loja e enviados por correio (ímanes,
+// porta-chaves...). Se tiverem um QR modelo, cada compra cria a cópia do QR do
+// cliente, que a Inpulse imprime no produto antes de o enviar.
+model ProdutoEnvio {
+  id             String   @id @default(cuid())
+  nome           String
+  descricao      String?
+  imagem         String?
+  precoCentimos  Int      @map("preco_centimos")
+  portesCentimos Int      @default(0) @map("portes_centimos")
+  qrModeloId     String?  @map("qr_modelo_id")
+  // null = sem limite
+  stock          Int?
+  ativo          Boolean  @default(true)
+  ordem          Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("produtos_envio")
 }

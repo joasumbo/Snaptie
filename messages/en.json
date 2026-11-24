@@ -270,6 +270,12 @@
     "nifHint": "Without a tax number, the invoice is issued to a final consumer.",
     "invoice": "Download invoice-receipt",
     "sentInvoice": "The confirmation and the invoice-receipt are on their way to {email}.",
-    "sentQr": "Your QR code and the code to edit your page are on their way to {email}."
+    "sentQr": "Your QR code and the code to edit your page are on their way to {email}.",
+    "phone": "Phone",
+    "shippingAddress": "Delivery address",
+    "shipTo": "Deliver to",
+    "addressRequired": "Enter the delivery address.",
+    "cityRequired": "Enter the town or city.",
+    "phoneInvalid": "Enter a phone number for the delivery."
   }
 }

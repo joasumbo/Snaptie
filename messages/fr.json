@@ -272,6 +272,12 @@
     "nifHint": "Sans numéro fiscal, la facture est émise au nom d'un consommateur final.",
     "invoice": "Télécharger la facture-reçu",
     "sentInvoice": "La confirmation et la facture-reçu sont envoyées à {email}.",
-    "sentQr": "Votre QR code et le code pour modifier la page sont envoyés à {email}."
+    "sentQr": "Votre QR code et le code pour modifier la page sont envoyés à {email}.",
+    "phone": "Téléphone",
+    "shippingAddress": "Adresse de livraison",
+    "shipTo": "Livraison à",
+    "addressRequired": "Indiquez l'adresse de livraison.",
+    "cityRequired": "Indiquez la ville.",
+    "phoneInvalid": "Indiquez un téléphone pour la livraison."
   }
 }

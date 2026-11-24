@@ -272,6 +272,12 @@
     "nifHint": "Ohne Steuernummer wird die Rechnung an einen Endverbraucher ausgestellt.",
     "invoice": "Rechnung herunterladen",
     "sentInvoice": "Die Bestätigung und die Rechnung gehen an {email}.",
-    "sentQr": "Ihr QR-Code und der Code zum Bearbeiten der Seite werden an {email} gesendet."
+    "sentQr": "Ihr QR-Code und der Code zum Bearbeiten der Seite werden an {email} gesendet.",
+    "phone": "Telefon",
+    "shippingAddress": "Lieferadresse",
+    "shipTo": "Lieferung an",
+    "addressRequired": "Geben Sie die Lieferadresse an.",
+    "cityRequired": "Geben Sie den Ort an.",
+    "phoneInvalid": "Geben Sie eine Telefonnummer für die Lieferung an."
   }
 }

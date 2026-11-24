@@ -51,7 +51,8 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
             chavePublica={process.env.STRIPE_PUBLISHABLE_KEY ?? ""}
             locale={locale}
             retorno={dados.retorno}
-            pedeDados={dados.tipo === "botao" || dados.tipo === "link" || dados.tipo === "qr"}
+            pedeDados={dados.tipo === "botao" || dados.tipo === "link" || dados.tipo === "qr" || dados.tipo === "envio"}
+            envio={dados.envio}
             qr={dados.entregaQr}
             fatura={dados.fatura}
             dados={{
@@ -61,6 +62,7 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
               morada: dados.moradaCliente ?? "",
               codigoPostal: dados.cpCliente ?? "",
               cidade: dados.cidadeCliente ?? "",
+              telefone: dados.telefoneCliente ?? "",
             }}
             textos={{
               botao: periodo ? t("subscribe", { valor }) : t("pay", { valor }),
@@ -79,6 +81,9 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
               morada: t("address"),
               codigoPostal: t("postcode"),
               cidade: t("city"),
+              telefone: t("phone"),
+              moradaEntrega: t("shippingAddress"),
+              entregaEm: t("shipTo"),
               opcional: t("optional"),
               comprovativo: t("receipt"),
               fatura: t("invoice"),
@@ -95,6 +100,9 @@ export default async function PagarPage({ params }: { params: Promise<{ id: stri
                 nome: t("nameRequired"),
                 nif: t("nifInvalid"),
                 codigoPostal: t("postcodeInvalid"),
+                morada: t("addressRequired"),
+                cidade: t("cityRequired"),
+                telefone: t("phoneInvalid"),
                 geral: t("error"),
               },
             }}

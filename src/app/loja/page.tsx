@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Eye, Mail, Pencil, Printer, QrCode, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Eye, Mail, Package, Pencil, Printer, QrCode, ShoppingBag, Truck } from "lucide-react";
 import { modelosAVenda } from "@/lib/loja";
+import { MAX_QUANTIDADE, produtosAVenda } from "@/lib/envios";
 import { euros } from "@/lib/pagamentos";
-import { comprar } from "./actions";
+import { comprar, comprarEnvio } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ const PASSOS = [
 ];
 
 export default async function LojaPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
-  const [{ erro }, modelos] = await Promise.all([searchParams, modelosAVenda()]);
+  const [{ erro }, modelos, produtos] = await Promise.all([searchParams, modelosAVenda(), produtosAVenda()]);
 
   return (
     <main className="min-h-screen px-6 py-14">
@@ -69,7 +70,7 @@ export default async function LojaPage({ searchParams }: { searchParams: Promise
           </p>
         ) : null}
 
-        {modelos.length === 0 ? (
+        {modelos.length === 0 && produtos.length === 0 ? (
           <div className="mt-12 rounded-2xl border border-dashed border-foreground/15 p-10 text-center text-muted-foreground">
             <QrCode className="mx-auto size-8" />
             <p className="mt-3">Ainda não há produtos à venda. Volte em breve.</p>
@@ -122,6 +123,76 @@ export default async function LojaPage({ searchParams }: { searchParams: Promise
             ))}
           </div>
         )}
+
+        {produtos.length > 0 ? (
+          <section className="mt-16">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Truck className="size-4" />
+              Enviamos por correio
+            </div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight">Produtos com o seu QR</h2>
+            <p className="mt-2 max-w-2xl text-muted-foreground">
+              Pague aqui e enviamos para a morada que indicar, em Portugal. Os produtos com QR levam a sua página: recebe logo
+              por email o link e o código para a editar.
+            </p>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {produtos.map((p) => (
+                <article
+                  key={p.id}
+                  className="flex flex-col overflow-hidden rounded-2xl border border-foreground/10 bg-card/60 transition hover:border-foreground/20"
+                >
+                  <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-indigo-500/10 to-indigo-500/0">
+                    {p.imagem ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imagem} alt={p.nome} className="size-full object-cover" />
+                    ) : (
+                      <Package className="size-12 text-indigo-600/70" />
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
+                    <h3 className="font-semibold">{p.nome}</h3>
+                    {p.descricao ? (
+                      <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{p.descricao}</p>
+                    ) : (
+                      <div className="flex-1" />
+                    )}
+                    <div className="mt-4 flex items-baseline justify-between gap-3">
+                      <span className="text-2xl font-semibold tracking-tight">{euros(p.precoCentimos, "eur")}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {p.portesCentimos ? `+ ${euros(p.portesCentimos, "eur")} de portes` : "Portes incluídos"}
+                      </span>
+                    </div>
+                    {p.esgotado ? (
+                      <div className="mt-4 rounded-lg bg-muted px-3 py-2 text-center text-sm text-muted-foreground">Esgotado</div>
+                    ) : (
+                      <form action={comprarEnvio} className="mt-4 flex gap-2">
+                        <input type="hidden" name="produto" value={p.id} />
+                        <select
+                          name="quantidade"
+                          aria-label="Quantidade"
+                          defaultValue="1"
+                          className="h-9 rounded-lg border border-foreground/15 bg-transparent px-2 text-sm"
+                        >
+                          {Array.from({ length: MAX_QUANTIDADE }, (_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              {i + 1}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="submit"
+                          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition hover:bg-indigo-700"
+                        >
+                          Comprar
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <footer className="mt-20 border-t border-foreground/10 pt-8 text-sm text-muted-foreground">
           Precisa de vários QR codes para uma empresa?{" "}
