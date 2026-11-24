@@ -438,10 +438,22 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
     const erradas = Array.isArray(d.erradas) ? (d.erradas as unknown[]).map(opcao).filter(Boolean).slice(0, 3) : [];
     const opcoes = [certa, ...erradas];
     const correta = 0;
-    if (!certa || erradas.length < 2 || !txt(d.pergunta)) throw new Error("pergunta de escolha múltipla incompleta");
+    // O modelo pequeno às vezes copia os rótulos "Certa / Erradas" para dentro
+    // da pergunta: tiram-se essas linhas, e uma pergunta que ainda mostre a
+    // resposta é recusada (pede-se outra).
+    const pergunta = txt(d.pergunta)
+      .split(/\n+/)
+      .map((l) => l.trim())
+      .filter((l) => l && !/^(certa|erradas?|respostas?)\b/i.test(l) && !/^\d+[.)]?$/.test(l))
+      .join(" ")
+      .trim();
+    if (!certa || erradas.length < 2 || !pergunta) throw new Error("pergunta de escolha múltipla incompleta");
+    const certaNorm = normalizar(certa);
+    if (/\b(certa|erradas?)\s*:/i.test(pergunta) || (certaNorm.split(" ").length >= 3 && normalizar(pergunta).includes(certaNorm)))
+      throw new Error("a pergunta mostra a resposta");
     // Opções repetidas dão perguntas com duas respostas possíveis.
     if (new Set(opcoes.map((o) => normalizar(o))).size !== opcoes.length) throw new Error("opções repetidas");
-    const base = { pergunta: txt(d.pergunta), opcoes, correta, porque: txt(d.porque) };
+    const base = { pergunta, opcoes, correta, porque: txt(d.porque) };
     if (tipo === "escolha") return baralhar({ tipo, ...base });
     if (!txt(d.explicacao)) throw new Error("explicação vazia");
     return baralhar({ tipo, titulo: txt(d.titulo), explicacao: txt(d.explicacao), exemplo: txt(d.exemplo), ...base });
