@@ -451,6 +451,14 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
     const certaNorm = normalizar(certa);
     if (/\b(certa|erradas?)\s*:/i.test(pergunta) || (certaNorm.split(" ").length >= 3 && normalizar(pergunta).includes(certaNorm)))
       throw new Error("a pergunta mostra a resposta");
+    // Restos do esquema dentro do texto (o modelo pequeno mistura os campos):
+    // "Porque:", "Erradas", opções "A) ... B)" na pergunta, ou uma resposta
+    // que é só uma letra ou um rótulo.
+    const rotulo = (t: string) => /^([A-Da-d]|certa|erradas?|errid\w*|op[cç][aã]o \w)$/i.test(t.trim());
+    if (/\b(porque|certa|erradas?|errid\w*)\s*:/i.test(pergunta) || /\berrid/i.test(pergunta))
+      throw new Error("a pergunta traz restos do esquema");
+    if (/(^|\s)[A-D]\)\s/.test(pergunta) || rotulo(certa) || erradas.some(rotulo))
+      throw new Error("a pergunta traz as opções ou um rótulo");
     // Opções repetidas dão perguntas com duas respostas possíveis.
     if (new Set(opcoes.map((o) => normalizar(o))).size !== opcoes.length) throw new Error("opções repetidas");
     const base = { pergunta, opcoes, correta, porque: txt(d.porque) };
