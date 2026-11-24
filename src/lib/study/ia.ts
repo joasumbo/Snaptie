@@ -3,13 +3,28 @@ import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { prisma } from "@/lib/prisma";
 
-// A IA do Study, num sítio só. Por agora é a JOAs: um Ollama com o gemma3:12b
-// no servidor de GPU, a que o Jserver chega por um túnel SSH (joas.internal).
-// Trocar de IA (por exemplo para a API do Claude) é mudar este ficheiro; o
-// resto do Study só usa ler() e gerar().
+// A IA do Study, num sítio só. É a JOAs: um Ollama no servidor de GPU, a que o
+// Jserver chega por um túnel SSH (joas.internal). Trocar de IA é mudar este
+// ficheiro; o resto do Study só usa ler() e gerar().
+//
+// O orquestrador escolhe o modelo pelo trabalho:
+//   ler e plano            -> o forte (gemma3:12b, parte na placa): uma vez por
+//                             estudo, onde a qualidade mais conta;
+//   atividades, correções  -> o rápido (gemma3:4b, inteiro na placa): cerca de
+//   e imagens                 100 palavras por segundo contra 9 do forte, e
+//                             ocupa menos placa (2,7 GB contra 3,5 GB).
+// A JOAs só tem um modelo carregado de cada vez, por isso a troca acontece
+// uma vez por estudo, entre o plano e a primeira atividade.
 
 const URL_IA = process.env.STUDY_IA_URL || "http://joas.internal:11500";
-const MODELO = process.env.STUDY_IA_MODELO || "joas-gemma";
+const MODELO_FORTE = process.env.STUDY_IA_MODELO || "joas-gemma";
+const MODELO_RAPIDO = process.env.STUDY_IA_MODELO_RAPIDO || "gemma3:4b";
+const TRABALHO_FORTE = new Set(["ler", "plano"]);
+
+function modeloPara(tipo: string | undefined): { model: string; options: Record<string, number> } {
+  if (tipo && !TRABALHO_FORTE.has(tipo) && MODELO_RAPIDO) return { model: MODELO_RAPIDO, options: { num_gpu: 99 } };
+  return { model: MODELO_FORTE, options: {} };
+}
 
 // A placa é partilhada e responde a um pedido de cada vez: um pedido pode ter
 // de esperar pelos outros na fila.
@@ -26,21 +41,22 @@ export function comUso<T>(sessaoId: string, tipo: string, fn: () => Promise<T>):
 }
 
 async function conversar(mensagens: Mensagem[], formato?: object, temperatura = 0.4): Promise<string> {
+  const c = contexto.getStore();
+  const { model, options } = modeloPara(c?.tipo);
   const r = await fetch(`${URL_IA}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: MODELO,
+      model,
       messages: mensagens,
       stream: false,
       ...(formato ? { format: formato } : {}),
-      options: { temperature: temperatura },
+      options: { temperature: temperatura, ...options },
     }),
     signal: AbortSignal.timeout(TEMPO_MAXIMO),
   });
   if (!r.ok) throw new Error(`IA respondeu ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d = (await r.json()) as { message?: { content?: string }; prompt_eval_count?: number; eval_count?: number; total_duration?: number };
-  const c = contexto.getStore();
   if (c)
     await prisma.studyUso
       .create({

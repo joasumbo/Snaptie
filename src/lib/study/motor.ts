@@ -316,21 +316,21 @@ const ESQUEMAS: Record<TipoAtividade, object> = {
       explicacao: { type: "string" },
       exemplo: { type: "string" },
       pergunta: { type: "string" },
-      opcoes: { type: "array", items: { type: "string" } },
-      correta: { type: "integer" },
+      certa: { type: "string" },
+      erradas: { type: "array", items: { type: "string" } },
       porque: { type: "string" },
     },
-    required: ["titulo", "explicacao", "exemplo", "pergunta", "opcoes", "correta", "porque"],
+    required: ["titulo", "explicacao", "exemplo", "pergunta", "certa", "erradas", "porque"],
   },
   escolha: {
     type: "object",
     properties: {
       pergunta: { type: "string" },
-      opcoes: { type: "array", items: { type: "string" } },
-      correta: { type: "integer" },
+      certa: { type: "string" },
+      erradas: { type: "array", items: { type: "string" } },
       porque: { type: "string" },
     },
-    required: ["pergunta", "opcoes", "correta", "porque"],
+    required: ["pergunta", "certa", "erradas", "porque"],
   },
   completar: {
     type: "object",
@@ -378,8 +378,8 @@ function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[], segun
         "\"titulo\" é o nome do conceito. \"explicacao\" é curta: entre 30 e 60 palavras, no máximo 2 parágrafos pequenos separados por uma linha em branco, só com o essencial do conceito " +
         "(é para uma criança ler num telemóvel; os pormenores aparecem depois nas perguntas). " +
         "\"exemplo\" é uma comparação ou um exemplo do dia a dia numa só frase curta. " +
-        "Depois faz uma pergunta de escolha múltipla simples sobre o que acabaste de explicar: \"opcoes\" tem 4 opções curtas, só uma certa e sem dúvida possível, " +
-        "\"correta\" é a posição (0 a 3) da opção certa e \"porque\" explica numa frase porque é a certa, sem falar em letras nem números de opção." +
+        "Depois faz uma pergunta de escolha múltipla simples sobre o que acabaste de explicar: \"certa\" é a resposta certa, sem dúvida possível, e \"erradas\" são 3 respostas erradas mas plausíveis, " +
+        "todas curtas e sem letras nem números à frente. \"porque\" explica numa frase porque a certa é a certa." +
         evitar
       );
     case "escolha":
@@ -387,8 +387,8 @@ function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[], segun
         `Etapa CONSOLIDAR. Faz uma pergunta de escolha múltipla sobre ${nomes}, sem explicação antes.` +
         nivel +
         "A opção certa tem de se poder confirmar no texto da matéria, sem conclusões que lá não estejam, e só uma opção pode estar certa. " +
-        "\"opcoes\" tem 4 opções plausíveis e curtas; as erradas devem ser enganos que um aluno costuma fazer. " +
-        "\"correta\" é a posição (0 a 3) da certa e \"porque\" explica numa frase, sem falar em letras nem números de opção." +
+        "\"certa\" é a resposta certa e \"erradas\" são 3 respostas erradas plausíveis, enganos que um aluno costuma fazer; todas curtas e sem letras nem números à frente. " +
+        "\"porque\" explica numa frase porque a certa é a certa." +
         evitar
       );
     case "completar":
@@ -431,10 +431,14 @@ function limpar(s: string) {
 function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
   const txt = (v: unknown) => (typeof v === "string" ? limpar(v) : "");
   if (tipo === "explicacao" || tipo === "escolha") {
-    const opcoes = Array.isArray(d.opcoes) ? (d.opcoes as unknown[]).map(txt).filter(Boolean).slice(0, 4) : [];
-    const correta = Number(d.correta);
-    if (opcoes.length < 3 || !Number.isInteger(correta) || correta < 0 || correta >= opcoes.length || !txt(d.pergunta))
-      throw new Error("pergunta de escolha múltipla incompleta");
+    // A IA escreve a certa e as erradas à parte e é o código que as junta:
+    // assim a resposta certa nunca fica trocada por um número mal dado.
+    const opcao = (v: unknown) => txt(v).replace(/^\(?[A-Da-d1-4][).:-]\s+/, "").replace(/\s*\(\d\)\s*$/, "").trim();
+    const certa = opcao(d.certa);
+    const erradas = Array.isArray(d.erradas) ? (d.erradas as unknown[]).map(opcao).filter(Boolean).slice(0, 3) : [];
+    const opcoes = [certa, ...erradas];
+    const correta = 0;
+    if (!certa || erradas.length < 2 || !txt(d.pergunta)) throw new Error("pergunta de escolha múltipla incompleta");
     // Opções repetidas dão perguntas com duas respostas possíveis.
     if (new Set(opcoes.map((o) => normalizar(o))).size !== opcoes.length) throw new Error("opções repetidas");
     const base = { pergunta: txt(d.pergunta), opcoes, correta, porque: txt(d.porque) };
