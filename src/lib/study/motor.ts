@@ -531,7 +531,10 @@ async function criarAtividade(id: string, atividadeId: string) {
   const jaExplicado = p.atividades.filter((x) => x.id !== a.id && x.tipo === "explicacao" && x.dados && x.conceitos.join() === a.conceitos.join()).length;
   let bruto: Record<string, unknown> | null = null;
   try {
-    bruto = await gerar<Record<string, unknown>>(sistema(s, plano), pedido(a, conceitos, anteriores, jaExplicado > 0), ESQUEMAS[a.tipo]);
+    // Cada nova tentativa sai mais variada, para não repetir a pergunta que
+    // acabou de ser recusada.
+    const temperatura = Math.min(0.95, 0.4 + 0.25 * (a.tentativas ?? 0));
+    bruto = await gerar<Record<string, unknown>>(sistema(s, plano), pedido(a, conceitos, anteriores, jaExplicado > 0), ESQUEMAS[a.tipo], temperatura);
     const dados = validar(a.tipo, bruto);
     // A imagem procura-se depois, para a explicação não esperar por ela:
     // sem a chave "imagem" está por procurar, null é que não há.
