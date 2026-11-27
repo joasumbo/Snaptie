@@ -20,6 +20,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { Segmented } from "@/components/ui/segmented";
 import { TYPE_FIELD, isContentBlock, parBotoes } from "@/lib/qr";
 import { lerLembrete } from "@/lib/lembrete";
+import { EstadoChips } from "./message-wall";
 import { QrPage, type QrPageData } from "./qr-page";
 import {
   verifyEditPin,
@@ -207,9 +208,11 @@ export default function PublicQrView({
   async function mudarEstado(messageId: string, estado: string): Promise<boolean> {
     const r = await mudarEstadoOcorrencia({ codigo, pin: authPin, messageId, estado });
     if (!r.ok) {
-      toast.error(tc("error"));
+      toast.error(r.message || tc("error"));
       return false;
     }
+    // A página por trás da janela também fica com o estado novo.
+    router.refresh();
     return true;
   }
 
@@ -322,6 +325,26 @@ export default function PublicQrView({
                       setField={setField}
                       uploaderFor={uploaderFor}
                     />
+                    {b.tipo === "MANUTENCAO" ? (
+                      // As ocorrências mudam de estado aqui mesmo, sem fechar a
+                      // janela (e também continuam a mudar na página).
+                      (() => {
+                        const lista = data.blocks.find((x) => x.id === b.id)?.mensagens ?? [];
+                        return lista.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">{t("noOccurrences")}</p>
+                        ) : (
+                          <ul className="space-y-2">
+                            {lista.map((m) => (
+                              <li key={m.id} className="rounded-lg bg-muted/40 px-3 py-2">
+                                <div className="text-sm font-medium">{m.nome}</div>
+                                {m.mensagem ? <div className="line-clamp-2 text-sm text-muted-foreground">{m.mensagem}</div> : null}
+                                <EstadoChips messageId={m.id} atual={m.estado} onMudar={mudarEstado} />
+                              </li>
+                            ))}
+                          </ul>
+                        );
+                      })()
+                    ) : null}
                   </div>
                 ))
               : null}

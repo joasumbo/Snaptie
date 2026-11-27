@@ -106,7 +106,7 @@
     "tooMany": "Demasiados intentos. Inténtelo de nuevo en {minutos} min.",
     "editMode": "Modo de edición: toque el estado de cada incidencia para cambiarlo.",
     "editExit": "Salir",
-    "editStatesHint": "También puede cambiar el estado de las incidencias en la propia página: cierre esta ventana y toque el estado de cada una.",
+    "editStatesHint": "Puede cambiar el estado de cada incidencia aquí o directamente en la página.",
     "unavailableTitle": "Página temporalmente no disponible",
     "unavailableText": "Esta página está suspendida por el momento. Inténtelo más tarde.",
     "reminderRule": "Cuándo",
@@ -120,7 +120,8 @@
     "fieldReminderText": "Texto del recordatorio",
     "fieldReminderEmails": "Enviar a",
     "optional": "Opcional",
-    "reminderShow": "Mostrar en la página el próximo recordatorio"
+    "reminderShow": "Mostrar en la página el próximo recordatorio",
+    "noOccurrences": "Todavía no hay incidencias."
   },
   "Wifi": {
     "pointCamera": "Apunte la cámara del teléfono para conectar",

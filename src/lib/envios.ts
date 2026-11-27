@@ -40,7 +40,11 @@ export async function produtosAVenda(): Promise<ProdutoLoja[]> {
 }
 
 // Começa uma compra e devolve o id do pagamento (a página é /pagar/<id>).
-export async function comprarProduto(produtoId: string, quantidade: number): Promise<string> {
+export async function comprarProduto(
+  produtoId: string,
+  quantidade: number,
+  origem: { retorno?: string; companyId?: string | null; qrId?: string | null; blockId?: string | null } = {},
+): Promise<string> {
   const p = await prisma.produtoEnvio.findUnique({ where: { id: produtoId } });
   if (!p || !p.ativo) throw new Error("Este produto já não está à venda.");
   const qtd = Math.min(MAX_QUANTIDADE, Math.max(1, Math.floor(quantidade) || 1));
@@ -56,7 +60,10 @@ export async function comprarProduto(produtoId: string, quantidade: number): Pro
     valorCentimos: p.precoCentimos * qtd + p.portesCentimos,
     descricao: `Snaptie ${p.nome}${qtd > 1 ? ` (${qtd} unidades)` : ""}`,
     qrModeloId: p.qrModeloId,
-    retorno: "/loja",
+    retorno: origem.retorno ?? "/loja",
+    companyId: origem.companyId ?? null,
+    qrId: origem.qrId ?? null,
+    blockId: origem.blockId ?? null,
   });
   await prisma.pagamento.update({ where: { id }, data: { produtoId: p.id, quantidade: qtd } });
   return id;

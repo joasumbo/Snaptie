@@ -5,6 +5,7 @@ import { accessCookieName, hasAccess } from "@/lib/auth/qr-access";
 import { PAGAMENTO_MAX_CENTIMOS, PAGAMENTO_MIN_CENTIMOS, lerPagamento } from "@/lib/pagamentos";
 import { stripeConfigurado } from "@/lib/stripe";
 import { criarPagamentoAvulso } from "@/lib/stripe-pagamentos";
+import { comprarProduto } from "@/lib/envios";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,24 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   const conf = lerPagamento((block.conteudo ?? {}) as Record<string, unknown>);
+
+  // O botão vende um produto por correio: o preço é o do produto e o
+  // pagamento pede a morada de entrega.
+  if (conf.produtoId) {
+    try {
+      const id = await comprarProduto(conf.produtoId, 1, {
+        retorno: `/${qr.company.slug}/${qr.codigo}`,
+        companyId: qr.companyId,
+        qrId: qr.id,
+        blockId,
+      });
+      return NextResponse.json({ url: `/pagar/${id}` });
+    } catch (e) {
+      console.error("[pagamento bloco] produto", blockId, e);
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Falhou" }, { status: 409 });
+    }
+  }
+
   const valor = conf.valorLivre ? Math.round(Number(corpo.valor)) : conf.valorCentimos;
   if (!Number.isInteger(valor) || valor < PAGAMENTO_MIN_CENTIMOS || valor > PAGAMENTO_MAX_CENTIMOS) {
     return NextResponse.json({ error: "Valor invalido" }, { status: 400 });

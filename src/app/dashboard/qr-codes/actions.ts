@@ -647,3 +647,11 @@ export async function qrsParaCopia(qrId: string): Promise<{ id: string; nome: st
   });
   return lista.filter((q) => !fora.has(q.id));
 }
+
+// Os produtos por correio que um elemento Pagamento pode vender.
+export async function produtosParaPagamento(): Promise<{ id: string; nome: string; totalCentimos: number }[]> {
+  const actor = await requireQrManager();
+  if (!actor) return [];
+  const l = await prisma.produtoEnvio.findMany({ where: { ativo: true }, orderBy: [{ ordem: "asc" }, { nome: "asc" }] });
+  return l.map((p) => ({ id: p.id, nome: p.nome, totalCentimos: p.precoCentimos + p.portesCentimos }));
+}

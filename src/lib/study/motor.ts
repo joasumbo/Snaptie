@@ -201,13 +201,16 @@ async function planear(id: string) {
     resumo: string;
     conceitos: { nome: string; ideia: string; peso: number; imagem: string }[];
   }>(
-    "Analisas páginas de manuais escolares portugueses para preparar um plano de estudo. Respondes em português de Portugal e só com base no texto dado.",
+    "Analisas páginas de manuais escolares portugueses para preparar um plano de estudo. Respondes em português de Portugal. " +
+      "Partes sempre do que está nas páginas; quando a página é só um esquema, um diagrama ou uma lista de nomes, completas com conhecimento escolar fiável e consensual para o ano do aluno, sem nunca contradizer o manual.",
     `Estas são as páginas que o aluno fotografou:\n\n${s.texto}\n\n` +
       "Identifica a disciplina, o ano de escolaridade (por exemplo \"6.º ano\"; deixa vazio se não se perceber) e o tema. " +
       "Escreve um resumo de duas frases. " +
-      `Depois faz a lista de TODOS os conceitos que o aluno tem de aprender nestas páginas, pela ordem em que aparecem, sem deixar nenhum subtema de fora: cerca de ${alvo} conceitos (nunca mais de 10). ` +
+      `Depois faz a lista de TODOS os conceitos do tema que o aluno tem de aprender nestas páginas, pela ordem em que aparecem, sem deixar nenhum subtema de fora: cerca de ${alvo} conceitos (nunca mais de 10). ` +
+      "Num esquema com legendas, os conceitos são as partes que pertencem ao tema (num esquema do sistema digestivo, os órgãos da digestão, e não o cérebro ou os pulmões). " +
       "Junta num só conceito as ideias muito próximas (por exemplo, um grupo social e os seus privilégios) e põe o vocabulário dentro do conceito a que pertence; não repitas a mesma ideia em dois conceitos. " +
-      "Para cada conceito: \"nome\" é curto (até 6 palavras); \"ideia\" diz numa ou duas frases o essencial que o aluno tem de saber, com os factos tal como estão no texto; " +
+      "Para cada conceito: \"nome\" é curto (até 6 palavras); \"ideia\" diz numa ou duas frases o essencial que o aluno tem de saber (o que é, para que serve, como funciona), com os factos do texto ou, se o texto não os tiver, com conhecimento escolar fiável; " +
+      "a \"ideia\" nunca pode ser vaga como \"é uma parte do corpo\" nem falar do texto, do diagrama ou da imagem; " +
       "\"peso\" é 1 se é uma ideia simples, 2 se tem várias informações, 3 se é complexo ou tem muita informação para memorizar; " +
       "\"imagem\" é o que procurar na Wikipédia em português para encontrar uma gravura, pintura, fotografia, mapa ou esquema que ajude a perceber o conceito: " +
       "o título provável de um artigo, com a época ou o contexto (por exemplo \"Nobreza medieval\", \"Clero na Idade Média\" ou \"Ciclo hidrológico\"), ou vazio se uma imagem não ajudar.",
@@ -230,7 +233,7 @@ async function planear(id: string) {
   }
   const plano: Plano = {
     disciplina: r.disciplina?.trim() || "",
-    ano: r.ano?.trim() || "",
+    ano: /n[aã]o|desconhec|indefin/i.test(r.ano ?? "") ? "" : r.ano?.trim() || "",
     tema: r.tema?.trim() || "",
     resumo: r.resumo?.trim() || "",
     conceitos,
@@ -302,8 +305,10 @@ function sistema(s: { texto: string | null }, plano: Plano): string {
   const ano = plano.ano ? `do ${plano.ano}` : "do ensino básico";
   return (
     `És um explicador paciente de um aluno ${ano} em Portugal. Escreves em português de Portugal, com frases curtas e palavras simples, sem linguagem infantilizada. ` +
-    "Tratas o aluno por tu. Usas só a matéria abaixo, tirada das páginas do manual do aluno: não inventes factos, datas, nomes, números, causas nem pormenores que não estejam lá. " +
-    "Os exemplos e comparações podem vir da vida do aluno, mas nunca acrescentam factos sobre a matéria. Usa português de Portugal, nunca do Brasil.\n\n" +
+    "Tratas o aluno por tu. Usas a matéria abaixo, tirada das páginas do manual do aluno, e as ideias dos conceitos do estudo; quando a matéria é só um esquema ou uma lista de nomes, " +
+    "usas também conhecimento escolar fiável e consensual para este ano, sem nunca contradizer o manual e sem inventar datas, nomes ou números. " +
+    "As perguntas são sobre o que cada coisa é, para que serve e como funciona: nunca perguntes se algo aparece no texto, no diagrama ou na imagem, nem aceites como resposta \"é uma parte do corpo\" ou outra resposta vaga. " +
+    "Os exemplos e comparações podem vir da vida do aluno. Usa português de Portugal, nunca do Brasil.\n\n" +
     `MATÉRIA (${[plano.disciplina, plano.tema].filter(Boolean).join(", ")}):\n"""\n${s.texto}\n"""\n\n` +
     `CONCEITOS DO ESTUDO:\n${plano.conceitos.map((c) => `- ${c.nome}: ${c.ideia}`).join("\n")}`
   );
@@ -429,6 +434,11 @@ function limpar(s: string) {
   return s.replace(/\*+/g, "").trim();
 }
 
+// Perguntas e respostas que não ensinam nada: falar do texto, do diagrama ou
+// da imagem em vez da matéria, ou respostas como "é uma parte do corpo".
+const VAGA =
+  /\b(no|do|pelo|na|da) (texto|diagrama|manual|esquema|imagem|página)\b|identificad[oa]s? n[oa]|confirmad[oa] no|parte do corpo humano|é uma parte importante/i;
+
 function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
   const txt = (v: unknown) => (typeof v === "string" ? limpar(v) : "");
   if (tipo === "explicacao" || tipo === "escolha") {
@@ -458,6 +468,8 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
     const rotulo = (t: string) => /^([A-Da-d]|certa|erradas?|errid\w*|op[cç][aã]o \w)$/i.test(t.trim());
     if (/\b(porque|certa|erradas?|errid\w*)\s*:/i.test(pergunta) || /\berrid/i.test(pergunta))
       throw new Error("a pergunta traz restos do esquema");
+    if (VAGA.test(pergunta) || VAGA.test(certa) || erradas.some((e) => VAGA.test(e)))
+      throw new Error("pergunta sobre o texto ou resposta vaga");
     if (/(^|\s)[A-D]\)\s/.test(pergunta) || rotulo(certa) || erradas.some(rotulo))
       throw new Error("a pergunta traz as opções ou um rótulo");
     // Opções repetidas dão perguntas com duas respostas possíveis.
@@ -471,6 +483,7 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
     let frase = txt(d.frase);
     const resposta = txt(d.resposta);
     if (!resposta || !frase) throw new Error("frase incompleta");
+    if (VAGA.test(frase) || frase.replace(/_+/g, " ").trim().split(/\s+/).length < 6) throw new Error("frase vaga");
     if (!frase.includes("____")) {
       // A IA às vezes deixa a palavra na frase: tira-se aqui.
       const i = frase.toLowerCase().indexOf(resposta.toLowerCase());
@@ -484,6 +497,7 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
   }
   const pontos = Array.isArray(d.pontos) ? (d.pontos as unknown[]).map(txt).filter(Boolean).slice(0, 4) : [];
   if (!txt(d.pergunta) || pontos.length === 0) throw new Error("pergunta aberta incompleta");
+  if (VAGA.test(txt(d.pergunta))) throw new Error("pergunta sobre o texto");
   return { tipo, pergunta: txt(d.pergunta), pontos, modelo: txt(d.modelo) };
 }
 

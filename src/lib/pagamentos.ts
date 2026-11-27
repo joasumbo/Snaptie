@@ -41,6 +41,9 @@ export type ConteudoPagamento = {
   textoBotao: string;
   // QR demo da mesma empresa: quem paga recebe por email uma cópia dele.
   copiaQrId: string;
+  // Produto enviado por correio: o botão vende-o (preço + portes) e pede a
+  // morada de entrega, como na loja.
+  produtoId: string;
 };
 
 export function lerPagamento(c: Record<string, unknown>): ConteudoPagamento {
@@ -50,5 +53,6 @@ export function lerPagamento(c: Record<string, unknown>): ConteudoPagamento {
     valorLivre: c.valorLivre === true,
     textoBotao: typeof c.textoBotao === "string" ? c.textoBotao : "",
     copiaQrId: typeof c.copiaQrId === "string" ? c.copiaQrId : "",
+    produtoId: typeof c.produtoId === "string" ? c.produtoId : "",
   };
 }

@@ -31,7 +31,7 @@ import {
   emailsManutencao,
   type ParBotao,
 } from "@/lib/qr";
-import { addBlock, qrsParaCopia, updateBlock } from "@/app/dashboard/qr-codes/actions";
+import { addBlock, produtosParaPagamento, qrsParaCopia, updateBlock } from "@/app/dashboard/qr-codes/actions";
 import { DIAS_SEMANA, lerLembrete, type RegraLembrete } from "@/lib/lembrete";
 import { lerPagamento, PAGAMENTO_MAX_CENTIMOS, PAGAMENTO_MIN_CENTIMOS } from "@/lib/pagamentos";
 import { Segmented } from "@/components/ui/segmented";
@@ -143,6 +143,15 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
       .then(setQrsCopia)
       .catch(() => setQrsCopia([]));
   }, [tipo, qrId, qrsCopia]);
+  // Produto por correio vendido pelo botão ("" = nenhum).
+  const [produtoId, setProdutoId] = useState(pagamentoInicial.produtoId);
+  const [produtos, setProdutos] = useState<{ id: string; nome: string; totalCentimos: number }[] | null>(null);
+  useEffect(() => {
+    if (tipo !== "PAGAMENTO" || produtos !== null) return;
+    produtosParaPagamento()
+      .then(setProdutos)
+      .catch(() => setProdutos([]));
+  }, [tipo, produtos]);
   // Os dois botões lado a lado. São sempre dois, por isso o estado tem sempre
   // dois lugares — nunca se acrescenta nem se tira nenhum.
   const [par, setPar] = useState<ParBotao[]>(() => parBotoes(c));
@@ -320,7 +329,8 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
             valorCentimos: Number.isFinite(centimos) && centimos > 0 ? centimos : 0,
             valorLivre,
             textoBotao: textoBotao.trim(),
-            copiaQrId,
+            copiaQrId: produtoId ? "" : copiaQrId,
+            produtoId,
           };
           break;
         }
@@ -358,7 +368,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
       }
       if (field === "pagamento") {
         const v = Number(conteudo.valorCentimos);
-        if (!valorLivre && (v < PAGAMENTO_MIN_CENTIMOS || v > PAGAMENTO_MAX_CENTIMOS)) {
+        if (!produtoId && !valorLivre && (v < PAGAMENTO_MIN_CENTIMOS || v > PAGAMENTO_MAX_CENTIMOS)) {
           setError("Indique o valor a pagar, entre 1 € e 10 000 €.");
           return;
         }
@@ -872,6 +882,39 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                   outros métodos ativos na conta). O valor recebido entra na conta
                   Stripe do Snaptie e aparece em Pagamentos.
                 </p>
+                <Field label="Vender um produto por correio">
+                  <select
+                    value={produtoId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setProdutoId(id);
+                      const pr = (produtos ?? []).find((x) => x.id === id);
+                      if (pr) {
+                        setValorPagamento((pr.totalCentimos / 100).toFixed(2).replace(".", ","));
+                        setValorLivre(false);
+                      }
+                    }}
+                    className="h-9 w-full rounded-md border bg-transparent px-2 text-sm"
+                  >
+                    <option value="">Nenhum (pagamento de um valor)</option>
+                    {(produtos ?? []).map((pr) => (
+                      <option key={pr.id} value={pr.id}>
+                        {pr.nome} · {(pr.totalCentimos / 100).toFixed(2).replace(".", ",")} €
+                      </option>
+                    ))}
+                    {produtoId && !(produtos ?? []).some((pr) => pr.id === produtoId) ? (
+                      <option value={produtoId}>Produto escolhido (escondido ou apagado)</option>
+                    ) : null}
+                  </select>
+                </Field>
+                {produtoId ? (
+                  <p className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">
+                    O botão vende este produto pelo preço com portes. Quem paga indica a morada de entrega e o telefone, e a
+                    encomenda aparece em Pagamentos, Encomendas, como as da loja.
+                  </p>
+                ) : null}
+                {produtoId ? null : (
+                  <>
                 <Field label={valorLivre ? "Valor sugerido (€, opcional)" : "Valor (€)"}>
                   <Input
                     inputMode="decimal"
@@ -888,6 +931,8 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                   />
                   O visitante escolhe o valor (entre 1 € e 10 000 €)
                 </label>
+                  </>
+                )}
                 <Field label="Texto do botão (opcional)">
                   <Input
                     placeholder="Pagar"
@@ -895,6 +940,7 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                     onChange={(e) => setTextoBotao(e.target.value)}
                   />
                 </Field>
+                {produtoId ? null : (
                 <Field label="Ao pagar, enviar ao cliente uma cópia de">
                   <select
                     value={copiaQrId}
@@ -912,7 +958,8 @@ export function BlockFormModal({ qrId, block, onClose, onSaved }: Props) {
                     ) : null}
                   </select>
                 </Field>
-                {copiaQrId ? (
+                )}
+                {copiaQrId && !produtoId ? (
                   <p className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">
                     Quando o pagamento entra, o sistema cria uma cópia desse QR para quem pagou e envia-lhe por email
                     a imagem do QR, o link da página e o código para editar as fotos e os textos.
