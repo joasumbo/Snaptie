@@ -385,14 +385,17 @@ function pedido(a: Atividade, conceitos: Conceito[], anteriores: string[], segun
         "(é para uma criança ler num telemóvel; os pormenores aparecem depois nas perguntas). " +
         "\"exemplo\" é uma comparação ou um exemplo do dia a dia numa só frase curta. " +
         "Depois faz uma pergunta de escolha múltipla simples sobre o que acabaste de explicar: \"certa\" é a resposta certa, sem dúvida possível, e \"erradas\" são 3 respostas erradas mas plausíveis, " +
+        "\"pergunta\" é só a pergunta, uma frase curta que acaba em ponto de interrogação, sem as opções lá dentro; não faças perguntas pela negativa (com NÃO ou EXCETO). " +
+        
         "todas curtas e sem letras nem números à frente. \"porque\" explica numa frase porque a certa é a certa." +
         evitar
       );
     case "escolha":
       return (
-        `Etapa CONSOLIDAR. Faz uma pergunta de escolha múltipla sobre ${nomes}, sem explicação antes.` +
+        `Etapa CONSOLIDAR. Faz uma pergunta de escolha múltipla sobre ${nomes}, sem explicação antes. ` +
+        "\"pergunta\" é só a pergunta, uma frase curta que acaba em ponto de interrogação, sem as opções lá dentro; não faças perguntas pela negativa (com NÃO ou EXCETO). " +
         nivel +
-        "A opção certa tem de se poder confirmar no texto da matéria, sem conclusões que lá não estejam, e só uma opção pode estar certa. " +
+        "A opção certa tem de estar de acordo com a matéria e com as ideias dos conceitos, sem conclusões inventadas, e só uma opção pode estar certa. " +
         "\"certa\" é a resposta certa e \"erradas\" são 3 respostas erradas plausíveis, enganos que um aluno costuma fazer; todas curtas e sem letras nem números à frente. " +
         "\"porque\" explica numa frase porque a certa é a certa." +
         evitar
@@ -452,12 +455,18 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
     // O modelo pequeno às vezes copia os rótulos "Certa / Erradas" para dentro
     // da pergunta: tiram-se essas linhas, e uma pergunta que ainda mostre a
     // resposta é recusada (pede-se outra).
-    const pergunta = txt(d.pergunta)
+    const linhas = txt(d.pergunta)
       .split(/\n+/)
       .map((l) => l.trim())
-      .filter((l) => l && !/^(certa|erradas?|respostas?)\b/i.test(l) && !/^\d+[.)]?$/.test(l))
-      .join(" ")
-      .trim();
+      .filter((l) => l && !/^(certa|erradas?|respostas?)\b/i.test(l) && !/^\d+[.)]?$/.test(l) && !/^\(?[a-dA-D]\)\s/.test(l));
+    // Se o modelo meteu as opções no campo da pergunta, aproveita-se a linha
+    // que é mesmo uma pergunta; sem nenhuma, a atividade é pedida de novo.
+    const comPergunta = linhas.filter((l) => /\?$/.test(l));
+    const pergunta = (comPergunta.length ? comPergunta[comPergunta.length - 1] : linhas.join(" ")).trim();
+    // Perguntas pela negativa enganam o modelo pequeno (marca como certa a
+    // opção verdadeira): não se aceitam.
+    if (/\bN[ÃA]O\b|\bEXCETO\b/.test(pergunta) || /\b(qual|quais) (destas|destes|das seguintes|dos seguintes)[^?]*\b(não|exceto)\b/i.test(pergunta))
+      throw new Error("pergunta pela negativa");
     if (!certa || erradas.length < 2 || !pergunta) throw new Error("pergunta de escolha múltipla incompleta");
     const certaNorm = normalizar(certa);
     if (/\b(certa|erradas?)\s*:/i.test(pergunta) || (certaNorm.split(" ").length >= 3 && normalizar(pergunta).includes(certaNorm)))
@@ -465,12 +474,12 @@ function validar(tipo: TipoAtividade, d: Record<string, unknown>): Gerada {
     // Restos do esquema dentro do texto (o modelo pequeno mistura os campos):
     // "Porque:", "Erradas", opções "A) ... B)" na pergunta, ou uma resposta
     // que é só uma letra ou um rótulo.
-    const rotulo = (t: string) => /^([A-Da-d]|certa|erradas?|errid\w*|op[cç][aã]o \w)$/i.test(t.trim());
+    const rotulo = (t: string) => /^(\(?[A-Da-d]\)?|certa|erradas?|errid\w*|op[cç][aã]o \w)$/i.test(t.trim());
     if (/\b(porque|certa|erradas?|errid\w*)\s*:/i.test(pergunta) || /\berrid/i.test(pergunta))
       throw new Error("a pergunta traz restos do esquema");
     if (VAGA.test(pergunta) || VAGA.test(certa) || erradas.some((e) => VAGA.test(e)))
       throw new Error("pergunta sobre o texto ou resposta vaga");
-    if (/(^|\s)[A-D]\)\s/.test(pergunta) || rotulo(certa) || erradas.some(rotulo))
+    if (/(^|\s)\(?[A-Da-d]\)\s/.test(pergunta) || rotulo(certa) || erradas.some(rotulo))
       throw new Error("a pergunta traz as opções ou um rótulo");
     // Opções repetidas dão perguntas com duas respostas possíveis.
     if (new Set(opcoes.map((o) => normalizar(o))).size !== opcoes.length) throw new Error("opções repetidas");
