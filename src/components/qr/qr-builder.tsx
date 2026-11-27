@@ -287,8 +287,9 @@ export default function QrBuilder({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-3">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        {/* min-w-0: sem isto, um texto comprido alargava a coluna para a direita. */}
+        <div className="min-w-0 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-medium">Elementos</h2>
             <Button size="sm" onClick={() => setBlockModal({ mode: "create" })}>
@@ -308,7 +309,7 @@ export default function QrBuilder({
               {blocks.map((block, i) => (
                 <Card key={block.id} className="transition-all hover:shadow-md">
                   <CardContent className="flex items-center gap-3">
-                    <div className="flex flex-col">
+                    <div className="flex shrink-0 flex-col">
                       <Button
                         variant="ghost"
                         size="icon-xs"
@@ -327,8 +328,8 @@ export default function QrBuilder({
                       </Button>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="break-words font-medium">
                           {block.titulo || BLOCK_TYPE_LABELS[block.tipo]}
                         </span>
                         <Badge variant="secondary">
@@ -338,7 +339,8 @@ export default function QrBuilder({
                           <StatusBadge tone="neutral">Inativo</StatusBadge>
                         ) : null}
                       </div>
-                      <div className="truncate text-sm text-muted-foreground">
+                      {/* O resumo parte em várias linhas (até 3) em vez de esticar a linha. */}
+                      <div className="line-clamp-3 whitespace-normal break-words text-sm text-muted-foreground">
                         {summary(block) || "—"}
                       </div>
                     </div>
